@@ -4,9 +4,8 @@ import re
 import threading
 import os
 import json
-import configparser
 from bs4 import BeautifulSoup
-
+import hashlib
 def RequestWeb(url):
     headers = {'Accept-Language':'zh-CN,zh;q=0.9',
                 'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36'
@@ -29,26 +28,47 @@ def download(url,name,path):
 #         if chunk:
 #             f.write(chunk)
 
-def downloader(url,filenames,path):
+def compare_md5(filepath,md5s):
+    if os.path.exists(filepath):
+        md5file=open(filepath,'rb')
+        md5=hashlib.md5(md5file.read()).hexdigest()
+        md5file.close()
+        if md5 in md5s:
+            return True
+        else:
+            print('Warning:',name,'md5 do not match, we will try again')
+            return False
+    else:
+        return False
+
+
+def downloader(url,filenames,md5s,dir):
     for name in filenames:
+        filepath  = os.path.join(dir,name)
         print('Download:',name)
-        while not os.path.exists(os.path.join(path,name)):
+        while not compare_md5(filepath,md5s):
             try:
-                download(url+name,name,path)
+                download(url+name,name,dir)
             except Exception as e:
                 print('Warning:',name,'download failed! we will try again')
     
-def rundownloader(url,filenames,path,ThreadNum=5):
+def rundownloader(url,filenames,md5s,dir,ThreadNum=5):
     perthread=int(len(filenames)/ThreadNum)
     for i in range(0,ThreadNum):
-        t = threading.Thread(target=downloader,args=(url,filenames[perthread*i:perthread*(1+i)],path,))
+        t = threading.Thread(target=downloader,args=(url,filenames[perthread*i:perthread*(1+i)],md5s,dir,))
         t.start()
-    t = threading.Thread(target=downloader,args=(url,filenames[perthread*ThreadNum:],path,))
+    t = threading.Thread(target=downloader,args=(url,filenames[perthread*ThreadNum:],md5s,dir,))
     t.start()
 
 
-savedir = './sleep-edfx/sleep-cassette'
-url = 'https://physionet.org/physiobank/database/sleep-edfx/sleep-cassette/'
+savedir = './sleep-edfx/sleep-telemetry'
+url = 'https://physionet.org/physiobank/database/sleep-edfx/sleep-telemetry/'
+
+
+md5s=open(os.path.join(savedir,'MD5SUMS.txt'),'rb')
+md5s = md5s.read()
+md5s=md5s.decode('utf-8')
+md5s = md5s.split()
 
 soup,page_info=RequestWeb(url)
 links = soup.find_all('a',href=re.compile(r".edf"))
@@ -58,15 +78,5 @@ for link in links[1:]:
     stop = str(link).index('</a>')
     filename = str(link)[begin+2:stop]
     filenames.append(filename)
-rundownloader(url,filenames,savedir)
-'''
-    print('download:',filename)
-    try:
-        download(url+filename,filename,savedir)
-    except Exception as e:
-        print(filename,'download failed! ERR:',e)
-'''
-# had_down_files = os.listdir(savedir)
-# for filename in filenames:
-#     if :
-#         pass
+rundownloader(url,filenames,md5s,savedir)
+

@@ -6,7 +6,9 @@ import time
 import torch
 import random
 import DSP
-import pyedflib
+# import pyedflib
+import mne
+
 # CinC_Challenge_2018
 def loadstages(dirpath):
     filepath = os.path.join(dirpath,os.path.basename(dirpath)+'-arousal.mat')
@@ -86,17 +88,51 @@ def stage_str2int(stagestr):
         stage = 5
     return stage
 
-def loaddata_sleep_edf(filedir,filenum,filenames,signal_name,BID = 'median',filter = True):
+def loaddata_sleep_edf(filedir,filenum,signal_name,BID = 'median',filter = True):
     filenames = os.listdir(filedir)
-    # f_stage_name='a'
-    # f_signal_name='b'
     for filename in filenames:
         if str(filenum) in filename and 'Hypnogram' in filename:
             f_stage_name = filename
         if str(filenum) in filename and 'PSG' in filename:
             f_signal_name = filename
-    # print(f_stage_name)
+    print(f_stage_name)
+
+    raw_data= mne.io.read_raw_edf(os.path.join(filedir,f_signal_name),preload=True)
+    raw_annot = mne.read_annotations(os.path.join(filedir,f_stage_name))
+    eeg = raw_data.pick_channels(['EEG Fpz-Cz']).to_data_frame().values.T.reshape(-1)
+
+    raw_data.set_annotations(raw_annot, emit_warning=False)
+    event_id = {'Sleep stage 4': 0,
+                  'Sleep stage 3': 0,
+                  'Sleep stage 2': 1,
+                  'Sleep stage 1': 2,
+                  'Sleep stage R': 3,
+                  'Sleep stage W': 4,
+                  'Sleep stage ?': 5,
+                  'Sleep stage Movement time': 5}
+    events, _ = mne.events_from_annotations(
+        raw_data, event_id=event_id, chunk_duration=30.)
+    events = np.array(events)
+
+    signals=trimdata(eeg,3000)
+    signals = signals.reshape(-1,3000)
+    stages = events[:,2]
+    print(signals.shape,events.shape)
+    # stages = stages[0:signals.shape[0]]
+
+    stages_copy = stages.copy()
+    cnt = 0
+    for i in range(len(stages_copy)):
+        if stages_copy[i] == 5 :
+            signals = np.delete(signals,i-cnt,axis =0)
+            stages = np.delete(stages,i-cnt,axis =0)
+            cnt += 1
+
+
+
+
     # print(f_signal_name)
+    '''
     f_stage = pyedflib.EdfReader(os.path.join(filedir,f_stage_name))
     annotations = f_stage.readAnnotations()
     number_of_annotations = f_stage.annotations_in_file
@@ -106,18 +142,15 @@ def loaddata_sleep_edf(filedir,filenum,filenames,signal_name,BID = 'median',filt
     for i in range(number_of_annotations):
         stages[int(annotations[0][i])//30:(int(annotations[0][i])+int(annotations[1][i]))//30] = stage_str2int(annotations[2][i])
 
-    # #select sleep time 
-    # stages[int(annotations[0][0])//30:(int(annotations[0][0])+int(annotations[1][0]))//30-120] = 5
-    # stages[int(annotations[0][number_of_annotations-2])//30+120:(int(annotations[0][number_of_annotations-2])+int(annotations[1][number_of_annotations-2]))//30] = 5
-    
     f_signal = pyedflib.EdfReader(os.path.join(filedir,f_signal_name))
     signals = f_signal.readSignal(0)
+    signals=trimdata(signals,3000)
     signals = signals.reshape(-1,3000)
     stages = stages[0:signals.shape[0]]
 
-    #select sleep time 
-    signals = signals[(int(annotations[0][0])+int(annotations[1][0]))//30-60:int(annotations[0][number_of_annotations-2])//30+60]
-    stages = stages[(int(annotations[0][0])+int(annotations[1][0]))//30-60:int(annotations[0][number_of_annotations-2])//30+60]
+    # #select sleep time 
+    # signals = signals[np.clip(int(annotations[1][0])//30-60,0,9999999):int(annotations[0][number_of_annotations-2])//30+60]
+    # stages = stages[np.clip(int(annotations[1][0])//30-60,0,9999999):int(annotations[0][number_of_annotations-2])//30+60]
     
     #del UND
     stages_copy = stages.copy()
@@ -127,6 +160,7 @@ def loaddata_sleep_edf(filedir,filenum,filenames,signal_name,BID = 'median',filt
             signals = np.delete(signals,i-cnt,axis =0)
             stages = np.delete(stages,i-cnt,axis =0)
             cnt += 1
+    '''
     return signals.astype(np.int16),stages.astype(np.int16)
 
 
@@ -155,17 +189,9 @@ def loaddataset(filedir,dataset_name = 'CinC_Challenge_2018',signal_name = 'C4-M
                 print(filename,e)
     elif dataset_name == 'sleep-edfx':
         cnt = 0
-        signals=[]
-        stages=[]
         for filename in filenames:
             if 'PSG' in filename:
-                # try:
-
-                signal,stage = loaddata_sleep_edf(filedir,filename[2:6],filenames,signal_name = 'FPZ-CZ')
-                # print(type(signal[0][0]))
-                # signals.append(signal)
-                # stages.append(stage)
-
+                signal,stage = loaddata_sleep_edf(filedir,filename[2:6],signal_name = 'FPZ-CZ')
                 if cnt == 0:
                     signals =signal.copy()
                     stages =stage.copy()
@@ -175,12 +201,4 @@ def loaddataset(filedir,dataset_name = 'CinC_Challenge_2018',signal_name = 'C4-M
                 cnt += 1
                 if cnt == num:
                     break
-                # except Exception as e:
-                #     print(filename,e)
-        # signals = signals.reshape(-1,3000)
-        # print(signals)
-        # signals = np.array(signals)
-        # stages = np.array(stages)
-        # print(signals.shape)
-                
     return signals,stages

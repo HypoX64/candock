@@ -60,19 +60,19 @@ def random_transform_1d(data,finesize,test_flag):
 def random_transform_2d(img,finesize,test_flag):
     h,w = img.shape[:2]
     if test_flag:
-        h_move = 1
+        h_move = 2
         w_move = int((w-finesize)*0.5)
         result = img[h_move:h_move+finesize,w_move:w_move+finesize]
     else:
         #random crop
-        h_move = int(3*random.random()) #do not loss low freq signal infos
+        h_move = int(5*random.random()) #do not loss low freq signal infos
         w_move = int((w-finesize)*random.random())
         result = img[h_move:h_move+finesize,w_move:w_move+finesize]
         #random flip
         if random.random()<0.5:
             result = result[:,::-1]
         #random amp
-        result = result*random.uniform(0.98,1.02)+random.uniform(-0.01,0.01)
+        result = result*random.uniform(0.95,1.05)+random.uniform(-0.02,0.02)
     return result
     
 

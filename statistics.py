@@ -1,6 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+def writelog(log):
+    f = open('./log','a+')
+    f.write(log+'\n')
+    # print(log)
+
 def stage(stages):	
     #N3->0  N2->1  N1->2  REM->3  W->4
     stage_cnt=np.array([0,0,0,0,0])

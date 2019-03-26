@@ -18,6 +18,8 @@ warnings.filterwarnings("ignore")
 
 #test avg_recall: 0.7932 avg_acc: 0.9583 error: 0.1043
 opt = Options().getparse()
+localtime = time.asctime(time.localtime(time.time()))
+statistics.writelog('\n'+str(localtime)+'\n'+str(opt))
 
 t1 = time.time()
 signals,stages = dataloader.loaddataset(opt.dataset_dir,opt.dataset_name,opt.signal_name,opt.signal_num,shuffle=True,BID='median')
@@ -74,6 +76,8 @@ def evalnet(net,signals,stages,plot_result={},mode = 'part'):
         plot_result['test'].append(recall)   
         heatmap.draw(confusion_mat,name = 'test')
         print('test avg_recall:','%.4f' % recall,'avg_acc:','%.4f' % acc,'error:','%.4f' % error)
+    
+    statistics.writelog(str(confusion_mat)+'\navg_recall:'+str(recall)+'  avg_acc:'+str(acc)+'  error:'+str(error))
     # torch.cuda.empty_cache()
     return plot_result
 
@@ -83,6 +87,7 @@ plot_result['train']=[0]
 plot_result['test']=[0]
 for epoch in range(opt.epochs):
     t1 = time.time()
+    statistics.writelog('epoch:'+str(epoch)+'\n')
     confusion_mat = np.zeros((5,5), dtype=int)
     # running_loss, running_recall = 0.0, 0.0
     print('epoch:',epoch+1)
