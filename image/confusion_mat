@@ -1,3 +1,13 @@
+Confusion matrix:
+
+                  Pred
+                  
+        S1  S2  S3  REM WAKE
+        S2
+True    S3
+        REM
+        WAKE
+
 DFresnet18_heatmap_sleep-edf
 epoch:10  test avg_recall:0.8567  avg_acc:0.9663  error:0.0842
 confusion_mat:
