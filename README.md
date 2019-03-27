@@ -14,7 +14,7 @@
   resnet_1d:这里使用resnet的一维形式进行实验,(修改nn.Conv2d为nn.Conv1d).<br>
   DFCNN:将30s的eeg信号进行短时傅里叶变换,并生成频谱图作为输入,并使用resnet网络进行分类.<br>
 * EEG频谱图<br>
-  这里展示5个睡眠阶段对应的平铺图,它们依次是wake, stage 1, stage 2, stage 3, REM
+  这里展示5个睡眠阶段对应的频谱图,它们依次是wake, stage 1, stage 2, stage 3, REM
   ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_wake.png)
   ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_N1.png)
   ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_N2.png)
@@ -25,7 +25,8 @@
 ## 部分实验结果
 该部分将持续更新... ...
 * sleep-edf<br>
-  [[Confusion matrix]](https://github.com/HypoX64/candock/blob/master/image/confusion_mat)
+  [[Confusion matrix]](https://github.com/HypoX64/candock/blob/master/image/confusion_mat)<br>
+  
   | Network        | Label average recall | Label average accuracy | error rate |
   | :------------- | :------------------- | ---------------------- | ---------- |
   | lstm           | 0.7257               | 0.9266                 | 0.1836     |
