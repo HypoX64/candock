@@ -16,40 +16,39 @@ from options import Options
 import warnings
 warnings.filterwarnings("ignore")
 
-#test avg_recall: 0.7932 avg_acc: 0.9583 error: 0.1043
 opt = Options().getparse()
 localtime = time.asctime(time.localtime(time.time()))
 statistics.writelog('\n'+str(localtime)+'\n'+str(opt))
 
 t1 = time.time()
-signals,stages = dataloader.loaddataset(opt.dataset_dir,opt.dataset_name,opt.signal_name,opt.signal_num,shuffle=True,BID='median')
+signals,stages = dataloader.loaddataset(opt.dataset_dir,opt.dataset_name,opt.signal_name,opt.sample_num,shuffle=True,BID='median')
 stage_cnt_per = statistics.stage(stages)[1]
 print('stage_cnt_per:',stage_cnt_per,'\nlength of dataset:',len(stages))
 signals_train,stages_train,signals_eval,stages_eval, = data.batch_generator(signals,stages,opt.batchsize,shuffle = True)
-print('length of batch:',len(signals_train))
+
 batch_length = len(signals_train)+len(signals_eval)
+print('length of batch:',batch_length)
 show_freq = int(len(signals_train)/5)
 util.show_menory()
 t2 = time.time()
 print('load data cost time:',t2-t1)
 
 net=models.CreatNet(opt.model_name)
+weight = torch.from_numpy(opt.weight).float()
 # print(net)
 if not opt.no_cuda:
     net.cuda()
-    weight = opt.weight.cuda()
+    weight = weight.cuda()
     cudnn.benchmark = True
-
-# print(net)
 
 # time.sleep(2000)
 optimizer = torch.optim.Adam(net.parameters(), lr=opt.lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.95)
 criterion = nn.CrossEntropyLoss(weight)
-# criterion = nn.CrossEntropyLoss()
 
 
-def evalnet(net,signals,stages,plot_result={},mode = 'part'):
+
+def evalnet(net,signals,stages,epoch,plot_result={},mode = 'part'):
     net.eval()
     if mode =='part':
         data.shuffledata(signals,stages)
@@ -76,8 +75,9 @@ def evalnet(net,signals,stages,plot_result={},mode = 'part'):
         plot_result['test'].append(recall)   
         heatmap.draw(confusion_mat,name = 'test')
         print('test avg_recall:','%.4f' % recall,'avg_acc:','%.4f' % acc,'error:','%.4f' % error)
-    
-    statistics.writelog(str(confusion_mat)+'\navg_recall:'+str(recall)+'  avg_acc:'+str(acc)+'  error:'+str(error))
+        statistics.writelog('epoch:'+str(epoch)+'  test avg_recall:'+str(round(recall,4))+'  avg_acc:'+str(round(acc,4))+'  error:'+str(round(error,4)))
+    if epoch%5==0:
+        statistics.writelog('confusion_mat:\n'+str(confusion_mat))
     # torch.cuda.empty_cache()
     return plot_result
 
@@ -85,11 +85,10 @@ def evalnet(net,signals,stages,plot_result={},mode = 'part'):
 plot_result={}
 plot_result['train']=[0]
 plot_result['test']=[0]
+print('begin to train ...')
 for epoch in range(opt.epochs):
     t1 = time.time()
-    statistics.writelog('epoch:'+str(epoch)+'\n')
     confusion_mat = np.zeros((5,5), dtype=int)
-    # running_loss, running_recall = 0.0, 0.0
     print('epoch:',epoch+1)
     net.train()
     for i, (signal, stage) in enumerate(zip(signals_train,stages_train), 1):
@@ -118,7 +117,7 @@ for epoch in range(opt.epochs):
             # net.train()
 
     # torch.cuda.empty_cache() 
-    evalnet(net,signals_eval,stages_eval,plot_result,mode = 'all')
+    evalnet(net,signals_eval,stages_eval,epoch+1,plot_result,mode = 'all')
     scheduler.step()
 
     t2=time.time()

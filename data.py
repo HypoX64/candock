@@ -93,7 +93,7 @@ def ToInputShape(data,net_name,norm=True,test_flag = False):
             result.append(randomdata)
         result = np.array(result)
         if norm:
-            result = Normalize(result,maxmin = 200,avg=0,sigma=200)
+            result = Normalize(result,maxmin = 1000,avg=0,sigma=1000)
         result = result.reshape(batchsize,1,2700)
 
     elif net_name in ['resnet18','densenet121','densenet201','resnet101','resnet50']:
@@ -104,7 +104,8 @@ def ToInputShape(data,net_name,norm=True,test_flag = False):
             result.append(spectrum)
         result = np.array(result)
         if norm:
-            #std,mean,median,max= 0.2972 0.3008 0.2006 2.0830
+            #sleep_def : std,mean,median = 0.4157 0.3688 0.2473
+            #challge 2018 : std,mean,median,max= 0.2972 0.3008 0.2006 2.0830
             result=Normalize(result,2,0.3,1)
         result = result.reshape(batchsize,1,224,224)
         # print(result.shape)

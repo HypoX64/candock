@@ -72,22 +72,6 @@ def loaddata(dirpath,signal_name,BID = 'median',filter = True):
     # print(stages.shape,signals.shape)
     return signals,stages
 
-
-def stage_str2int(stagestr):
-    if stagestr == 'Sleep stage 3' or stagestr == 'Sleep stage 4':
-        stage = 0
-    elif stagestr == 'Sleep stage 2':
-        stage = 1
-    elif stagestr == 'Sleep stage 1':
-        stage = 2
-    elif stagestr == 'Sleep stage R':
-        stage = 3
-    elif stagestr == 'Sleep stage W':
-        stage = 4
-    elif stagestr == 'Sleep stage ?'or stagestr == 'Movement time':
-        stage = 5
-    return stage
-
 def loaddata_sleep_edf(filedir,filenum,signal_name,BID = 'median',filter = True):
     filenames = os.listdir(filedir)
     for filename in filenames:
@@ -95,11 +79,12 @@ def loaddata_sleep_edf(filedir,filenum,signal_name,BID = 'median',filter = True)
             f_stage_name = filename
         if str(filenum) in filename and 'PSG' in filename:
             f_signal_name = filename
-    print(f_stage_name)
+    # print(f_stage_name)
 
     raw_data= mne.io.read_raw_edf(os.path.join(filedir,f_signal_name),preload=True)
     raw_annot = mne.read_annotations(os.path.join(filedir,f_stage_name))
-    eeg = raw_data.pick_channels(['EEG Fpz-Cz']).to_data_frame().values.T.reshape(-1)
+    eeg = raw_data.pick_channels([signal_name]).to_data_frame().values.T
+    signals = eeg.reshape(-1)
 
     raw_data.set_annotations(raw_annot, emit_warning=False)
     event_id = {'Sleep stage 4': 0,
@@ -109,16 +94,16 @@ def loaddata_sleep_edf(filedir,filenum,signal_name,BID = 'median',filter = True)
                   'Sleep stage R': 3,
                   'Sleep stage W': 4,
                   'Sleep stage ?': 5,
-                  'Sleep stage Movement time': 5}
+                  'Movement time': 5}
     events, _ = mne.events_from_annotations(
         raw_data, event_id=event_id, chunk_duration=30.)
+    
+    signals = signals[events[0][0]:events[-1][0]]
     events = np.array(events)
-
-    signals=trimdata(eeg,3000)
     signals = signals.reshape(-1,3000)
+    # signals = signals*13/np.median(np.abs(signals))
     stages = events[:,2]
-    print(signals.shape,events.shape)
-    # stages = stages[0:signals.shape[0]]
+    stages = stages[:len(signals)]
 
     stages_copy = stages.copy()
     cnt = 0
@@ -129,9 +114,6 @@ def loaddata_sleep_edf(filedir,filenum,signal_name,BID = 'median',filter = True)
             cnt += 1
 
 
-
-
-    # print(f_signal_name)
     '''
     f_stage = pyedflib.EdfReader(os.path.join(filedir,f_stage_name))
     annotations = f_stage.readAnnotations()
@@ -187,11 +169,15 @@ def loaddataset(filedir,dataset_name = 'CinC_Challenge_2018',signal_name = 'C4-M
                     stages=np.concatenate((stages, stage), axis=0)
             except Exception as e:
                 print(filename,e)
-    elif dataset_name == 'sleep-edfx':
+    elif dataset_name in ['sleep-edfx','sleep-edf']:
         cnt = 0
+        if dataset_name == 'sleep-edf':
+            filenames = ['SC4002E0-PSG.edf','SC4012E0-PSG.edf','SC4102E0-PSG.edf','SC4112E0-PSG.edf',
+            'ST7022J0-PSG.edf','ST7052J0-PSG.edf','ST7121J0-PSG.edf','ST7132J0-PSG.edf']
+
         for filename in filenames:
             if 'PSG' in filename:
-                signal,stage = loaddata_sleep_edf(filedir,filename[2:6],signal_name = 'FPZ-CZ')
+                signal,stage = loaddata_sleep_edf(filedir,filename[2:6],signal_name = 'EEG Fpz-Cz')
                 if cnt == 0:
                     signals =signal.copy()
                     stages =stage.copy()
@@ -201,4 +187,5 @@ def loaddataset(filedir,dataset_name = 'CinC_Challenge_2018',signal_name = 'C4-M
                 cnt += 1
                 if cnt == num:
                     break
+    # print(np.median(np.abs(signals)))
     return signals,stages

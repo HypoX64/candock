@@ -47,7 +47,7 @@ def getfeature(signal,mod = 'fir',ch_num = 5):
     signal =signal - np.mean(signal)
     eeg=signal
 
-    beta=BPF(eeg,100,16,45,mod)    # 
+    beta=BPF(eeg,100,16,45,mod)    # β
     theta=BPF(eeg,100,4,8,mod)   #θ
     sigma=BPF(eeg,100,12,16,mod) #σ spindle
     alpha=BPF(eeg,100,8,12,mod)  #α
@@ -82,6 +82,8 @@ def getfeature(signal,mod = 'fir',ch_num = 5):
 #     return spectrum
 
 def signal2spectrum(data):
+    # window : ('tukey',0.5) hann
+
     zxx = scipy.signal.stft(data, fs=100, window='hann', nperseg=1024, noverlap=1024-12, nfft=1024, detrend=False, return_onesided=True, boundary='zeros', padded=True, axis=-1)[2]
     zxx =np.abs(zxx)[:512]
     spectrum=np.zeros((256,251))
