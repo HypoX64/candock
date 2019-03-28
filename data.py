@@ -49,8 +49,8 @@ def random_transform_1d(data,finesize,test_flag):
         result = data[move:move+finesize]
 
         #random flip
-        if random.random()<0.5:
-            result = result[::-1]
+        # if random.random()<0.5:
+        #     result = result[::-1]
 
         #random amp
         result = result*random.uniform(0.95,1.05)
@@ -106,7 +106,7 @@ def ToInputShape(data,net_name,norm=True,test_flag = False):
         if norm:
             #sleep_def : std,mean,median = 0.4157 0.3688 0.2473
             #challge 2018 : std,mean,median,max= 0.2972 0.3008 0.2006 2.0830
-            result=Normalize(result,2,0.3,1)
+            result=Normalize(result,3,0.3,1)
         result = result.reshape(batchsize,1,224,224)
         # print(result.shape)
 

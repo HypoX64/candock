@@ -8,8 +8,20 @@ True    S3
         REM
         WAKE
 
-DFresnet18_heatmap_sleep-edf
-epoch:10  test avg_recall:0.8567  avg_acc:0.9663  error:0.0842
+-------------------sleep-edf-------------------
+
+LSTM
+avg_recall:0.8342  avg_acc:0.9611  error:0.0974
+confusion_mat:
+[[ 232   34    0    1    2]
+ [  41  609   17   25    2]
+ [   1    9   77   26    3]
+ [   1   28   32  268    1]
+ [   3    1   51   18 1558]]
+
+
+DFresnet18
+avg_recall:0.8567  avg_acc:0.9663  error:0.0842
 confusion_mat:
 [[ 238    9    2    1    0]
  [  59  587   29   41    3]
@@ -18,8 +30,7 @@ confusion_mat:
  [   1    1   27    7 1621]]
 
 
-resnet18_1d_heatmap_sleep-edf
-epoch:10
+resnet18_1d_sleep-edf
 avg_recall:0.8434  avg_acc:0.9627  error:0.0930
 confusion_mat:
 [[ 225   37    1    0    1]
@@ -27,3 +38,5 @@ confusion_mat:
  [   0    4   85   28    1]
  [   0   19   43  261    3]
  [   1    3   44    9 1533]]
+
+-------------------sleep-edfx-------------------

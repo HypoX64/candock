@@ -101,7 +101,7 @@ def loaddata_sleep_edf(filedir,filenum,signal_name,BID = 'median',filter = True)
     signals = signals[events[0][0]:events[-1][0]]
     events = np.array(events)
     signals = signals.reshape(-1,3000)
-    # signals = signals*13/np.median(np.abs(signals))
+    signals = signals*13/np.median(np.abs(signals))
     stages = events[:,2]
     stages = stages[:len(signals)]
 
@@ -170,11 +170,13 @@ def loaddataset(filedir,dataset_name = 'CinC_Challenge_2018',signal_name = 'C4-M
             except Exception as e:
                 print(filename,e)
     elif dataset_name in ['sleep-edfx','sleep-edf']:
-        cnt = 0
+        if num > 197:
+            num = 197
         if dataset_name == 'sleep-edf':
             filenames = ['SC4002E0-PSG.edf','SC4012E0-PSG.edf','SC4102E0-PSG.edf','SC4112E0-PSG.edf',
             'ST7022J0-PSG.edf','ST7052J0-PSG.edf','ST7121J0-PSG.edf','ST7132J0-PSG.edf']
-
+        
+        cnt = 0
         for filename in filenames:
             if 'PSG' in filename:
                 signal,stage = loaddata_sleep_edf(filedir,filename[2:6],signal_name = 'EEG Fpz-Cz')

@@ -15,12 +15,15 @@ def CreatNet(name):
     elif name in ['resnet101','resnet50','resnet18']:
         if name =='resnet101':
             net = torchvision.models.resnet101(pretrained=False)
+            net.fc = nn.Linear(2048, 5)
         elif name =='resnet50':
             net = torchvision.models.resnet50(pretrained=False)
+            net.fc = nn.Linear(2048, 5)
         elif name =='resnet18':
             net = torchvision.models.resnet18(pretrained=False)
+            net.fc = nn.Linear(512, 5)
         net.conv1 = nn.Conv2d(1, 64, 7, 2, 3, bias=False)
-        net.fc = nn.Linear(512, 5)     
+             
         return net
     
     elif 'densenet' in name:
@@ -56,7 +59,7 @@ class LSTM(nn.Module):
         self.out = nn.Linear(Hidden_size, CLASS_NUM)
 
     def forward(self, x):
-        x=self.bn(x)
+        # x=self.bn(x)
         x=x.view(-1, self.TIME_STEP, self.INPUT_SIZE)
         r_out, (h_n, h_c) = self.lstm(x, None)   # None represents zero initial hidden state
         x=r_out[:, -1, :]

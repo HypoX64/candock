@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore")
 
 opt = Options().getparse()
 localtime = time.asctime(time.localtime(time.time()))
-statistics.writelog('\n'+str(localtime)+'\n'+str(opt))
+statistics.writelog('\n\n'+str(localtime)+'\n'+str(opt))
 
 t1 = time.time()
 signals,stages = dataloader.loaddataset(opt.dataset_dir,opt.dataset_name,opt.signal_name,opt.sample_num,shuffle=True,BID='median')
@@ -34,16 +34,20 @@ t2 = time.time()
 print('load data cost time:',t2-t1)
 
 net=models.CreatNet(opt.model_name)
+# print(net)
+if opt.pretrained:
+    net.load_state_dict(torch.load('./checkpoints/pretrained/'+opt.model_name+'.pth'))
+
 weight = torch.from_numpy(opt.weight).float()
 # print(net)
 if not opt.no_cuda:
     net.cuda()
     weight = weight.cuda()
     cudnn.benchmark = True
-
+# print(weight)
 # time.sleep(2000)
 optimizer = torch.optim.Adam(net.parameters(), lr=opt.lr)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.95)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.95)
 criterion = nn.CrossEntropyLoss(weight)
 
 
@@ -76,7 +80,7 @@ def evalnet(net,signals,stages,epoch,plot_result={},mode = 'part'):
         heatmap.draw(confusion_mat,name = 'test')
         print('test avg_recall:','%.4f' % recall,'avg_acc:','%.4f' % acc,'error:','%.4f' % error)
         statistics.writelog('epoch:'+str(epoch)+'  test avg_recall:'+str(round(recall,4))+'  avg_acc:'+str(round(acc,4))+'  error:'+str(round(error,4)))
-    if epoch%5==0:
+    if epoch%1==0:
         statistics.writelog('confusion_mat:\n'+str(confusion_mat))
     # torch.cuda.empty_cache()
     return plot_result
@@ -119,6 +123,12 @@ for epoch in range(opt.epochs):
     # torch.cuda.empty_cache() 
     evalnet(net,signals_eval,stages_eval,epoch+1,plot_result,mode = 'all')
     scheduler.step()
+
+    if (epoch+1)%opt.network_save_freq == 0:
+        torch.save(net.cpu().state_dict(),'./checkpoints/'+opt.model_name+'_epoch'+str(epoch+1)+'.pth')
+        print('network saved.')
+        if not opt.no_cuda:
+            net.cuda()
 
     t2=time.time()
     print('cost time: %.2f' % (t2-t1))
