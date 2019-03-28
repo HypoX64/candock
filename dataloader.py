@@ -101,9 +101,10 @@ def loaddata_sleep_edf(filedir,filenum,signal_name,BID = 'median',filter = True)
     signals = signals[events[0][0]:events[-1][0]]
     events = np.array(events)
     signals = signals.reshape(-1,3000)
-    signals = signals*13/np.median(np.abs(signals))
+    # signals = signals*13/np.median(np.abs(signals))
     stages = events[:,2]
     stages = stages[:len(signals)]
+
 
     stages_copy = stages.copy()
     cnt = 0
@@ -112,7 +113,7 @@ def loaddata_sleep_edf(filedir,filenum,signal_name,BID = 'median',filter = True)
             signals = np.delete(signals,i-cnt,axis =0)
             stages = np.delete(stages,i-cnt,axis =0)
             cnt += 1
-
+    print('shape:',signals.shape,stages.shape)
 
     '''
     f_stage = pyedflib.EdfReader(os.path.join(filedir,f_stage_name))
