@@ -31,6 +31,7 @@
 该部分将持续更新... ...<br>
 [[Confusion matrix]](https://github.com/HypoX64/candock/blob/master/image/confusion_mat)<br>
 * sleep-edf<br>
+
   | Network        | Label average recall | Label average accuracy | error rate |
   | :------------- | :------------------- | ---------------------- | ---------- |
   | lstm           | 0.8342               | 0.9611                 | 0.0974     |
@@ -39,6 +40,7 @@
   | DFCNN+resnet50 | 0.7916               | 0.9607                 | 0.0983     |
 <br>
 * sleep-edfx(only sleep time)<br>
+
   | Network        | Label average recall | Label average accuracy | error rate |
   | :------------- | :------------------- | ---------------------- | ---------- |
   | lstm           | 0.7864               | 0.9166                 | 0.2085     |
