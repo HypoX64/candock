@@ -21,7 +21,7 @@ localtime = time.asctime(time.localtime(time.time()))
 statistics.writelog('\n\n'+str(localtime)+'\n'+str(opt))
 
 t1 = time.time()
-signals,stages = dataloader.loaddataset(opt.dataset_dir,opt.dataset_name,opt.signal_name,opt.sample_num,shuffle=True,BID='median')
+signals,stages = dataloader.loaddataset(opt,opt.dataset_dir,opt.dataset_name,opt.signal_name,opt.sample_num,shuffle=True,BID='median')
 stage_cnt_per = statistics.stage(stages)[1]
 print('stage_cnt_per:',stage_cnt_per,'\nlength of dataset:',len(stages))
 signals_train,stages_train,signals_eval,stages_eval, = data.batch_generator(signals,stages,opt.batchsize,shuffle = True)
@@ -38,7 +38,12 @@ net=models.CreatNet(opt.model_name)
 if opt.pretrained:
     net.load_state_dict(torch.load('./checkpoints/pretrained/'+opt.model_name+'.pth'))
 
-weight = torch.from_numpy(opt.weight).float()
+weight = np.array([1,1,1,1,1])
+if opt.weight_mod == 'avg_best':
+    weight = np.log(1/stage_cnt_per)
+    weight[2] = weight[2]+1
+print(weight)
+weight = torch.from_numpy(weight).float()
 # print(net)
 if not opt.no_cuda:
     net.cuda()

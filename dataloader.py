@@ -72,7 +72,7 @@ def loaddata(dirpath,signal_name,BID = 'median',filter = True):
     # print(stages.shape,signals.shape)
     return signals,stages
 
-def loaddata_sleep_edf(filedir,filenum,signal_name,BID = 'median',filter = True):
+def loaddata_sleep_edf(opt,filedir,filenum,signal_name,BID = 'median',filter = True):
     filenames = os.listdir(filedir)
     for filename in filenames:
         if str(filenum) in filename and 'Hypnogram' in filename:
@@ -84,7 +84,7 @@ def loaddata_sleep_edf(filedir,filenum,signal_name,BID = 'median',filter = True)
     raw_data= mne.io.read_raw_edf(os.path.join(filedir,f_signal_name),preload=True)
     raw_annot = mne.read_annotations(os.path.join(filedir,f_stage_name))
     eeg = raw_data.pick_channels([signal_name]).to_data_frame().values.T
-    signals = eeg.reshape(-1)
+    eeg = eeg.reshape(-1)
 
     raw_data.set_annotations(raw_annot, emit_warning=False)
     event_id = {'Sleep stage 4': 0,
@@ -97,14 +97,21 @@ def loaddata_sleep_edf(filedir,filenum,signal_name,BID = 'median',filter = True)
                   'Movement time': 5}
     events, _ = mne.events_from_annotations(
         raw_data, event_id=event_id, chunk_duration=30.)
-    
-    signals = signals[events[0][0]:events[-1][0]]
-    events = np.array(events)
-    signals = signals.reshape(-1,3000)
-    # signals = signals*13/np.median(np.abs(signals))
-    stages = events[:,2]
-    stages = stages[:len(signals)]
 
+    stages = []
+    signals =[]
+    for i in range(len(events)-1):
+        stages.append(events[i][2])
+        signals.append(eeg[events[i][0]:events[i][0]+3000])
+    stages=np.array(stages)
+    signals=np.array(signals)
+    signals = signals*13/np.median(np.abs(signals))
+
+    # #select sleep time 
+    if opt.select_sleep_time:
+        if 'SC' in f_signal_name:
+            signals = signals[np.clip(int(raw_annot[0]['duration'])//30-60,0,9999999):int(raw_annot[-2]['onset'])//30+60]
+            stages = stages[np.clip(int(raw_annot[0]['duration'])//30-60,0,9999999):int(raw_annot[-2]['onset'])//30+60]
 
     stages_copy = stages.copy()
     cnt = 0
@@ -147,7 +154,7 @@ def loaddata_sleep_edf(filedir,filenum,signal_name,BID = 'median',filter = True)
     return signals.astype(np.int16),stages.astype(np.int16)
 
 
-def loaddataset(filedir,dataset_name = 'CinC_Challenge_2018',signal_name = 'C4-M1',num = 100 ,BID = 'median',shuffle = True):
+def loaddataset(opt,filedir,dataset_name = 'CinC_Challenge_2018',signal_name = 'C4-M1',num = 100 ,BID = 'median',shuffle = True):
     print('load dataset, please wait...')
     filenames = os.listdir(filedir)
 
@@ -180,7 +187,7 @@ def loaddataset(filedir,dataset_name = 'CinC_Challenge_2018',signal_name = 'C4-M
         cnt = 0
         for filename in filenames:
             if 'PSG' in filename:
-                signal,stage = loaddata_sleep_edf(filedir,filename[2:6],signal_name = 'EEG Fpz-Cz')
+                signal,stage = loaddata_sleep_edf(opt,filedir,filename[2:6],signal_name = 'EEG Fpz-Cz')
                 if cnt == 0:
                     signals =signal.copy()
                     stages =stage.copy()

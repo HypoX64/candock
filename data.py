@@ -49,8 +49,8 @@ def random_transform_1d(data,finesize,test_flag):
         result = data[move:move+finesize]
 
         #random flip
-        # if random.random()<0.5:
-        #     result = result[::-1]
+        if random.random()<0.5:
+            result = result[::-1]
 
         #random amp
         result = result*random.uniform(0.95,1.05)
