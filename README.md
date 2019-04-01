@@ -49,3 +49,6 @@
   | DFCNN+resnet50 | xxxxxx               | xxxxxx                 | xxxxxx     |
 
 * CinC Challenge 2018<br>
+
+## 心路历程
+* 2019/04/01 DFCNN的运算量也忒大了,提升还不明显,还容易过拟合......真是食之无味,弃之可惜...
