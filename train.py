@@ -48,11 +48,11 @@ weight = torch.from_numpy(weight).float()
 if not opt.no_cuda:
     net.cuda()
     weight = weight.cuda()
-    cudnn.benchmark = True
+    # cudnn.benchmark = True
 # print(weight)
 # time.sleep(2000)
 optimizer = torch.optim.Adam(net.parameters(), lr=opt.lr)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.95)
+# scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.95)
 criterion = nn.CrossEntropyLoss(weight)
 
 
@@ -127,7 +127,7 @@ for epoch in range(opt.epochs):
 
     # torch.cuda.empty_cache() 
     evalnet(net,signals_eval,stages_eval,epoch+1,plot_result,mode = 'all')
-    scheduler.step()
+    # scheduler.step()
 
     if (epoch+1)%opt.network_save_freq == 0:
         torch.save(net.cpu().state_dict(),'./checkpoints/'+opt.model_name+'_epoch'+str(epoch+1)+'.pth')

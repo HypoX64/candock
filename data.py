@@ -96,7 +96,7 @@ def ToInputShape(data,net_name,norm=True,test_flag = False):
             result = Normalize(result,maxmin = 1000,avg=0,sigma=1000)
         result = result.reshape(batchsize,1,2700)
 
-    elif net_name in ['resnet18','densenet121','densenet201','resnet101','resnet50']:
+    elif net_name in ['dfcnn','resnet18','densenet121','densenet201','resnet101','resnet50']:
         result =[]
         for i in range(0,batchsize):
             spectrum = DSP.signal2spectrum(data[i])

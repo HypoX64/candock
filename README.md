@@ -15,10 +15,10 @@
   对于不同的网络结构,对原始eeg信号采取了预处理,使其拥有不同的shape:<br>
   LSTM:将30s的eeg信号进行FIR带通滤波,获得θ,σ,α,δ,β波,并将它们进行连接后作为输入数据<br>
   resnet_1d:这里使用resnet的一维形式进行实验,(修改nn.Conv2d为nn.Conv1d).<br>
-  DFCNN:将30s的eeg信号进行短时傅里叶变换,并生成频谱图作为输入,并使用resnet网络进行分类.<br>
+  DFCNN:将30s的eeg信号进行短时傅里叶变换,并生成频谱图作为输入,并使用图像分类网络进行分类.<br>
 
 * EEG频谱图<br>
-  这里展示5个睡眠阶段对应的频谱图,它们依次是wake, stage 1, stage 2, stage 3, REM
+  这里展示5个睡眠阶段对应的频谱图,它们依次是wake, stage 1, stage 2, stage 3, REM<br>
   ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_wake.png)
   ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_N1.png)
   ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_N2.png)
@@ -38,14 +38,14 @@
   | resnet18_1d    | 0.8434               | 0.9627                 | 0.0930     |
   | DFCNN+resnet18 | 0.8567               | 0.9663                 | 0.0842     |
   | DFCNN+resnet50 | 0.7916               | 0.9607                 | 0.0983     |
-<br>
+
 * sleep-edfx(only sleep time)<br>
 
   | Network        | Label average recall | Label average accuracy | error rate |
   | :------------- | :------------------- | ---------------------- | ---------- |
   | lstm           | 0.7864               | 0.9166                 | 0.2085     |
   | resnet18_1d    | xxxxxx               | xxxxxx                 | xxxxxx     |
-  | DFCNN+resnet18 | xxxxxx               | xxxxxx                 | xxxxxx     |
+  | DFCNN+resnet18 | 0.7844               | 0.9124                 | 0.219      |
   | DFCNN+resnet50 | xxxxxx               | xxxxxx                 | xxxxxx     |
-<br>
+
 * CinC Challenge 2018<br>
