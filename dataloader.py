@@ -5,7 +5,7 @@ import os
 import time
 import torch
 import random
-import DSP
+import dsp
 # import pyedflib
 import mne
 
@@ -45,7 +45,7 @@ def loaddata(dirpath,signal_name,BID = 'median',filter = True):
     #load
     signals = loadsignals(dirpath,signal_name)
     if filter:
-        signals = DSP.BPF(signals,200,0.2,50,mod = 'fir')
+        signals = dsp.BPF(signals,200,0.2,50,mod = 'fir')
     stages = loadstages(dirpath)
     #resample
     signals = reducesample(signals,2)

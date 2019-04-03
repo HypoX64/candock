@@ -1,10 +1,9 @@
-import data
 import numpy as np
 import time
 import util
 import os
 import time
-import data
+import transformer
 import dataloader
 import models
 import torch
@@ -24,7 +23,7 @@ t1 = time.time()
 signals,stages = dataloader.loaddataset(opt,opt.dataset_dir,opt.dataset_name,opt.signal_name,opt.sample_num,shuffle=True,BID='median')
 stage_cnt_per = statistics.stage(stages)[1]
 print('stage_cnt_per:',stage_cnt_per,'\nlength of dataset:',len(stages))
-signals_train,stages_train,signals_eval,stages_eval, = data.batch_generator(signals,stages,opt.batchsize,shuffle = True)
+signals_train,stages_train,signals_eval,stages_eval, = transformer.batch_generator(signals,stages,opt.batchsize,shuffle = True)
 
 batch_length = len(signals_train)+len(signals_eval)
 print('length of batch:',batch_length)
@@ -60,15 +59,15 @@ criterion = nn.CrossEntropyLoss(weight)
 def evalnet(net,signals,stages,epoch,plot_result={},mode = 'part'):
     net.eval()
     if mode =='part':
-        data.shuffledata(signals,stages)
+        transformer.shuffledata(signals,stages)
         signals=signals[0:int(len(stages)/2)]
         stages=stages[0:int(len(stages)/2)]
 
     confusion_mat = np.zeros((5,5), dtype=int)
     for i, (signal, stage) in enumerate(zip(signals,stages), 1):
 
-        signal=data.ToInputShape(signal,opt.model_name,test_flag =True)
-        signal,stage = data.ToTensor(signal,stage,no_cuda =opt.no_cuda)
+        signal=transformer.ToInputShape(signal,opt.model_name,test_flag =True)
+        signal,stage = transformer.ToTensor(signal,stage,no_cuda =opt.no_cuda)
         out = net(signal)
         loss = criterion(out, stage)
         pred = torch.max(out, 1)[1]
@@ -102,8 +101,8 @@ for epoch in range(opt.epochs):
     net.train()
     for i, (signal, stage) in enumerate(zip(signals_train,stages_train), 1):
 
-        signal=data.ToInputShape(signal,opt.model_name,test_flag =False)
-        signal,stage = data.ToTensor(signal,stage,no_cuda =opt.no_cuda)
+        signal=transformer.ToInputShape(signal,opt.model_name,test_flag =False)
+        signal,stage = transformer.ToTensor(signal,stage,no_cuda =opt.no_cuda)
 
         out = net(signal)
         loss = criterion(out, stage)

@@ -4,6 +4,7 @@ from torch import nn, optim
 import torch.nn.functional as F
 import torchvision
 from collections import OrderedDict
+import densenet
 
 def CreatNet(name):
     if name =='LSTM':
@@ -30,16 +31,16 @@ def CreatNet(name):
     
     elif 'densenet' in name:
         if name =='densenet121':
-            net = torchvision.models.densenet121(pretrained=False)
+            net = densenet.densenet121(pretrained=False,num_classes=5)
         elif name == 'densenet201':
-            net = torchvision.models.densenet201(pretrained=False)
-        net.features = nn.Sequential(OrderedDict([
-            ('conv0', nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)),
-            ('norm0', nn.BatchNorm2d(64)),
-            ('relu0', nn.ReLU(inplace=True)),
-            ('pool0', nn.MaxPool2d(kernel_size=3, stride=2, padding=1)),
-        ]))
-        net.classifier = nn.Linear(4096, 5)
+            net = densenet.densenet201(pretrained=False,num_classes=5)
+        # net.features = nn.Sequential(OrderedDict([
+        #     ('conv0', nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)),
+        #     ('norm0', nn.BatchNorm2d(64)),
+        #     ('relu0', nn.ReLU(inplace=True)),
+        #     ('pool0', nn.MaxPool2d(kernel_size=3, stride=2, padding=1)),
+        # ]))
+        # net.classifier = nn.Linear(64, 5)
         return net
 
 

@@ -18,11 +18,11 @@
   DFCNN:将30s的eeg信号进行短时傅里叶变换,并生成频谱图作为输入,并使用图像分类网络进行分类.<br>
 
 * EEG频谱图<br>
-  这里展示5个睡眠阶段对应的频谱图,它们依次是wake, stage 1, stage 2, stage 3, REM<br>
-  ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_wake.png)
-  ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_N1.png)
-  ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_N2.png)
-  ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_N3.png)
+  这里展示5个睡眠阶段对应的频谱图,它们依次是Wake, Stage 1, Stage 2, Stage 3, REM<br>
+  ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_Wake.png)
+  ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_Stage1.png)
+  ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_Stage2.png)
+  ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_Stage3.png)
   ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_REM.png)
 
 * 关于代码<br>
@@ -52,3 +52,4 @@
 
 ## 心路历程
 * 2019/04/01 DFCNN的运算量也忒大了,提升还不明显,还容易过拟合......真是食之无味,弃之可惜...
+* 2019/04/03 花了一天更新到pytorch 1.0, 然后尝试了一下缩小输入频谱图的尺寸从而减小运算量... 
