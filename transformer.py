@@ -15,17 +15,39 @@ def shuffledata(data,target):
     np.random.shuffle(target)
     # return data,target
 
-
 def batch_generator(data,target,batchsize,shuffle = True):
     if shuffle:
         shuffledata(data,target)
-
     data = trimdata(data,batchsize)
     target = trimdata(target,batchsize)
     data = data.reshape(-1,batchsize,3000)
     target = target.reshape(-1,batchsize)
-    return data[0:int(0.8*len(target))],target[0:int(0.8*len(target))],data[int(0.8*len(target)):],target[int(0.8*len(target)):]
-    
+    return data,target
+
+def k_fold_generator(length,fold_num):
+    sequence = np.linspace(0,length-1,length,dtype='int')
+    train_length = int(length/fold_num*(fold_num-1))
+    test_length = int(length/fold_num)
+    train_sequence = np.zeros((fold_num,train_length), dtype = 'int')
+    test_sequence = np.zeros((fold_num,test_length), dtype = 'int')
+    for i in range(fold_num):
+        test_sequence[i] = (sequence[test_length*i:test_length*(i+1)])[:test_length]
+        train_sequence[i] = np.concatenate((sequence[0:test_length*i],sequence[test_length*(i+1):]),axis=0)[:train_length]
+    return train_sequence,test_sequence
+
+
+'''
+def batch_generator(data,target,batchsize,shuffle = True):
+    data = trimdata(data,batchsize)
+    target = trimdata(target,batchsize)
+    data = data.reshape(-1,batchsize,3000)
+    target = target.reshape(-1,batchsize)
+    signals_train,stages_train,signals_eval,stages_eval = data[0:int(0.8*len(target))],target[0:int(0.8*len(target))],data[int(0.8*len(target)):],target[int(0.8*len(target)):]
+    if shuffle:
+        shuffledata(signals_train,stages_train)
+        shuffledata(signals_eval,stages_eval)
+    return signals_train,stages_train,signals_eval,stages_eval
+'''   
 def Normalize(data,maxmin,avg,sigma):
     data = np.clip(data, -maxmin, maxmin)
     return (data-avg)/sigma
@@ -67,14 +89,14 @@ def random_transform_2d(img,finesize = (224,122),test_flag = True):
         result = img[h_move:h_move+finesize[0],w_move:w_move+finesize[1]]
     else:
         #random crop
-        h_move = int(5*random.random()) #do not loss low freq signal infos
+        h_move = int(10*random.random()) #do not loss low freq signal infos
         w_move = int((w-finesize[1])*random.random())
         result = img[h_move:h_move+finesize[0],w_move:w_move+finesize[1]]
         #random flip
         if random.random()<0.5:
             result = result[:,::-1]
         #random amp
-        result = result*random.uniform(0.95,1.05)+random.uniform(-0.02,0.02)
+        result = result*random.uniform(0.9,1.1)+random.uniform(-0.05,0.05)
     return result
 
 
@@ -127,7 +149,7 @@ def ToInputShape(data,net_name,norm=True,test_flag = False):
         if norm:
             #sleep_def : std,mean,median = 0.4157 0.3688 0.2473
             #challge 2018 : std,mean,median,max= 0.2972 0.3008 0.2006 2.0830
-            result=Normalize(result,3,0.3,1)
+            result=Normalize(result,2,0.3,1)
         result = result.reshape(batchsize,1,224,122)
         # print(result.shape)
 

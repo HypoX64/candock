@@ -105,7 +105,8 @@ def loaddata_sleep_edf(opt,filedir,filenum,signal_name,BID = 'median',filter = T
         signals.append(eeg[events[i][0]:events[i][0]+3000])
     stages=np.array(stages)
     signals=np.array(signals)
-    signals = signals*13/np.median(np.abs(signals))
+    if BID == 'median':
+        signals = signals*13/np.median(np.abs(signals))
 
     # #select sleep time 
     if opt.select_sleep_time:
@@ -122,35 +123,6 @@ def loaddata_sleep_edf(opt,filedir,filenum,signal_name,BID = 'median',filter = T
             cnt += 1
     print('shape:',signals.shape,stages.shape)
 
-    '''
-    f_stage = pyedflib.EdfReader(os.path.join(filedir,f_stage_name))
-    annotations = f_stage.readAnnotations()
-    number_of_annotations = f_stage.annotations_in_file
-    end_duration = int(annotations[0][number_of_annotations-1])+int(annotations[1][number_of_annotations-1])
-    stages = np.zeros(end_duration//30, dtype=int)
-    # print(number_of_annotations)
-    for i in range(number_of_annotations):
-        stages[int(annotations[0][i])//30:(int(annotations[0][i])+int(annotations[1][i]))//30] = stage_str2int(annotations[2][i])
-
-    f_signal = pyedflib.EdfReader(os.path.join(filedir,f_signal_name))
-    signals = f_signal.readSignal(0)
-    signals=trimdata(signals,3000)
-    signals = signals.reshape(-1,3000)
-    stages = stages[0:signals.shape[0]]
-
-    # #select sleep time 
-    # signals = signals[np.clip(int(annotations[1][0])//30-60,0,9999999):int(annotations[0][number_of_annotations-2])//30+60]
-    # stages = stages[np.clip(int(annotations[1][0])//30-60,0,9999999):int(annotations[0][number_of_annotations-2])//30+60]
-    
-    #del UND
-    stages_copy = stages.copy()
-    cnt = 0
-    for i in range(len(stages_copy)):
-        if stages_copy[i] == 5 :
-            signals = np.delete(signals,i-cnt,axis =0)
-            stages = np.delete(stages,i-cnt,axis =0)
-            cnt += 1
-    '''
     return signals.astype(np.int16),stages.astype(np.int16)
 
 
@@ -168,7 +140,7 @@ def loaddataset(opt,filedir,dataset_name = 'CinC_Challenge_2018',signal_name = '
         for i,filename in enumerate(filenames[:num],0):
 
             try:
-                signal,stage = loaddata(os.path.join(filedir,filename),signal_name,BID)
+                signal,stage = loaddata(os.path.join(filedir,filename),signal_name,BID = None)
                 if i == 0:
                     signals =signal.copy()
                     stages =stage.copy()
@@ -187,7 +159,7 @@ def loaddataset(opt,filedir,dataset_name = 'CinC_Challenge_2018',signal_name = '
         cnt = 0
         for filename in filenames:
             if 'PSG' in filename:
-                signal,stage = loaddata_sleep_edf(opt,filedir,filename[2:6],signal_name = 'EEG Fpz-Cz')
+                signal,stage = loaddata_sleep_edf(opt,filedir,filename[2:6],signal_name = signal_name)
                 if cnt == 0:
                     signals =signal.copy()
                     stages =stage.copy()

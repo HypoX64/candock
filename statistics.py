@@ -1,10 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
-def writelog(log):
-    f = open('./log','a+')
-    f.write(log+'\n')
-    # print(log)
+import util
 
 def stage(stages):	
     #N3->0  N2->1  N1->2  REM->3  W->4
@@ -12,6 +8,8 @@ def stage(stages):
     for i in range(len(stages)):
         stage_cnt[stages[i]] += 1
     stage_cnt_per = stage_cnt/len(stages) 
+    util.writelog('statistics of dataset [S3 S2 S1 R W]: '+str(stage_cnt))
+    print('statistics of dataset [S3 S2 S1 R W]:\n',stage_cnt,'\n',stage_cnt_per)
     return stage_cnt,stage_cnt_per
 
 def result(mat):
@@ -20,13 +18,24 @@ def result(mat):
     sub_recall = np.zeros(wide)
     err = 0
     for i in range(wide):
-        sub_recall[i]=mat[i,i]/np.sum(mat[i])
+        if np.sum(mat[i]) == 0 :
+            sub_recall[i] = 0
+        else:
+            sub_recall[i]=mat[i,i]/np.sum(mat[i])
         err += mat[i,i]
         sub_acc[i] = (np.sum(mat)-((np.sum(mat[i])+np.sum(mat[:,i]))-2*mat[i,i]))/np.sum(mat)
     avg_recall = np.mean(sub_recall)
     avg_acc = np.mean(sub_acc)
     err = 1-err/np.sum(mat)
     return avg_recall,avg_acc,err
+
+def stagefrommat(mat):
+    wide=mat.shape[0]
+    stage_num = np.zeros(wide,dtype='int')
+    for i in range(wide):
+        stage_num[i]=np.sum(mat[i])
+    util.writelog('statistics of dataset [S3 S2 S1 R W]:\n'+str(stage_num),True)
+
 
 
 def show(plot_result,epoch):
