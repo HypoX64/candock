@@ -7,7 +7,7 @@
 
 ## 一些说明
 * 对数据集进行的处理<br>
-  读取数据集各样本后分割为30s/Epoch作为一个输入,共有5个标签,分别是Sleep stage 3,2,1,R,W,将分割后的eeg信号与睡眠阶段标签进行对应后,打乱其顺序,并将80%的数据用于训练,20%的数据用于测试.<br>
+  读取数据集各样本后分割为30s/Epoch作为一个输入,共有5个标签,分别是Sleep stage 3,2,1,R,W,将分割后的eeg信号与睡眠阶段标签进行一一对应<br>
 
   注意:对于sleep-edfx数据集,我们仅仅截取了入睡前30分钟到醒来后30分钟之间的睡眠区间作为读入数据(实验结果中用only sleep time 进行标注),目的是平衡各睡眠时期的比例并加快训练速度.
 
@@ -23,8 +23,19 @@
   ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_Stage1.png)
   ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_Stage2.png)
   ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_Stage3.png)
-  ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_REM.png)
+  ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_REM.png)<br>
 
+* 关于交叉验证<br>
+  为了便于与其他文献中的方法便于比较，使用了两种交叉验证方法<br>
+  1.对于同一数据集，采用5倍K-fold交叉验证<br>
+  2.在不同数据集间进行交叉验证<br>
+
+* 关于评估指标<br>
+  对于各标签:<br>
+  accuracy = (TP+TN)/(TP+FN+TN+FP)<br>
+  recall = sensitivity = (TP)/(TP+FN)<br>
+  对于总体:<br>
+  
 * 关于代码<br>
   目前的代码仍然在不断修改与更新中,不能确保其能工作.详细内容将会在毕业设计完成后抽空更新.<br>
 ## 部分实验结果
@@ -53,3 +64,5 @@
 ## 心路历程
 * 2019/04/01 DFCNN的运算量也忒大了,提升还不明显,还容易过拟合......真是食之无味,弃之可惜...
 * 2019/04/03 花了一天更新到pytorch 1.0, 然后尝试了一下缩小输入频谱图的尺寸从而减小运算量... 
+* 2019/04/04 需要增加k-fold+受试者交叉验证才够严谨...
+* 2019/04/05 清明节…看文献，还是按照大部分人的做法来做吧，使用5倍K-fold和数据集间的交叉验证，这样方便与其他人的方法做横向比较. 不行，这里要吐槽一下，别人做k-fold完全是因为数据集太小了…这上百Gb的数据做K-fold…真的是多此一举，结果根本不会有什么差别…完全是浪费计算资源…
