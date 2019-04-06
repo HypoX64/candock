@@ -41,26 +41,36 @@
 ## 部分实验结果
 该部分将持续更新... ...<br>
 [[Confusion matrix]](https://github.com/HypoX64/candock/blob/master/image/confusion_mat)<br>
+####  5-Fold Cross-Validation Results
 * sleep-edf<br>
 
   | Network        | Label average recall | Label average accuracy | error rate |
   | :------------- | :------------------- | ---------------------- | ---------- |
-  | lstm           | 0.8342               | 0.9611                 | 0.0974     |
-  | resnet18_1d    | 0.8434               | 0.9627                 | 0.0930     |
-  | DFCNN+resnet18 | 0.8567               | 0.9663                 | 0.0842     |
-  | DFCNN+resnet50 | 0.7916               | 0.9607                 | 0.0983     |
+  | lstm           |                      |                        |            |
+  | resnet18_1d    |                      |                        |            |
+  | DFCNN+resnet18 | 0.8261               | 0.9594                 | 0.1016     |
+  | DFCNN+resnet50 |                      |                        |            |
 
 * sleep-edfx(only sleep time)<br>
 
   | Network        | Label average recall | Label average accuracy | error rate |
   | :------------- | :------------------- | ---------------------- | ---------- |
-  | lstm           | 0.7864               | 0.9166                 | 0.2085     |
-  | resnet18_1d    | xxxxxx               | xxxxxx                 | xxxxxx     |
-  | DFCNN+resnet18 | 0.7844               | 0.9124                 | 0.219      |
-  | DFCNN+resnet50 | xxxxxx               | xxxxxx                 | xxxxxx     |
+  | lstm           |                      |                        |            |
+  | resnet18_1d    |                      |                        |            |
+  | DFCNN+resnet18 |                      |                        |            |
+  | DFCNN+resnet50 |                      |                        |            |
 
-* CinC Challenge 2018<br>
+* CinC Challenge 2018(sample size = 100)<br>
 
+  | Network        | Label average recall | Label average accuracy | error rate |
+  | :------------- | :------------------- | ---------------------- | ---------- |
+  | lstm           |                      |                        |            |
+  | resnet18_1d    |                      |                        |            |
+  | DFCNN+resnet18 | 0.7823               | 0.909                  | 0.2276     |
+  | DFCNN+resnet50 |                      |                        |            |
+  
+#### Subject Cross-Validation Results
+<br>
 ## 心路历程
 * 2019/04/01 DFCNN的运算量也忒大了,提升还不明显,还容易过拟合......真是食之无味,弃之可惜...
 * 2019/04/03 花了一天更新到pytorch 1.0, 然后尝试了一下缩小输入频谱图的尺寸从而减小运算量... 
