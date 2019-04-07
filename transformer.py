@@ -122,13 +122,13 @@ def random_transform_2d(img,finesize = (224,122),test_flag = True):
 def ToInputShape(data,net_name,norm=True,test_flag = False):
     data = data.astype(np.float32)
     batchsize=data.shape[0]
-    if net_name=='LSTM':
+    if net_name=='lstm':
         result =[]
         for i in range(0,batchsize):
             randomdata=random_transform_1d(data[i],finesize = 2700,test_flag=test_flag)
             result.append(dsp.getfeature(randomdata))
         result = np.array(result).reshape(batchsize,2700*5)
-    elif net_name=='CNN' or net_name=='resnet18_1d':
+    elif net_name in['cnn_1d','resnet18_1d','multi_scale_resnet_1d']:
         result =[]
         for i in range(0,batchsize):
             randomdata=random_transform_1d(data[i],finesize = 2700,test_flag=test_flag)
@@ -139,7 +139,7 @@ def ToInputShape(data,net_name,norm=True,test_flag = False):
             result = Normalize(result,maxmin = 1000,avg=0,sigma=1000)
         result = result.reshape(batchsize,1,2700)
 
-    elif net_name in ['dfcnn','resnet18','densenet121','densenet201','resnet101','resnet50']:
+    elif net_name in ['squeezenet','multi_scale_resnet','dfcnn','resnet18','densenet121','densenet201','resnet101','resnet50']:
         result =[]
         for i in range(0,batchsize):
             spectrum = dsp.signal2spectrum(data[i])

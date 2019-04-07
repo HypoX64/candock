@@ -5,7 +5,8 @@ import os
 import time
 import transformer
 import dataloader
-import models
+# import models
+from creatnet import CreatNet
 import torch
 from torch import nn, optim
 import statistics
@@ -32,7 +33,7 @@ util.show_menory()
 t2 = time.time()
 print('load data cost time: %.2f'% (t2-t1),'s')
 
-net=models.CreatNet(opt.model_name)
+net=CreatNet(opt.model_name)
 torch.save(net.cpu().state_dict(),'./checkpoints/'+opt.model_name+'.pth')
 
 weight = np.array([1,1,1,1,1])
