@@ -6,6 +6,7 @@ import time
 import torch
 import random
 import dsp
+import transformer
 # import pyedflib
 import mne
 
@@ -41,7 +42,7 @@ def trimdata(data,num):
 def reducesample(data,mult):
     return data[::mult]
 
-def loaddata(dirpath,signal_name,BID = 'median',filter = True):
+def loaddata(dirpath,signal_name,BID,filter = True):
     #load
     signals = loadsignals(dirpath,signal_name)
     if filter:
@@ -52,9 +53,11 @@ def loaddata(dirpath,signal_name,BID = 'median',filter = True):
     stages = reducesample(stages,2)
     #Balance individualized differences
     if BID == 'median':
-        signals = (signals*8/(np.median(abs(signals)))).astype(np.int16)
-    elif BID == 'std':
-        signals = (signals*55/(np.std(signals))).astype(np.int16)
+        signals = (signals*10/(np.median(abs(signals))))
+    elif BID == '5_95_th':
+        tmp = np.sort(signals.reshape(-1))
+        th_5 = tmp[int(0.05*len(tmp))]
+        signals=transformer.Normalize(signals,1000,0,th_5)
     #trim
     signals = trimdata(signals,3000)
     stages = trimdata(stages,3000)
@@ -70,9 +73,9 @@ def loaddata(dirpath,signal_name,BID = 'median',filter = True):
             stages = np.delete(stages,i-cnt,axis =0)
             cnt += 1
     # print(stages.shape,signals.shape)
-    return signals,stages
+    return signals.astype(np.float16),stages.astype(np.int16)
 
-def loaddata_sleep_edf(opt,filedir,filenum,signal_name,BID = 'median',filter = True):
+def loaddata_sleep_edf(opt,filedir,filenum,signal_name,BID):
     filenames = os.listdir(filedir)
     for filename in filenames:
         if str(filenum) in filename and 'Hypnogram' in filename:
@@ -105,8 +108,6 @@ def loaddata_sleep_edf(opt,filedir,filenum,signal_name,BID = 'median',filter = T
         signals.append(eeg[events[i][0]:events[i][0]+3000])
     stages=np.array(stages)
     signals=np.array(signals)
-    if BID == 'median':
-        signals = signals*13/np.median(np.abs(signals))
 
     # #select sleep time 
     if opt.select_sleep_time:
@@ -123,10 +124,17 @@ def loaddata_sleep_edf(opt,filedir,filenum,signal_name,BID = 'median',filter = T
             cnt += 1
     print('shape:',signals.shape,stages.shape)
 
-    return signals.astype(np.int16),stages.astype(np.int16)
+    if BID == 'median':
+        signals = signals*10/np.median(np.abs(signals))
+    elif BID == '5_95_th':
+        tmp = np.sort(signals.reshape(-1))
+        th_5 = tmp[int(0.05*len(tmp))]
+        signals=transformer.Normalize(signals,1000,0,th_5)
+
+    return signals.astype(np.float16),stages.astype(np.int16)
 
 
-def loaddataset(opt,filedir,dataset_name = 'CinC_Challenge_2018',signal_name = 'C4-M1',num = 100 ,BID = 'median',shuffle = True):
+def loaddataset(opt,filedir,dataset_name = 'CinC_Challenge_2018',signal_name = 'C4-M1',num = 100 ,BID = 'median' ,shuffle = True):
     print('load dataset, please wait...')
     filenames = os.listdir(filedir)
 
@@ -140,7 +148,7 @@ def loaddataset(opt,filedir,dataset_name = 'CinC_Challenge_2018',signal_name = '
         for i,filename in enumerate(filenames[:num],0):
 
             try:
-                signal,stage = loaddata(os.path.join(filedir,filename),signal_name,BID = None)
+                signal,stage = loaddata(os.path.join(filedir,filename),signal_name,BID = BID)
                 if i == 0:
                     signals =signal.copy()
                     stages =stage.copy()
@@ -159,7 +167,7 @@ def loaddataset(opt,filedir,dataset_name = 'CinC_Challenge_2018',signal_name = '
         cnt = 0
         for filename in filenames:
             if 'PSG' in filename:
-                signal,stage = loaddata_sleep_edf(opt,filedir,filename[2:6],signal_name = signal_name)
+                signal,stage = loaddata_sleep_edf(opt,filedir,filename[2:6],signal_name,BID)
                 if cnt == 0:
                     signals =signal.copy()
                     stages =stage.copy()

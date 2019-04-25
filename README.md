@@ -1,5 +1,8 @@
 # candock
 这是一个用于记录毕业设计的日志仓库，其目的是尝试多种不同的深度神经网络结构(如LSTM,RESNET,DFCNN等)对单通道EEG进行自动化睡眠阶段分期.我们相信这些代码同时可以用于其他生理信号(如ECG,EMG等)的分类.希望这将有助于您的研究.<br>
+## 如何运行
+如果你需要运行这些代码（训练自己的模型或者使用预训练模型进行测试）请进入以下页面<br>
+[How to run codes](https://github.com/HypoX64/candock/blob/master/how_to_run.md)<br>
 ## 数据集
 使用了三个睡眠数据集进行测试,分别是:   [[CinC Challenge 2018]](https://physionet.org/physiobank/database/challenge/2018/#files)    [[sleep-edf]](https://www.physionet.org/physiobank/database/sleep-edf/)   [[sleep-edfx]](https://www.physionet.org/physiobank/database/sleep-edfx/) <br>
 对于CinC Challenge 2018数据集,使用其C4-M1通道<br>对于sleep-edfx与sleep-edf数据集,使用Fpz-Cz通道<br>
@@ -25,6 +28,11 @@
   ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_Stage3.png)
   ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_REM.png)<br>
 
+* multi_scale_resnet_1d 网络结构<br>
+  该网络参考[geekfeiw / Multi-Scale-1D-ResNet](https://github.com/geekfeiw/Multi-Scale-1D-ResNet)<br>
+  修改后的网络结构如图：<br>
+  ![image](https://github.com/HypoX64/candock/blob/master/image/multi_scale_resnet_1d_network.png)<br>
+
 * 关于交叉验证<br>
   为了便于与其他文献中的方法便于比较，使用了两种交叉验证方法<br>
   1.对于同一数据集，采用5倍K-fold交叉验证<br>
@@ -48,9 +56,10 @@
   | Network                  | Label average recall | Label average accuracy | error rate |
   | :----------------------- | :------------------- | ---------------------- | ---------- |
   | lstm                     |                      |                        |            |
-  | resnet18_1d              |                      |                        |            |
+  | resnet18_1d              | 0.8263               | 0.9601                 | 0.0997     |
   | DFCNN+resnet18           | 0.8261               | 0.9594                 | 0.1016     |
   | DFCNN+multi_scale_resnet | 0.8196               | 0.9631                 | 0.0922     |
+  | multi_scale_resnet_1d    | 0.8400               | 0.9595                 | 0.1013     |
 
 * sleep-edfx(only sleep time)<br>
 
@@ -69,7 +78,7 @@
   | resnet18_1d    |                      |                        |            |
   | DFCNN+resnet18 | 0.7823               | 0.909                  | 0.2276     |
   | DFCNN+resnet50 |                      |                        |            |
-  
+
 #### Subject Cross-Validation Results
 
 ## 心路历程
@@ -78,3 +87,4 @@
 * 2019/04/04 需要增加k-fold+受试者交叉验证才够严谨...
 * 2019/04/05 清明节…看文献，还是按照大部分人的做法来做吧，使用5倍K-fold和数据集间的交叉验证，这样方便与其他人的方法做横向比较. 不行，这里要吐槽一下，别人做k-fold完全是因为数据集太小了…这上百Gb的数据做K-fold…真的是多此一举，结果根本不会有什么差别…完全是浪费计算资源…
 * 2019/04/09 回老家了，啊！！！！我的毕业论文啊。。。。写不完了！
+* 2019/04/13 回学校撸论文了，回去的几天莫名奇妙多了两个star...额，这也行

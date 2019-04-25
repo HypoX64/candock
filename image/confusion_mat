@@ -2,15 +2,26 @@ Confusion matrix:
 
                   Pred
                   
-        S1  S2  S3  REM WAKE
+        S3  S2  S1  REM WAKE
         S2
-True    S3
+True    S1
         REM
         WAKE
 
 
 5-Fold Cross-Validation Results
 -------------------sleep-edf-------------------
+
+resnet18_1d
+final:  test avg_recall:0.8263  avg_acc:0.9601  error:0.0997
+confusion_mat:
+[[1133  148    7    3    0]
+ [ 296 2968  120  195    3]
+ [   3   60  368  149   18]
+ [   3   99  135 1342   18]
+ [   9    7  190   37 7729]]
+statistics of dataset [S3 S2 S1 R W]:
+[1291 3582  598 1597 7972]
 
 DFCNN+resnet18
 final:  test avg_recall:0.8261  avg_acc:0.9594  error:0.1016
@@ -23,6 +34,16 @@ confusion_mat:
 statistics of dataset [S3 S2 S1 R W]:
 [ 268  725  106  314 1611]
 
+multi_scale_resnet_1d
+confusion_mat:
+final:  test avg_recall:0.84  avg_acc:0.9595  error:0.1013
+[[1159  114   10    3    1]
+ [ 335 2961  153  143    5]
+ [   4   45  436  102   13]
+ [   0  100  241 1244    9]
+ [   2    2  214   27 7717]]
+statistics of dataset [S3 S2 S1 R W]:
+[1287 3597  600 1594 7962]
 
 -------------------sleep-edfx(only sleep time)-------------------
 

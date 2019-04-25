@@ -2,6 +2,7 @@ import argparse
 import os
 import numpy as np
 import torch
+#python3 train.py --dataset_dir './datasets/sleep-edfx/' --dataset_name sleep-edf --signal_name 'EEG Fpz-Cz' --sample_num 8 --model_name multi_scale_resnet_1d --batchsize 32 --network_save_freq 100 --epochs 40 --lr 0.0005
 #python3 train.py --dataset_dir '/media/hypo/Hypo/physionet_org_train' --dataset_name CinC_Challenge_2018 --signal_name C4-M1 --sample_num 200 --model_name resnet18 --batchsize 32 --epochs 10 --fold_num 5 --pretrained
 #python3 train_new.py --dataset_dir '/media/hypo/Hypo/physionet_org_train' --dataset_name CinC_Challenge_2018 --signal_name C4-M1 --sample_num 10 --model_name LSTM --batchsize 32 --network_save_freq 100 --epochs 10
 #python3 train.py --dataset_dir '/media/hypo/Hypo/physionet_org_train' --dataset_name CinC_Challenge_2018 --signal_name C4-M1 --sample_num 10 --model_name resnet18 --batchsize 32
@@ -19,6 +20,8 @@ class Options():
         self.parser.add_argument('--no_cudnn', action='store_true', help='if input, do not use cudnn')
         self.parser.add_argument('--pretrained', action='store_true', help='if input, use pretrained models')
         self.parser.add_argument('--lr', type=float, default=0.001,help='learning rate')
+        self.parser.add_argument('--Cross_Validation', type=str, default='k_fold',help='k-fold | subject')
+        self.parser.add_argument('--BID', type=str, default='None',help='Balance individualized differences  5_95_th | median |None')
         self.parser.add_argument('--fold_num', type=int, default=5,help='k-fold')
         self.parser.add_argument('--batchsize', type=int, default=16,help='batchsize')
         self.parser.add_argument('--dataset_dir', type=str, default='./datasets/sleep-edfx/',
@@ -27,7 +30,7 @@ class Options():
         self.parser.add_argument('--select_sleep_time', action='store_true', help='if input, for sleep-cassette only use sleep time to train')
         self.parser.add_argument('--signal_name', type=str, default='EEG Fpz-Cz',help='Choose the EEG channel C4-M1|EEG Fpz-Cz')
         self.parser.add_argument('--sample_num', type=int, default=20,help='the amount you want to load')
-        self.parser.add_argument('--model_name', type=str, default='resnet18',help='Choose model')
+        self.parser.add_argument('--model_name', type=str, default='lstm',help='Choose model')
         self.parser.add_argument('--epochs', type=int, default=50,help='end epoch')
         self.parser.add_argument('--weight_mod', type=str, default='avg_best',help='Choose weight mode: avg_best|normal')
         self.parser.add_argument('--network_save_freq', type=int, default=5,help='the freq to save network')
@@ -43,6 +46,10 @@ class Options():
 
         if self.opt.dataset_name == 'sleep-edf':
             self.opt.sample_num = 8
+        if self.opt.no_cuda:
+            self.opt.no_cudnn = True
+        if self.opt.fold_num == 0:
+            self.opt.fold_num = 1
 
 
         # if self.opt.weight_mod == 'normal':
