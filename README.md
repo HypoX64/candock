@@ -1,5 +1,6 @@
 # candock
 这是一个用于记录毕业设计的日志仓库，其目的是尝试多种不同的深度神经网络结构(如LSTM,RESNET,DFCNN等)对单通道EEG进行自动化睡眠阶段分期.我们相信这些代码同时可以用于其他生理信号(如ECG,EMG等)的分类.希望这将有助于您的研究.<br>
+![image](https://github.com/HypoX64/candock/blob/master/image/compare.png)
 ## 如何运行
 如果你需要运行这些代码（训练自己的模型或者使用预训练模型进行测试）请进入以下页面<br>
 [How to run codes](https://github.com/HypoX64/candock/blob/master/how_to_run.md)<br>
@@ -30,7 +31,7 @@
 
 * multi_scale_resnet_1d 网络结构<br>
   该网络参考[geekfeiw / Multi-Scale-1D-ResNet](https://github.com/geekfeiw/Multi-Scale-1D-ResNet)<br>
-  修改后的[网络结构如图](https://github.com/HypoX64/candock/blob/master/image/multi_scale_resnet_1d_network.png)<br>
+  修改后的[网络结构](https://github.com/HypoX64/candock/blob/master/image/multi_scale_resnet_1d_network.png)<br>
 
 * 关于交叉验证<br>
   为了便于与其他文献中的方法便于比较，使用了两种交叉验证方法<br>
@@ -42,14 +43,13 @@
   accuracy = (TP+TN)/(TP+FN+TN+FP)<br>
   recall = sensitivity = (TP)/(TP+FN)<br>
   对于总体:<br>
-
-  Top1.err.
+  Top1.err.<br>
 
 * 关于代码<br>
   目前的代码仍然在不断修改与更新中,不能确保其能工作.详细内容将会在毕业设计完成后抽空更新.<br>
 ## 部分实验结果
 该部分将持续更新... ...<br>
-[[Confusion matrix]](https://github.com/HypoX64/candock/blob/master/image/confusion_mat)<br>
+[[Confusion matrix]](https://github.com/HypoX64/candock/blob/master/confusion_mat)<br>
 
 ####  5-Fold Cross-Validation Results
 * sleep-edf<br>
