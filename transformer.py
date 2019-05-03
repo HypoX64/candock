@@ -1,9 +1,8 @@
-import numpy as np
 import os
-import torch
 import random
+import numpy as np
+import torch
 import dsp
-#python3 train.py --dataset_name sleep-edfx --model_name resnet18_1d --batchsize 16 --epochs 50 --lr 0.001 --select_sleep_time --sample_num 197
 
 def trimdata(data,num):
     return data[:num*int(len(data)/num)]
@@ -51,22 +50,26 @@ def k_fold_generator(length,fold_num):
     
     return train_sequence,test_sequence
 
-
-'''
-def batch_generator(data,target,batchsize,shuffle = True):
-    data = trimdata(data,batchsize)
-    target = trimdata(target,batchsize)
-    data = data.reshape(-1,batchsize,3000)
-    target = target.reshape(-1,batchsize)
-    signals_train,stages_train,signals_eval,stages_eval = data[0:int(0.8*len(target))],target[0:int(0.8*len(target))],data[int(0.8*len(target)):],target[int(0.8*len(target)):]
-    if shuffle:
-        shuffledata(signals_train,stages_train)
-        shuffledata(signals_eval,stages_eval)
-    return signals_train,stages_train,signals_eval,stages_eval
-'''   
 def Normalize(data,maxmin,avg,sigma):
     data = np.clip(data, -maxmin, maxmin)
     return (data-avg)/sigma
+
+def Balance_individualized_differences(signals,BID):
+
+    if BID == 'median':
+        signals = (signals*8/(np.median(abs(signals))))
+        signals=Normalize(signals,maxmin=10e3,avg=0,sigma=30)
+    elif BID == '5_95_th':
+        tmp = np.sort(signals.reshape(-1))
+        th_5 = -tmp[int(0.05*len(tmp))]
+        signals=Normalize(signals,maxmin=10e3,avg=0,sigma=th_5)
+    else:
+        #dataser 5_95_th  median
+        #CC2018  24.75   7.438
+        #sleep edfx  37.4   9.71
+        #sleep edfx sleeptime  39.03   10.125
+        signals=Normalize(signals,maxmin=10e3,avg=0,sigma=30)
+    return signals
 
 def ToTensor(data,target=None,no_cuda = False):
     if target is not None:
@@ -91,16 +94,13 @@ def random_transform_1d(data,finesize,test_flag):
         #random crop    
         move = int((length-finesize)*random.random())
         result = data[move:move+finesize]
-
         #random flip
         if random.random()<0.5:
             result = result[::-1]
-
         #random amp
         result = result*random.uniform(0.8,1.2)
 
     return result
-
 
 def random_transform_2d(img,finesize = (224,122),test_flag = True):
     h,w = img.shape[:2]
@@ -120,27 +120,23 @@ def random_transform_2d(img,finesize = (224,122),test_flag = True):
         result = result*random.uniform(0.9,1.1)+random.uniform(-0.05,0.05)
     return result
 
-
-def ToInputShape(data,net_name,BID = 'None',norm = True,test_flag = False):
-
+def ToInputShape(data,net_name,test_flag = False):
     data = data.astype(np.float32)
     batchsize=data.shape[0]
+
     if net_name=='lstm':
         result =[]
         for i in range(0,batchsize):
             randomdata=random_transform_1d(data[i],finesize = 2700,test_flag=test_flag)
             result.append(dsp.getfeature(randomdata))
-        if norm and BID != '5_95_th':
-            result = Normalize(result,maxmin = 1000,avg=0,sigma=50)
         result = np.array(result).reshape(batchsize,2700*5)
-    elif net_name in['cnn_1d','resnet18_1d','multi_scale_resnet_1d']:
+
+    elif net_name in['cnn_1d','resnet18_1d','multi_scale_resnet_1d','micro_multi_scale_resnet_1d']:
         result =[]
         for i in range(0,batchsize):
             randomdata=random_transform_1d(data[i],finesize = 2700,test_flag=test_flag)
             result.append(randomdata)
         result = np.array(result)
-        if norm and BID != '5_95_th':
-            result = Normalize(result,maxmin = 1000,avg=0,sigma=50)
         result = result.reshape(batchsize,1,2700)
 
     elif net_name in ['squeezenet','multi_scale_resnet','dfcnn','resnet18','densenet121','densenet201','resnet101','resnet50']:
@@ -150,31 +146,10 @@ def ToInputShape(data,net_name,BID = 'None',norm = True,test_flag = False):
             spectrum = random_transform_2d(spectrum,(224,122),test_flag=test_flag)
             result.append(spectrum)
         result = np.array(result)
-        if norm:
-            #sleep_def : std,mean,median = 0.4157 0.3688 0.2473
-            #challge 2018 : std,mean,median,max= 0.2972 0.3008 0.2006 2.0830
-            result=Normalize(result,2,0.3,1)
+        #datasets    th_95    avg       mid
+        # sleep_edfx 0.0458   0.0128    0.0053
+        # CC2018     0.0507   0.0161    0.00828
+        result = Normalize(result, maxmin=0.5, avg=0.0150, sigma=0.0500)
         result = result.reshape(batchsize,1,224,122)
-        # print(result.shape)
 
     return result
-
-
-# datasetpath='/media/hypo/Hypo/training'
-# dir = '/media/hypo/Hypo/training/tr03-0005'
-
-def main():
-    dir = '/media/hypo/Hypo/physionet_org_train/tr03-0052'
-    t1=time.time()
-    stages=loadstages(dir)
-    for i in range(len(stages)):
-        if stages[i]!=5:
-            print(i+1)
-            break
-    print(stages.shape)
-
-    t2=time.time()
-    print(t2-t1)
-
-if __name__ == '__main__':
-    main()

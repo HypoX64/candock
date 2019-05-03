@@ -30,8 +30,7 @@
 
 * multi_scale_resnet_1d 网络结构<br>
   该网络参考[geekfeiw / Multi-Scale-1D-ResNet](https://github.com/geekfeiw/Multi-Scale-1D-ResNet)<br>
-  修改后的网络结构如图：<br>
-  ![image](https://github.com/HypoX64/candock/blob/master/image/multi_scale_resnet_1d_network.png)<br>
+  修改后的[网络结构如图](https://github.com/HypoX64/candock/blob/master/image/multi_scale_resnet_1d_network.png)<br>
 
 * 关于交叉验证<br>
   为了便于与其他文献中的方法便于比较，使用了两种交叉验证方法<br>
@@ -43,7 +42,9 @@
   accuracy = (TP+TN)/(TP+FN+TN+FP)<br>
   recall = sensitivity = (TP)/(TP+FN)<br>
   对于总体:<br>
-  
+
+  Top1.err.
+
 * 关于代码<br>
   目前的代码仍然在不断修改与更新中,不能确保其能工作.详细内容将会在毕业设计完成后抽空更新.<br>
 ## 部分实验结果
@@ -87,4 +88,5 @@
 * 2019/04/04 需要增加k-fold+受试者交叉验证才够严谨...
 * 2019/04/05 清明节…看文献，还是按照大部分人的做法来做吧，使用5倍K-fold和数据集间的交叉验证，这样方便与其他人的方法做横向比较. 不行，这里要吐槽一下，别人做k-fold完全是因为数据集太小了…这上百Gb的数据做K-fold…真的是多此一举，结果根本不会有什么差别…完全是浪费计算资源…
 * 2019/04/09 回老家了，啊！！！！我的毕业论文啊。。。。写不完了！
-* 2019/04/13 回学校撸论文了，回去的几天莫名奇妙多了两个star...额，这也行
+* 2019/04/13 回学校撸论文了。
+* 2019/05/02 提交查重了，那这个仓库的更新将告一段落了。今天最后一次大更新。接下来我会开一个新的分支，其目的主要是考虑在实际应用方面的问题，比如运算量和准确率之间的平衡。另外，我也会提供一些不同情况的预训练模型，然很更新一下调用的接口，力求可以傻瓜式的调用我们的程序进行睡眠分期。

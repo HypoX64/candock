@@ -11,6 +11,40 @@ def stage(stages):
     util.writelog('statistics of dataset [S3 S2 S1 R W]: '+str(stage_cnt),True)
     return stage_cnt,stage_cnt_per
 
+def reversal_label(mat):
+    new_mat = np.zeros(mat.shape,dtype='int')
+    new_mat[0]=mat[4]
+    new_mat[1]=mat[2]
+    new_mat[2]=mat[1]
+    new_mat[3]=mat[0]
+    new_mat[4]=mat[3]
+
+    mat=new_mat.copy()
+
+    new_mat[:,0]=mat[:,4]
+    new_mat[:,1]=mat[:,2]
+    new_mat[:,2]=mat[:,1]
+    new_mat[:,3]=mat[:,0]
+    new_mat[:,4]=mat[:,3]
+
+    return new_mat
+
+def class_5to4(mat):
+    #[W N1 N2 N3 R] to [W N1+N2 N3 R]
+    new_mat=np.zeros((4,5),dtype='int')
+    new_mat[0] = mat[0]
+    new_mat[1] = mat[1]+mat[2]
+    new_mat[2] = mat[3]
+    new_mat[3] = mat[4]
+    mat = new_mat.copy()
+    new_mat=np.zeros((4,4),dtype='int')
+    new_mat[:,0] = mat[:,0]
+    new_mat[:,1] = mat[:,1]+mat[:,2]
+    new_mat[:,2] = mat[:,3]
+    new_mat[:,3] = mat[:,4]
+    return new_mat
+
+
 def Kappa(mat):
     mat=mat/10000 # avoid overflow
     mat_length=np.sum(mat)
