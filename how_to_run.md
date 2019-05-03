@@ -35,7 +35,7 @@ python3 train.py --dataset_dir './datasets/sleep-edfx/' --dataset_name sleep-edf
 If want to use cpu to train or test, please input --no_cuda
 
 ### Simple Test
-* Download pretrained model & simple test data  [[Google Drive]](https://drive.google.com/open?id=1pup2_tZFGQQwB-hoXRjpMxiD4Vmpn0Lf)
+* Download pretrained model & simple test data  [[Google Drive]](https://drive.google.com/open?id=1pup2_tZFGQQwB-hoXRjpMxiD4Vmpn0Lf)   [[百度云,dh88]](https://pan.baidu.com/s/1dGobTMVa_4u2HLky6bmbsA)
 * Input your options and run
 ```bash
 python3 simple_test.py
