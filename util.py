@@ -13,4 +13,6 @@ def writelog(log,printflag = False):
         print(log)
 
 def show_paramsnumber(net):
-    writelog('net parameters:'+str(sum(param.numel() for param in net.parameters())),True)
+    parameters = sum(param.numel() for param in net.parameters())
+    parameters = round(parameters/1e6,2)
+    writelog('net parameters: '+str(parameters)+'M',True)

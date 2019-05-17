@@ -107,8 +107,7 @@ def loaddata_sleep_edfx(filedir,filename,signal_name,BID,select_sleep_time):
     events, _ = mne.events_from_annotations(
         raw_data, event_id=event_id, chunk_duration=30.)
 
-    stages = []
-    signals =[]
+    stages = [];signals =[]
     for i in range(len(events)-1):
         stages.append(events[i][2])
         signals.append(eeg[events[i][0]:events[i][0]+3000])
@@ -129,38 +128,63 @@ def loaddata_sleep_edfx(filedir,filename,signal_name,BID,select_sleep_time):
     return signals.astype(np.float16),stages.astype(np.int16)
 
 #load all data in datasets
-def loaddataset(filedir,dataset_name,signal_name,num,BID,select_sleep_time,shuffle = True):
+def loaddataset(filedir,dataset_name,signal_name,num,BID,select_sleep_time,shuffle = False):
     print('load dataset, please wait...')
-    filenames = os.listdir(filedir)
-    if shuffle:
-        random.shuffle(filenames)
-    signals=[]
-    stages=[]
+
+    signals_train=[];stages_train=[];signals_test=[];stages_test=[] 
 
     if dataset_name == 'cc2018':
+        filenames = os.listdir(filedir)
+        if shuffle:
+            random.shuffle(filenames)
+        else:
+            filenames.sort()
+
         if num > len(filenames):
             num = len(filenames)
             print('num of dataset is:',num)
 
         for cnt,filename in enumerate(filenames[:num],0):
-            try:
-                signal,stage = loaddata_cc2018(filedir,filename,signal_name,BID = BID)
-                signals,stages = connectdata(signal,stage,signals,stages)
-            except Exception as e:
-                print(filename,e)
+            signal,stage = loaddata_cc2018(filedir,filename,signal_name,BID = BID)
+            if cnt < round(num*0.8) :
+                signals_train,stages_train = connectdata(signal,stage,signals_train,stages_train)
+            else:
+                signals_test,stages_test = connectdata(signal,stage,signals_test,stages_test)
+        print('train subjects:',round(num*0.8),'test subjects:',round(num*0.2))
 
-    elif dataset_name in ['sleep-edfx','sleep-edf']:
+    elif dataset_name == 'sleep-edfx':
         if num > 197:
             num = 197
-        if dataset_name == 'sleep-edf':
-            filenames = ['SC4002E0-PSG.edf','SC4012E0-PSG.edf','SC4102E0-PSG.edf','SC4112E0-PSG.edf',
-            'ST7022J0-PSG.edf','ST7052J0-PSG.edf','ST7121J0-PSG.edf','ST7132J0-PSG.edf']        
-        cnt = 0
-        for filename in filenames:
-            if 'PSG' in filename:
-                signal,stage = loaddata_sleep_edfx(filedir,filename,signal_name,BID,select_sleep_time)
-                signals,stages = connectdata(signal,stage,signals,stages)
-                cnt += 1
-                if cnt == num:
-                    break
-    return signals,stages
+
+        filenames_sc_train = ['SC4001E0-PSG.edf', 'SC4002E0-PSG.edf', 'SC4011E0-PSG.edf', 'SC4012E0-PSG.edf', 'SC4021E0-PSG.edf', 'SC4022E0-PSG.edf', 'SC4031E0-PSG.edf', 'SC4032E0-PSG.edf', 'SC4041E0-PSG.edf', 'SC4042E0-PSG.edf', 'SC4051E0-PSG.edf', 'SC4052E0-PSG.edf', 'SC4061E0-PSG.edf', 'SC4062E0-PSG.edf', 'SC4071E0-PSG.edf', 'SC4072E0-PSG.edf', 'SC4081E0-PSG.edf', 'SC4082E0-PSG.edf', 'SC4091E0-PSG.edf', 'SC4092E0-PSG.edf', 'SC4101E0-PSG.edf', 'SC4102E0-PSG.edf', 'SC4111E0-PSG.edf', 'SC4112E0-PSG.edf', 'SC4121E0-PSG.edf', 'SC4122E0-PSG.edf', 'SC4131E0-PSG.edf', 'SC4141E0-PSG.edf', 'SC4142E0-PSG.edf', 'SC4151E0-PSG.edf', 'SC4152E0-PSG.edf', 'SC4161E0-PSG.edf', 'SC4162E0-PSG.edf', 'SC4171E0-PSG.edf', 'SC4172E0-PSG.edf', 'SC4181E0-PSG.edf', 'SC4182E0-PSG.edf', 'SC4191E0-PSG.edf', 'SC4192E0-PSG.edf', 'SC4201E0-PSG.edf', 'SC4202E0-PSG.edf', 'SC4211E0-PSG.edf', 'SC4212E0-PSG.edf', 'SC4221E0-PSG.edf', 'SC4222E0-PSG.edf', 'SC4231E0-PSG.edf', 'SC4232E0-PSG.edf', 'SC4241E0-PSG.edf', 'SC4242E0-PSG.edf', 'SC4251E0-PSG.edf', 'SC4252E0-PSG.edf', 'SC4261F0-PSG.edf', 'SC4262F0-PSG.edf', 'SC4271F0-PSG.edf', 'SC4272F0-PSG.edf', 'SC4281G0-PSG.edf', 'SC4282G0-PSG.edf', 'SC4291G0-PSG.edf', 'SC4292G0-PSG.edf', 'SC4301E0-PSG.edf', 'SC4302E0-PSG.edf', 'SC4311E0-PSG.edf', 'SC4312E0-PSG.edf', 'SC4321E0-PSG.edf', 'SC4322E0-PSG.edf', 'SC4331F0-PSG.edf', 'SC4332F0-PSG.edf', 'SC4341F0-PSG.edf', 'SC4342F0-PSG.edf', 'SC4351F0-PSG.edf', 'SC4352F0-PSG.edf', 'SC4362F0-PSG.edf', 'SC4371F0-PSG.edf', 'SC4372F0-PSG.edf', 'SC4381F0-PSG.edf', 'SC4382F0-PSG.edf', 'SC4401E0-PSG.edf', 'SC4402E0-PSG.edf', 'SC4411E0-PSG.edf', 'SC4412E0-PSG.edf', 'SC4421E0-PSG.edf', 'SC4422E0-PSG.edf', 'SC4431E0-PSG.edf', 'SC4432E0-PSG.edf', 'SC4441E0-PSG.edf', 'SC4442E0-PSG.edf', 'SC4451F0-PSG.edf', 'SC4452F0-PSG.edf', 'SC4461F0-PSG.edf', 'SC4462F0-PSG.edf', 'SC4471F0-PSG.edf', 'SC4472F0-PSG.edf', 'SC4481F0-PSG.edf', 'SC4482F0-PSG.edf', 'SC4491G0-PSG.edf', 'SC4492G0-PSG.edf', 'SC4501E0-PSG.edf', 'SC4502E0-PSG.edf', 'SC4511E0-PSG.edf', 'SC4512E0-PSG.edf', 'SC4522E0-PSG.edf', 'SC4531E0-PSG.edf', 'SC4532E0-PSG.edf', 'SC4541F0-PSG.edf', 'SC4542F0-PSG.edf', 'SC4551F0-PSG.edf', 'SC4552F0-PSG.edf', 'SC4561F0-PSG.edf', 'SC4562F0-PSG.edf', 'SC4571F0-PSG.edf', 'SC4572F0-PSG.edf', 'SC4581G0-PSG.edf', 'SC4582G0-PSG.edf', 'SC4591G0-PSG.edf', 'SC4592G0-PSG.edf', 'SC4601E0-PSG.edf', 'SC4602E0-PSG.edf', 'SC4611E0-PSG.edf', 'SC4612E0-PSG.edf', 'SC4621E0-PSG.edf', 'SC4622E0-PSG.edf', 'SC4631E0-PSG.edf', 'SC4632E0-PSG.edf']
+        filenames_sc_test = ['SC4641E0-PSG.edf', 'SC4642E0-PSG.edf', 'SC4651E0-PSG.edf', 'SC4652E0-PSG.edf', 'SC4661E0-PSG.edf', 'SC4662E0-PSG.edf', 'SC4671G0-PSG.edf', 'SC4672G0-PSG.edf', 'SC4701E0-PSG.edf', 'SC4702E0-PSG.edf', 'SC4711E0-PSG.edf', 'SC4712E0-PSG.edf', 'SC4721E0-PSG.edf', 'SC4722E0-PSG.edf', 'SC4731E0-PSG.edf', 'SC4732E0-PSG.edf', 'SC4741E0-PSG.edf', 'SC4742E0-PSG.edf', 'SC4751E0-PSG.edf', 'SC4752E0-PSG.edf', 'SC4761E0-PSG.edf', 'SC4762E0-PSG.edf', 'SC4771G0-PSG.edf', 'SC4772G0-PSG.edf', 'SC4801G0-PSG.edf', 'SC4802G0-PSG.edf', 'SC4811G0-PSG.edf', 'SC4812G0-PSG.edf', 'SC4821G0-PSG.edf', 'SC4822G0-PSG.edf']
+        filenames_st_train = ['ST7011J0-PSG.edf', 'ST7012J0-PSG.edf', 'ST7021J0-PSG.edf', 'ST7022J0-PSG.edf', 'ST7041J0-PSG.edf', 'ST7042J0-PSG.edf', 'ST7051J0-PSG.edf', 'ST7052J0-PSG.edf', 'ST7061J0-PSG.edf', 'ST7062J0-PSG.edf', 'ST7071J0-PSG.edf', 'ST7072J0-PSG.edf', 'ST7081J0-PSG.edf', 'ST7082J0-PSG.edf', 'ST7091J0-PSG.edf', 'ST7092J0-PSG.edf', 'ST7101J0-PSG.edf', 'ST7102J0-PSG.edf', 'ST7111J0-PSG.edf', 'ST7112J0-PSG.edf', 'ST7121J0-PSG.edf', 'ST7122J0-PSG.edf', 'ST7131J0-PSG.edf', 'ST7132J0-PSG.edf', 'ST7141J0-PSG.edf', 'ST7142J0-PSG.edf', 'ST7151J0-PSG.edf', 'ST7152J0-PSG.edf', 'ST7161J0-PSG.edf', 'ST7162J0-PSG.edf', 'ST7171J0-PSG.edf', 'ST7172J0-PSG.edf', 'ST7181J0-PSG.edf', 'ST7182J0-PSG.edf', 'ST7191J0-PSG.edf', 'ST7192J0-PSG.edf']
+        filenames_st_test = ['ST7201J0-PSG.edf', 'ST7202J0-PSG.edf', 'ST7211J0-PSG.edf', 'ST7212J0-PSG.edf', 'ST7221J0-PSG.edf', 'ST7222J0-PSG.edf', 'ST7241J0-PSG.edf', 'ST7242J0-PSG.edf']
+
+        for filename in filenames_sc_train[:round(num*153/197*0.8)]:
+            signal,stage = loaddata_sleep_edfx(filedir,filename,signal_name,BID,select_sleep_time)
+            signals_train,stages_train = connectdata(signal,stage,signals_train,stages_train)
+
+        for filename in filenames_st_train[:round(num*44/197*0.8)]:
+            signal,stage = loaddata_sleep_edfx(filedir,filename,signal_name,BID,select_sleep_time)
+            signals_train,stages_train = connectdata(signal,stage,signals_train,stages_train)
+        
+        for filename in filenames_sc_test[:round(num*153/197*0.2)]:
+            signal,stage = loaddata_sleep_edfx(filedir,filename,signal_name,BID,select_sleep_time)
+            signals_test,stages_test = connectdata(signal,stage,signals_test,stages_test)
+
+        for filename in filenames_st_test[:round(num*44/197*0.2)]:
+            signal,stage = loaddata_sleep_edfx(filedir,filename,signal_name,BID,select_sleep_time)
+            signals_test,stages_test = connectdata(signal,stage,signals_test,stages_test)
+
+        print('---------Each subject has two sample---------',
+            '\nTrain samples_SC/ST:',round(num*153/197*0.8),round(num*44/197*0.8),
+            '\nTest samples_SC/ST:',round(num*153/197*0.2),round(num*44/197*0.2))
+    
+    elif dataset_name == 'preload':
+        signals_train = np.load(filedir+'/signals_train.npy')
+        stages_train = np.load(filedir+'/stages_train.npy')
+        signals_test = np.load(filedir+'/signals_test.npy')
+        stages_test = np.load(filedir+'/stages_test.npy')
+
+    return signals_train,stages_train,signals_test,stages_test

@@ -42,7 +42,8 @@ def BPF(signal,fs,fc1,fc2,mod = 'fir'):
         b=getfir_b(fc1,fc2,fs)
         result = scipy.signal.lfilter(b, 1, signal)
     return result
-def getfeature(signal,mod = 'fir',ch_num = 5):
+
+def getfeature(signal,mod = 'fft',ch_num = 5):
     result=[]
     signal =signal - np.mean(signal)
     eeg=signal
@@ -68,19 +69,6 @@ def getfeature(signal,mod = 'fir',ch_num = 5):
     result=result.reshape(ch_num*len(signal),)
     return result
 
-# def signal2spectrum(signal):
-#     spectrum =np.zeros((224,224))
-#     spectrum_y = np.zeros((224))
-#     for i in range(224):
-#         signal_window=signal[i*9:i*9+896]
-#         signal_window_fft=np.abs(np.fft.fft(signal_window))[0:448]
-#         spectrum_y[0:112]=signal_window_fft[0:112]
-#         spectrum_y[112:168]=signal_window_fft[112:224][::2]
-#         spectrum_y[168:224]=signal_window_fft[224:448][::4]
-#         spectrum[:,i] = spectrum_y
-#     # spectrum = np.log(spectrum+1)/11
-#     return spectrum
-
 # def signal2spectrum(data):
 #     # window : ('tukey',0.5) hann
 
@@ -96,7 +84,7 @@ def getfeature(signal,mod = 'fir',ch_num = 5):
 def signal2spectrum(data):
     # window : ('tukey',0.5) hann
 
-    zxx = scipy.signal.stft(data, fs=100, window=('tukey',0.5), nperseg=1024, noverlap=1024-24, nfft=1024, detrend=False, return_onesided=True, boundary='zeros', padded=True, axis=-1)[2]
+    zxx = scipy.signal.stft(data, fs=100, window='hann', nperseg=1024, noverlap=1024-24, nfft=1024, detrend=False, return_onesided=True, boundary='zeros', padded=True, axis=-1)[2]
     zxx =np.abs(zxx)[:512]
     spectrum=np.zeros((256,126))
     spectrum[0:128]=zxx[0:128]

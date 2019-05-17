@@ -1,25 +1,33 @@
 # candock
-这是一个用于记录毕业设计的日志仓库，其目的是尝试多种不同的深度神经网络结构(如LSTM,RESNET,DFCNN等)对单通道EEG进行自动化睡眠阶段分期.我们相信这些代码同时可以用于其他生理信号(如ECG,EMG等)的分类.希望这将有助于您的研究.<br>
+[这原本是一个用于记录毕业设计的日志仓库](<https://github.com/HypoX64/candock/tree/Graduation_Project>)，其目的是尝试多种不同的深度神经网络结构(如LSTM,ResNet,DFCNN等)对单通道EEG进行自动化睡眠阶段分期.<br>目前，毕业设计已经完成，我将继续跟进这个项目。项目重点将转变为如何将代码进行实际应用，我们将考虑运算量与准确率之间的平衡。另外，将提供一些预训练的模型便于使用。<br>同时我们相信这些代码也可以用于其他生理信号(如ECG,EMG等)的分类.希望这将有助于您的研究或项目.<br>
 ![image](https://github.com/HypoX64/candock/blob/master/image/compare.png)
+
 ## 如何运行
-如果你需要运行这些代码（训练自己的模型或者使用预训练模型进行测试）请进入以下页面<br>
+如果你需要运行这些代码（训练自己的模型或者使用预训练模型对自己的数据进行预测）请进入以下页面<br>
 [How to run codes](https://github.com/HypoX64/candock/blob/master/how_to_run.md)<br>
+
 ## 数据集
-使用了三个睡眠数据集进行测试,分别是:   [[CinC Challenge 2018]](https://physionet.org/physiobank/database/challenge/2018/#files)    [[sleep-edf]](https://www.physionet.org/physiobank/database/sleep-edf/)   [[sleep-edfx]](https://www.physionet.org/physiobank/database/sleep-edfx/) <br>
-对于CinC Challenge 2018数据集,使用其C4-M1通道<br>对于sleep-edfx与sleep-edf数据集,使用Fpz-Cz通道<br>
-值得注意的是:sleep-edfx是sleep-edf的扩展版本.<br>
+使用了两个公开的睡眠数据集进行训练，分别是:   [[CinC Challenge 2018]](https://physionet.org/physiobank/database/challenge/2018/#files)     [[sleep-edfx]](https://www.physionet.org/physiobank/database/sleep-edfx/) <br>
+对于CinC Challenge 2018数据集,我们仅使用其C4-M1通道, 对于sleep-edfx与sleep-edf数据集,使用Fpz-Cz通道<br>
+注意：<br>
+1.如果需要获得其他EEG通道的预训练模型，这需要下载这两个数据集并使用train.py完成训练。当然，你也可以使用自己的数据训练模型。<br>
+2.对于sleep-edfx数据集,我们仅仅截取了入睡前30分钟到醒来后30分钟之间的睡眠区间作为读入数据(实验结果中用select sleep time 进行标注),目的是平衡各睡眠时期的比例并加快训练速度.<br>
 
 ## 一些说明
-* 对数据集进行的处理<br>
-  读取数据集各样本后分割为30s/Epoch作为一个输入,共有5个标签,分别是Sleep stage 3,2,1,R,W,将分割后的eeg信号与睡眠阶段标签进行一一对应<br>
-
-  注意:对于sleep-edfx数据集,我们仅仅截取了入睡前30分钟到醒来后30分钟之间的睡眠区间作为读入数据(实验结果中用only sleep time 进行标注),目的是平衡各睡眠时期的比例并加快训练速度.
-
 * 数据预处理<br>
-  对于不同的网络结构,对原始eeg信号采取了预处理,使其拥有不同的shape:<br>
+
+  1.降采样：CinC Challenge 2018数据集的EEG信号将被降采样到100HZ<br>
+
+  2.归一化处理：我们推荐每个受试者的EEG信号均采用5th-95th分位数归一化，即第5%大的数据为0，第95%大的数据为1。注意：所有预训练模型均按照这个方法进行归一化后训练得到<br>
+
+  3.将读取的数据分割为30s/Epoch作为一个输入，每个输入包含3000个数据点。睡眠阶段标签为5个分别是N3,N2,N1,REM,W.每个Epoch的数据将对应一个标签。标签映射：N3(S4+S3)->0  N2->1  N1->2  REM->3  W->4<br>
+
+  4.数据集扩充：训练时，对每一个Epoch的数据均要进行随机切，随机翻转，随机改变信号幅度等操作<br>
+
+  5.对于不同的网络结构,对原始eeg信号采取了预处理,使其拥有不同的shape:<br>
   LSTM:将30s的eeg信号进行FIR带通滤波,获得θ,σ,α,δ,β波,并将它们进行连接后作为输入数据<br>
-  resnet_1d:这里使用resnet的一维形式进行实验,(修改nn.Conv2d为nn.Conv1d).<br>
-  DFCNN:将30s的eeg信号进行短时傅里叶变换,并生成频谱图作为输入,并使用图像分类网络进行分类.<br>
+  CNN_1d类(标有1d的网络):没有什么特别的操作，其实就是把图像领域的各种模型换成Conv1d之后拿过来用而已<br>
+  DFCNN类(就是科大讯飞的那种想法，先转化为频谱图，然后直接用图像分类的各种模型):将30s的eeg信号进行短时傅里叶变换,并生成频谱图作为输入,并使用图像分类网络进行分类。我们不推荐使用这种方法，因为转化为频谱图需要耗费较大的运算资源。<br>
 
 * EEG频谱图<br>
   这里展示5个睡眠阶段对应的频谱图,它们依次是Wake, Stage 1, Stage 2, Stage 3, REM<br>
@@ -30,63 +38,27 @@
   ![image](https://github.com/HypoX64/candock/blob/master/image/spectrum_REM.png)<br>
 
 * multi_scale_resnet_1d 网络结构<br>
-  该网络参考[geekfeiw / Multi-Scale-1D-ResNet](https://github.com/geekfeiw/Multi-Scale-1D-ResNet)<br>
+  该网络参考[geekfeiw / Multi-Scale-1D-ResNet](https://github.com/geekfeiw/Multi-Scale-1D-ResNet)     这个网络将被我们命名为micro_multi_scale_resnet_1d<br>
   修改后的[网络结构](https://github.com/HypoX64/candock/blob/master/image/multi_scale_resnet_1d_network.png)<br>
 
-* 关于交叉验证<br>
-  为了便于与其他文献中的方法便于比较，使用了两种交叉验证方法<br>
-  1.对于同一数据集，采用5倍K-fold交叉验证<br>
-  2.在不同数据集间进行交叉验证<br>
+* 关于交叉验证<br>为了更好的进行实际应用，我们将使用受试者交叉验证。即训练集和验证集的数据来自于不同的受试者。值得注意的是sleep-edfx数据集中每个受试者均有两个样本，我们视两个样本为同一个受试者，很多paper忽略了这一点，手动滑稽。<br>
 
 * 关于评估指标<br>
-  对于各标签:<br>
-  accuracy = (TP+TN)/(TP+FN+TN+FP)<br>
-  recall = sensitivity = (TP)/(TP+FN)<br>
-  对于总体:<br>
-  Top1.err.<br>
+  对于各睡眠阶段标签:  Accuracy = (TP+TN)/(TP+FN+TN+FP)   Recall = sensitivity = (TP)/(TP+FN)<br>
+  对于总体:   Top1 err.    Kappa    另外对Acc与Re做平均<br>
+  特别说明：这项分类任务中样本标签分布及不平衡，为了更具说服力，我们的平均并不加权。
 
-* 关于代码<br>
-  目前的代码仍然在不断修改与更新中,不能确保其能工作.详细内容将会在毕业设计完成后抽空更新.<br>
 ## 部分实验结果
 该部分将持续更新... ...<br>
 [[Confusion matrix]](https://github.com/HypoX64/candock/blob/master/confusion_mat)<br>
 
-####  5-Fold Cross-Validation Results
-* sleep-edf<br>
-
-  | Network                  | Label average recall | Label average accuracy | error rate |
-  | :----------------------- | :------------------- | ---------------------- | ---------- |
-  | lstm                     |                      |                        |            |
-  | resnet18_1d              | 0.8263               | 0.9601                 | 0.0997     |
-  | DFCNN+resnet18           | 0.8261               | 0.9594                 | 0.1016     |
-  | DFCNN+multi_scale_resnet | 0.8196               | 0.9631                 | 0.0922     |
-  | multi_scale_resnet_1d    | 0.8400               | 0.9595                 | 0.1013     |
-
-* sleep-edfx(only sleep time)<br>
-
-  | Network        | Label average recall | Label average accuracy | error rate |
-  | :------------- | :------------------- | ---------------------- | ---------- |
-  | lstm           |                      |                        |            |
-  | resnet18_1d    |                      |                        |            |
-  | DFCNN+resnet18 |                      |                        |            |
-  | DFCNN+resnet50 |                      |                        |            |
-
-* CinC Challenge 2018(sample size = 100)<br>
-
-  | Network        | Label average recall | Label average accuracy | error rate |
-  | :------------- | :------------------- | ---------------------- | ---------- |
-  | lstm           |                      |                        |            |
-  | resnet18_1d    |                      |                        |            |
-  | DFCNN+resnet18 | 0.7823               | 0.909                  | 0.2276     |
-  | DFCNN+resnet50 |                      |                        |            |
-
 #### Subject Cross-Validation Results
+特别说明：这项分类任务中样本标签分布及不平衡，我们对分类损失函数中的类别权重进行了魔改，这将使得Average Recall得到小幅提升，但同时整体error也将提升.若使用默认权重，Top1 err.至少下降5%,但这会导致数据占比极小的N1时期的recall猛跌20%，这绝对不是我们在实际应用中所希望看到的。下面给出的结果均是使用魔改后的权重得到的。<br>
+* [sleep-edfx](https://www.physionet.org/physiobank/database/sleep-edfx/)  ->sample size = 197, select sleep time
 
-## 心路历程
-* 2019/04/01 DFCNN的运算量也忒大了,提升还不明显,还容易过拟合......真是食之无味,弃之可惜...
-* 2019/04/03 花了一天更新到pytorch 1.0, 然后尝试了一下缩小输入频谱图的尺寸从而减小运算量... 
-* 2019/04/04 需要增加k-fold+受试者交叉验证才够严谨...
-* 2019/04/05 清明节…看文献，还是按照大部分人的做法来做吧，使用5倍K-fold和数据集间的交叉验证，这样方便与其他人的方法做横向比较. 不行，这里要吐槽一下，别人做k-fold完全是因为数据集太小了…这上百Gb的数据做K-fold…真的是多此一举，结果根本不会有什么差别…完全是浪费计算资源…
-* 2019/04/09 回老家了，啊！！！！我的毕业论文啊。。。。写不完了！
-* 2019/04/13 回学校撸论文了。
-* 2019/05/02 提交查重了，那这个仓库的更新将告一段落了。今天最后一次大更新。接下来我会开一个新的分支，其目的主要是考虑在实际应用方面的问题，比如运算量和准确率之间的平衡。另外，我也会提供一些不同情况的预训练模型，然很更新一下调用的接口，力求可以傻瓜式的调用我们的程序进行睡眠分期。
+| Network                     | Parameters | Top1.err. | Avg. Acc. | Avg. Re. | Need to extract feature |
+| --------------------------- | ---------- | --------- | --------- | -------- | ----------------------- |
+| lstm                        | 1.25M      | 26.32%    | 93.56%    | 68.57%   | Yes                     |
+| micro_multi_scale_resnet_1d | 2.11M      | 25.33%    | 93.87%    | 72.61%   | No                      |
+| resnet18_1d                 | 3.85M      | 24.21%    | 94.07%    | 72.87%   | No                      |
+| multi_scale_resnet_1d       | 8.42M      | 24.01%    | 94.06%    | 72.37%   | No                      |

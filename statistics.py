@@ -8,7 +8,7 @@ def stage(stages):
     for i in range(len(stages)):
         stage_cnt[stages[i]] += 1
     stage_cnt_per = stage_cnt/len(stages) 
-    util.writelog('statistics of dataset [S3 S2 S1 R W]: '+str(stage_cnt),True)
+    util.writelog('     dataset statistics [S3 S2 S1 R W]: '+str(stage_cnt),True)
     return stage_cnt,stage_cnt_per
 
 def reversal_label(mat):
