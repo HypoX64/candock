@@ -11,13 +11,12 @@ from creatnet import CreatNet
 
 '''
 @hypox64
-19/04/13
+19/05/18
 download pretrained model and test data here:
-https://drive.google.com/open?id=1pup2_tZFGQQwB-hoXRjpMxiD4Vmpn0Lf
+https://drive.google.com/open?id=1NTtLmT02jqlc81lhtzQ7GlPK8epuHfU5
 '''
 opt = Options().getparse()
 #choose and creat model
-opt.model_name = 'lstm'
 net=CreatNet(opt.model_name)
 
 if not opt.no_cuda:
