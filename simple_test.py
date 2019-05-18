@@ -17,7 +17,7 @@ https://drive.google.com/open?id=1pup2_tZFGQQwB-hoXRjpMxiD4Vmpn0Lf
 '''
 opt = Options().getparse()
 #choose and creat model
-opt.model_name = 'micro_multi_scale_resnet_1d'
+opt.model_name = 'lstm'
 net=CreatNet(opt.model_name)
 
 if not opt.no_cuda:

@@ -47,14 +47,14 @@ t2 = time.time()
 print('load data cost time: %.2f'% (t2-t1),'s')
 
 net=CreatNet(opt.model_name)
-torch.save(net.cpu().state_dict(),'./checkpoints/'+opt.model_name+'.pth')
 util.show_paramsnumber(net)
 
 weight = np.array([1,1,1,1,1])
 if opt.weight_mod == 'avg_best':
     weight = np.log(1/stage_cnt_per)
     weight[2] = weight[2]+1
-    weight = np.clip(weight,1,3)
+    weight = weight/np.median(weight)
+    weight = np.clip(weight, 0.8, 2)
 print('Loss_weight:',weight)
 weight = torch.from_numpy(weight).float()
 # print(net)

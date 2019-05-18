@@ -15,7 +15,7 @@ class Options():
         self.parser.add_argument('--no_cuda', action='store_true', help='if input, do not use gpu')
         self.parser.add_argument('--no_cudnn', action='store_true', help='if input, do not use cudnn')
         self.parser.add_argument('--pretrained', action='store_true', help='if input, use pretrained models')
-        self.parser.add_argument('--lr', type=float, default=0.0005,help='learning rate')
+        self.parser.add_argument('--lr', type=float, default=0.001,help='learning rate')
         self.parser.add_argument('--BID', type=str, default='5_95_th',help='Balance individualized differences  5_95_th | median |None')
         self.parser.add_argument('--batchsize', type=int, default=64,help='batchsize')
         self.parser.add_argument('--dataset_dir', type=str, default='./datasets/sleep-edfx/',
