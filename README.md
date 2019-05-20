@@ -62,3 +62,11 @@
 | micro_multi_scale_resnet_1d | 2.11M      | 25.33%    | 89.87%    | 72.61%   | No                      |
 | resnet18_1d                 | 3.85M      | 24.21%    | 90.31%    | 72.87%   | No                      |
 | multi_scale_resnet_1d       | 8.42M      | 24.01%    | 90.40%    | 72.37%   | No                      |
+* [CinC Challenge 2018](https://physionet.org/physiobank/database/challenge/2018/#files)  ->sample size = 994
+
+| Network                     | Parameters | Top1.err. | Avg. Acc. | Avg. Re. | Need to extract feature |
+| --------------------------- | ---------- | --------- | --------- | -------- | ----------------------- |
+| lstm                        | 1.25M      | 26.85%    | 89.26%    | 71.39%   | Yes                     |
+| micro_multi_scale_resnet_1d | 2.11M      |           |           |          | No                      |
+| resnet18_1d                 | 3.85M      |           |           |          | No                      |
+| multi_scale_resnet_1d       | 8.42M      |           |           |          | No                      |

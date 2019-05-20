@@ -63,9 +63,10 @@ if not opt.no_cuda:
     weight = weight.cuda()
 if opt.pretrained:
     net.load_state_dict(torch.load('./checkpoints/pretrained/'+opt.dataset_name+'/'+opt.model_name+'.pth'))
+if opt.continue_train:
+    net.load_state_dict(torch.load('./checkpoints/last.pth'))
 if not opt.no_cudnn:
     torch.backends.cudnn.benchmark = True
-
 
 optimizer = torch.optim.Adam(net.parameters(), lr=opt.lr)
 # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.8)
@@ -130,11 +131,12 @@ for epoch in range(opt.epochs):
     confusion_mats.append(confusion_mat)
     # scheduler.step()
 
+    torch.save(net.cpu().state_dict(),'./checkpoints/last.pth')
     if (epoch+1)%opt.network_save_freq == 0:
         torch.save(net.cpu().state_dict(),'./checkpoints/'+opt.model_name+'_epoch'+str(epoch+1)+'.pth')
         print('network saved.')
-        if not opt.no_cuda:
-            net.cuda()
+    if not opt.no_cuda:
+        net.cuda()
 
     t2=time.time()
     if epoch+1==1:
