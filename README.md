@@ -67,6 +67,6 @@
 | Network                     | Parameters | Top1.err. | Avg. Acc. | Avg. Re. | Need to extract feature |
 | --------------------------- | ---------- | --------- | --------- | -------- | ----------------------- |
 | lstm                        | 1.25M      | 26.85%    | 89.26%    | 71.39%   | Yes                     |
-| micro_multi_scale_resnet_1d | 2.11M      |           |           |          | No                      |
-| resnet18_1d                 | 3.85M      |           |           |          | No                      |
-| multi_scale_resnet_1d       | 8.42M      |           |           |          | No                      |
+| micro_multi_scale_resnet_1d | 2.11M      | 27.01%    | 89.20%    | 73.12%   | No                      |
+| resnet18_1d                 | 3.85M      | 25.84%    | 89.66%    | 73.32%   | No                      |
+| multi_scale_resnet_1d       | 8.42M      | 25.27%    | 89.89%    | 73.63%   | No                      |
