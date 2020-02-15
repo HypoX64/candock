@@ -12,24 +12,30 @@ class Options():
         self.initialized = False
 
     def initialize(self):
+        #base
         self.parser.add_argument('--no_cuda', action='store_true', help='if input, do not use gpu')
         self.parser.add_argument('--no_cudnn', action='store_true', help='if input, do not use cudnn')
+        self.parser.add_argument('--label', type=int, default=5,help='number of labels')
+        self.parser.add_argument('--label_name', type=str, default='auto',help='name of labels')
         self.parser.add_argument('--pretrained', action='store_true', help='if input, use pretrained models')
         self.parser.add_argument('--continue_train', action='store_true', help='if input, continue train')
         self.parser.add_argument('--lr', type=float, default=0.001,help='learning rate')
-        self.parser.add_argument('--BID', type=str, default='5_95_th',help='Balance individualized differences  5_95_th | median |None')
+        self.parser.add_argument('--model_name', type=str, default='lstm',help='Choose model  lstm | multi_scale_resnet_1d | resnet18 |...')
         self.parser.add_argument('--batchsize', type=int, default=64,help='batchsize')
         self.parser.add_argument('--dataset_dir', type=str, default='./datasets/sleep-edfx/',
                                 help='your dataset path')
-        self.parser.add_argument('--dataset_name', type=str, default='sleep-edfx',help='Choose dataset sleep-edfx | cc2018')
+        self.parser.add_argument('--epochs', type=int, default=20,help='end epoch')
+        self.parser.add_argument('--weight_mod', type=str, default='normal',help='Choose weight mode: avg_best|normal')
+        self.parser.add_argument('--network_save_freq', type=int, default=5,help='the freq to save network')
+        self.parser.add_argument('--dataset_name', type=str, default='sleep-edfx',
+            help='Choose dataset preload | sleep-edfx | cc2018  ,preload:your data, sleep-edfx&cc2018:sleep stage')
+
+        #EEG datasets  
+        self.parser.add_argument('--BID', type=str, default='5_95_th',help='Balance individualized differences  5_95_th | median |None')
         self.parser.add_argument('--select_sleep_time', action='store_true', help='if input, for sleep-cassette only use sleep time to train')
         self.parser.add_argument('--signal_name', type=str, default='EEG Fpz-Cz',help='Choose the EEG channel C4-M1 | EEG Fpz-Cz |...')
         self.parser.add_argument('--sample_num', type=int, default=20,help='the amount you want to load')
-        self.parser.add_argument('--model_name', type=str, default='lstm',help='Choose model  lstm | multi_scale_resnet_1d | resnet18 |...')
-        self.parser.add_argument('--epochs', type=int, default=20,help='end epoch')
-        self.parser.add_argument('--weight_mod', type=str, default='avg_best',help='Choose weight mode: avg_best|normal')
-        self.parser.add_argument('--network_save_freq', type=int, default=5,help='the freq to save network')
-
+        
         self.initialized = True
 
     def getparse(self):
@@ -41,5 +47,14 @@ class Options():
             self.opt.sample_num = 8
         if self.opt.no_cuda:
             self.opt.no_cudnn = True
+
+        if self.opt.label_name == 'auto':
+            if self.opt.dataset_name == 'sleep-edf' or self.opt.dataset_name == 'sleep-edfx' or self.opt.dataset_name == 'cc2018':
+                self.opt.label_name = ["N3", "N2", "N1", "REM","W"]
+            else:
+                names = []
+                for i in range(self.opt.label):
+                    names.append(str(i))
+                self.opt.label_name = names
 
         return self.opt

@@ -2,47 +2,47 @@ import numpy as np
 import matplotlib.pyplot as plt
 import util
 
-def stage(stages):	
-    #N3->0  N2->1  N1->2  REM->3  W->4
-    stage_cnt=np.array([0,0,0,0,0])
+def stage(opt,stages):	
+    #sleep stage: N3->0  N2->1  N1->2  REM->3  W->4
+    stage_cnt=np.zeros(opt.label,dtype=np.int64)
     for i in range(len(stages)):
         stage_cnt[stages[i]] += 1
     stage_cnt_per = stage_cnt/len(stages) 
-    util.writelog('     dataset statistics [S3 S2 S1 R W]: '+str(stage_cnt),True)
+    util.writelog(str(stage_cnt),True)
     return stage_cnt,stage_cnt_per
 
-def reversal_label(mat):
-    new_mat = np.zeros(mat.shape,dtype='int')
-    new_mat[0]=mat[4]
-    new_mat[1]=mat[2]
-    new_mat[2]=mat[1]
-    new_mat[3]=mat[0]
-    new_mat[4]=mat[3]
+# def reversal_label(mat):
+#     new_mat = np.zeros(mat.shape,dtype='int')
+#     new_mat[0]=mat[4]
+#     new_mat[1]=mat[2]
+#     new_mat[2]=mat[1]
+#     new_mat[3]=mat[0]
+#     new_mat[4]=mat[3]
 
-    mat=new_mat.copy()
+#     mat=new_mat.copy()
 
-    new_mat[:,0]=mat[:,4]
-    new_mat[:,1]=mat[:,2]
-    new_mat[:,2]=mat[:,1]
-    new_mat[:,3]=mat[:,0]
-    new_mat[:,4]=mat[:,3]
+#     new_mat[:,0]=mat[:,4]
+#     new_mat[:,1]=mat[:,2]
+#     new_mat[:,2]=mat[:,1]
+#     new_mat[:,3]=mat[:,0]
+#     new_mat[:,4]=mat[:,3]
 
-    return new_mat
+#     return new_mat
 
-def class_5to4(mat):
-    #[W N1 N2 N3 R] to [W N1+N2 N3 R]
-    new_mat=np.zeros((4,5),dtype='int')
-    new_mat[0] = mat[0]
-    new_mat[1] = mat[1]+mat[2]
-    new_mat[2] = mat[3]
-    new_mat[3] = mat[4]
-    mat = new_mat.copy()
-    new_mat=np.zeros((4,4),dtype='int')
-    new_mat[:,0] = mat[:,0]
-    new_mat[:,1] = mat[:,1]+mat[:,2]
-    new_mat[:,2] = mat[:,3]
-    new_mat[:,3] = mat[:,4]
-    return new_mat
+# def class_5to4(mat):
+#     #[W N1 N2 N3 R] to [W N1+N2 N3 R]
+#     new_mat=np.zeros((4,5),dtype='int')
+#     new_mat[0] = mat[0]
+#     new_mat[1] = mat[1]+mat[2]
+#     new_mat[2] = mat[3]
+#     new_mat[3] = mat[4]
+#     mat = new_mat.copy()
+#     new_mat=np.zeros((4,4),dtype='int')
+#     new_mat[:,0] = mat[:,0]
+#     new_mat[:,1] = mat[:,1]+mat[:,2]
+#     new_mat[:,2] = mat[:,3]
+#     new_mat[:,3] = mat[:,4]
+#     return new_mat
 
 
 def Kappa(mat):
@@ -88,7 +88,7 @@ def stagefrommat(mat):
     stage_num = np.zeros(wide,dtype='int')
     for i in range(wide):
         stage_num[i]=np.sum(mat[i])
-    util.writelog('statistics of dataset [S3 S2 S1 R W]:\n'+str(stage_num),True)
+    util.writelog('statistics:\n'+str(stage_num),True)
 
 def show(plot_result,epoch):
     train = np.array(plot_result['train'])
@@ -108,7 +108,7 @@ def show(plot_result,epoch):
     plt.plot(test_x,test*100,label='test', linewidth = 2.0,color = 'blue')
     plt.legend(loc=1)
     plt.title('Running err.',fontsize='large')
-    plt.savefig('./running_err.png')
+    plt.savefig('./checkpoints/running_err.png')
 
     # plt.draw()
     # plt.pause(0.01)
@@ -117,8 +117,7 @@ def show(plot_result,epoch):
 def main():
     mat=[[37980,1322,852,2,327],[3922,8784,3545,0,2193],[1756,5136,99564,1091,991],[18,1,7932,4063,14],[1361,1680,465,0,23931]]
     mat = np.array(mat)
-    avg_recall,avg_acc,err = result(mat)
-    print(avg_recall,avg_acc,err)
+    avg_recall,avg_acc,avg_sp,err,kappa = result(mat)
+    print(avg_recall,avg_acc,avg_sp,err,kappa)
 if __name__ == '__main__':
     main()
-

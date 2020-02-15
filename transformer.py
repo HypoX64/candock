@@ -20,7 +20,7 @@ def batch_generator(data,target,batchsize,shuffle = True):
         shuffledata(data,target)
     data = trimdata(data,batchsize)
     target = trimdata(target,batchsize)
-    data = data.reshape(-1,batchsize,3000)
+    data = data.reshape(-1,batchsize,data.shape[1])
     target = target.reshape(-1,batchsize)
     return data,target
 
@@ -99,22 +99,24 @@ def random_transform_2d(img,finesize = (224,122),test_flag = True):
 
 def ToInputShape(data,net_name,test_flag = False):
     data = data.astype(np.float32)
-    batchsize=data.shape[0]
+    batchsize = data.shape[0]
+    loadsize = data.shape[1]
+    _finesize = int(loadsize*0.9)
 
     if net_name=='lstm':
         result =[]
         for i in range(0,batchsize):
-            randomdata=random_transform_1d(data[i],finesize = 2700,test_flag=test_flag)
+            randomdata=random_transform_1d(data[i],finesize = _finesize,test_flag=test_flag)
             result.append(dsp.getfeature(randomdata))
-        result = np.array(result).reshape(batchsize,2700*5)
+        result = np.array(result).reshape(batchsize,_finesize*5)
 
     elif net_name in['cnn_1d','resnet18_1d','multi_scale_resnet_1d','micro_multi_scale_resnet_1d']:
         result =[]
         for i in range(0,batchsize):
-            randomdata=random_transform_1d(data[i],finesize = 2700,test_flag=test_flag)
+            randomdata=random_transform_1d(data[i],finesize = _finesize,test_flag=test_flag)
             result.append(randomdata)
         result = np.array(result)
-        result = result.reshape(batchsize,1,2700)
+        result = result.reshape(batchsize,1,_finesize)
 
     elif net_name in ['squeezenet','multi_scale_resnet','dfcnn','resnet18','densenet121','densenet201','resnet101','resnet50']:
         result =[]

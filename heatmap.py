@@ -5,6 +5,7 @@ import time
 zhfont1 = matplotlib.font_manager.FontProperties(fname='/home/hypo/.local/share/fonts/simsun.ttc')
 zhfont = matplotlib.font_manager.FontProperties(fname='/usr/share/fonts/times.ttf')
 FontSize=15
+BarFontSize = 15
 def heatmap(data, row_labels, col_labels, ax=None,
             cbar_kw={}, cbarlabel="", **kwargs):
     """
@@ -33,9 +34,9 @@ def heatmap(data, row_labels, col_labels, ax=None,
     im = ax.imshow(data, **kwargs,origin='lower')
 
     # Create colorbar
-    #cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
-    #cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom",fontproperties=zhfont,fontsize=15)
-
+    cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
+    cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom",fontproperties=zhfont,fontsize=15)
+    cbar.ax.tick_params(labelsize=BarFontSize)
     # We want to show all ticks...
     ax.set_xticks(np.arange(data.shape[1]))
     ax.set_yticks(np.arange(data.shape[0]))
@@ -130,12 +131,12 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
 #                 [23,26,76,0,0,1474]
 #                 ]
 # harvest = np.array(mat).astype(int)
-# True_lable = ["N3", "N2", "N1", "REM","W"]
-# Pred_lable = ["N3", "N2", "N1", "REM","W"]
+# true_lable = ["N3", "N2", "N1", "REM","W"]
+# pred_lable = ["N3", "N2", "N1", "REM","W"]
 
 def draw(harvest,
-    True_lable = ["N3", "N2", "N1", "REM","W"],
-    Pred_lable = ["N3", "N2", "N1", "REM","W"],
+    true_lable = ["N3", "N2", "N1", "REM","W"],
+    pred_lable = ["N3", "N2", "N1", "REM","W"],
     name = 'train'):
     
     harvest = harvest.astype(float)
@@ -143,12 +144,16 @@ def draw(harvest,
     for i in range(wide):
         harvest[i,:]=harvest[i,:]/np.sum(harvest[i])
 
-    # plt.close()
-    # plt.figure('confusion_mat')
-    fig, ax = plt.subplots()
+    h = harvest.shape[0]+1
+    w = int(h*0.75)+0.5
+    global BarFontSize
+    BarFontSize = int((BarFontSize+h)*0.5)
+
+    fig, ax = plt.subplots(figsize=(h, w))
+
     ax.set_ylabel('True',fontsize=FontSize)
     ax.set_xlabel('Pred',fontsize=FontSize)
-    im = heatmap(harvest, True_lable, Pred_lable, ax=ax,
+    im = heatmap(harvest, true_lable, pred_lable, ax=ax,
                        cmap="Wistia")
     try:
         texts = annotate_heatmap(im, valfmt="{x:.2f}")
@@ -156,11 +161,22 @@ def draw(harvest,
         print('Draw heatmap error:',e)
     
     fig.tight_layout()
-    plt.savefig(name+'_heatmap.png')
+    plt.savefig('checkpoints/'+name+'_heatmap.png')
     # plt.show()
     # del fig
     # plt.pause(1)
     plt.close('all')
 
+def main():
+    mat = [[8027,6,5,0,0,15],
+                    [83,408,41,0,1,66],
+                    [21,15,3470,57,4,49],
+                    [5,3,85,520,50,0],
+                    [3,0,7,43,592,0],
+                    [23,26,76,0,0,1474]
+                    ]
+    harvest = np.array(mat).astype(int)
+    draw(harvest,name = 'train')
 
-
+if __name__ == '__main__':
+    main()

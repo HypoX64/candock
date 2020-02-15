@@ -7,7 +7,7 @@ import os
 #     return usage
 
 def writelog(log,printflag = False):
-    f = open('./log','a+')
+    f = open('./checkpoints/log.txt','a+')
     f.write(log+'\n')
     if printflag:
         print(log)

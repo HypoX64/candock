@@ -4,8 +4,6 @@ import random
 
 import scipy.io as sio
 import numpy as np
-import h5py
-import mne
 
 import dsp
 import transformer
@@ -69,7 +67,7 @@ def loaddata_cc2018(filedir,filename,signal_name,BID,filter = True):
     #trim
     signals = trimdata(signals,3000)
     stages = trimdata(stages,3000)
-    #30s per lable
+    #30s per label
     signals = signals.reshape(-1,3000)
     stages = stages[::3000]
     #Balance individualized differences
@@ -131,9 +129,10 @@ def loaddata_sleep_edfx(filedir,filename,signal_name,BID,select_sleep_time):
 def loaddataset(filedir,dataset_name,signal_name,num,BID,select_sleep_time,shuffle = False):
     print('load dataset, please wait...')
 
-    signals_train=[];stages_train=[];signals_test=[];stages_test=[] 
+    signals_train=[];labels_train=[];signals_test=[];labels_test=[] 
 
     if dataset_name == 'cc2018':
+        import h5py
         filenames = os.listdir(filedir)
         if shuffle:
             random.shuffle(filenames)
@@ -147,12 +146,13 @@ def loaddataset(filedir,dataset_name,signal_name,num,BID,select_sleep_time,shuff
         for cnt,filename in enumerate(filenames[:num],0):
             signal,stage = loaddata_cc2018(filedir,filename,signal_name,BID = BID)
             if cnt < round(num*0.8) :
-                signals_train,stages_train = connectdata(signal,stage,signals_train,stages_train)
+                signals_train,labels_train = connectdata(signal,stage,signals_train,labels_train)
             else:
-                signals_test,stages_test = connectdata(signal,stage,signals_test,stages_test)
+                signals_test,labels_test = connectdata(signal,stage,signals_test,labels_test)
         print('train subjects:',round(num*0.8),'test subjects:',round(num*0.2))
 
     elif dataset_name == 'sleep-edfx':
+        import mne
         if num > 197:
             num = 197
 
@@ -163,19 +163,19 @@ def loaddataset(filedir,dataset_name,signal_name,num,BID,select_sleep_time,shuff
 
         for filename in filenames_sc_train[:round(num*153/197*0.8)]:
             signal,stage = loaddata_sleep_edfx(filedir,filename,signal_name,BID,select_sleep_time)
-            signals_train,stages_train = connectdata(signal,stage,signals_train,stages_train)
+            signals_train,labels_train = connectdata(signal,stage,signals_train,labels_train)
 
         for filename in filenames_st_train[:round(num*44/197*0.8)]:
             signal,stage = loaddata_sleep_edfx(filedir,filename,signal_name,BID,select_sleep_time)
-            signals_train,stages_train = connectdata(signal,stage,signals_train,stages_train)
+            signals_train,labels_train = connectdata(signal,stage,signals_train,labels_train)
         
         for filename in filenames_sc_test[:round(num*153/197*0.2)]:
             signal,stage = loaddata_sleep_edfx(filedir,filename,signal_name,BID,select_sleep_time)
-            signals_test,stages_test = connectdata(signal,stage,signals_test,stages_test)
+            signals_test,labels_test = connectdata(signal,stage,signals_test,labels_test)
 
         for filename in filenames_st_test[:round(num*44/197*0.2)]:
             signal,stage = loaddata_sleep_edfx(filedir,filename,signal_name,BID,select_sleep_time)
-            signals_test,stages_test = connectdata(signal,stage,signals_test,stages_test)
+            signals_test,labels_test = connectdata(signal,stage,signals_test,labels_test)
 
         print('---------Each subject has two sample---------',
             '\nTrain samples_SC/ST:',round(num*153/197*0.8),round(num*44/197*0.8),
@@ -183,8 +183,8 @@ def loaddataset(filedir,dataset_name,signal_name,num,BID,select_sleep_time,shuff
     
     elif dataset_name == 'preload':
         signals_train = np.load(filedir+'/signals_train.npy')
-        stages_train = np.load(filedir+'/stages_train.npy')
+        labels_train = np.load(filedir+'/labels_train.npy')
         signals_test = np.load(filedir+'/signals_test.npy')
-        stages_test = np.load(filedir+'/stages_test.npy')
+        labels_test = np.load(filedir+'/labels_test.npy')
 
-    return signals_train,stages_train,signals_test,stages_test
+    return signals_train,labels_train,signals_test,labels_test

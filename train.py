@@ -30,26 +30,26 @@ but the data needs meet the following conditions:
   we recommend signal data normalized useing 5_95_th for each subject, 
   example: signals_normalized=transformer.Balance_individualized_differences(signals_origin, '5_95_th')
 '''
-signals_train,stages_train,signals_test,stages_test = dataloader.loaddataset(opt.dataset_dir,opt.dataset_name,opt.signal_name,opt.sample_num,opt.BID,opt.select_sleep_time)
+signals_train,labels_train,signals_test,labels_test = dataloader.loaddataset(opt.dataset_dir,opt.dataset_name,opt.signal_name,opt.sample_num,opt.BID,opt.select_sleep_time)
 
 util.writelog('train:',True)
-stage_cnt,stage_cnt_per = statistics.stage(stages_train)
+stage_cnt,stage_cnt_per = statistics.stage(opt,labels_train)
 util.writelog('test:',True)
-_,_ = statistics.stage(stages_test)
-signals_train,stages_train = transformer.batch_generator(signals_train,stages_train,opt.batchsize)
-signals_test,stages_test = transformer.batch_generator(signals_test,stages_test,opt.batchsize)
+_,_ = statistics.stage(opt,labels_test)
+signals_train,labels_train = transformer.batch_generator(signals_train,labels_train,opt.batchsize)
+signals_test,labels_test = transformer.batch_generator(signals_test,labels_test,opt.batchsize)
 
 
 batch_length = len(signals_train)
 print('length of batch:',batch_length)
-show_freq = int(len(stages_train)/5)
+show_freq = int(len(labels_train)/5)
 t2 = time.time()
 print('load data cost time: %.2f'% (t2-t1),'s')
 
-net=CreatNet(opt.model_name)
+net=CreatNet(opt)
 util.show_paramsnumber(net)
 
-weight = np.array([1,1,1,1,1])
+weight = np.ones(opt.label)
 if opt.weight_mod == 'avg_best':
     weight = np.log(1/stage_cnt_per)
     weight[2] = weight[2]+1
@@ -74,7 +74,7 @@ criterion = nn.CrossEntropyLoss(weight)
 
 def evalnet(net,signals,stages,epoch,plot_result={}):
     # net.eval()
-    confusion_mat = np.zeros((5,5), dtype=int)
+    confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
     for i, (signal,stage) in enumerate(zip(signals,stages), 1):
 
         signal=transformer.ToInputShape(signal,opt.model_name,test_flag =True)
@@ -90,22 +90,22 @@ def evalnet(net,signals,stages,epoch,plot_result={}):
 
     recall,acc,sp,err,k  = statistics.result(confusion_mat)
     plot_result['test'].append(err)   
-    heatmap.draw(confusion_mat,name = 'test')
+    heatmap.draw(confusion_mat,opt.label_name,opt.label_name,name = 'test')
     print('recall,acc,sp,err,k: '+str(statistics.result(confusion_mat)))
     return plot_result,confusion_mat
 
 print('begin to train ...')
-final_confusion_mat = np.zeros((5,5), dtype=int)
+final_confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
 
 plot_result={'train':[1.],'test':[1.]}
 confusion_mats = []
 
 for epoch in range(opt.epochs):
     t1 = time.time()
-    confusion_mat = np.zeros((5,5), dtype=int)
+    confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
     print('epoch:',epoch+1)
     net.train()
-    for i, (signal,stage) in enumerate(zip(signals_train,stages_train), 1):
+    for i, (signal,stage) in enumerate(zip(signals_train,labels_train), 1):
 
         signal=transformer.ToInputShape(signal,opt.model_name,test_flag =False)
         signal,stage = transformer.ToTensor(signal,stage,no_cuda =opt.no_cuda)
@@ -123,11 +123,11 @@ for epoch in range(opt.epochs):
             confusion_mat[stage[x]][pred[x]] += 1
         if i%show_freq==0:       
             plot_result['train'].append(statistics.result(confusion_mat)[3])
-            heatmap.draw(confusion_mat,name = 'train')
+            heatmap.draw(confusion_mat,opt.label_name,opt.label_name,name = 'train')
             statistics.show(plot_result,epoch+i/(batch_length*0.8))
             confusion_mat[:]=0
 
-    plot_result,confusion_mat = evalnet(net,signals_test,stages_test,epoch+1,plot_result)
+    plot_result,confusion_mat = evalnet(net,signals_test,labels_test,epoch+1,plot_result)
     confusion_mats.append(confusion_mat)
     # scheduler.step()
 
@@ -147,4 +147,4 @@ final_confusion_mat = confusion_mats[pos]
 util.writelog('final: '+'recall,acc,sp,err,k: '+str(statistics.result(final_confusion_mat)),True)
 util.writelog('confusion_mat:\n'+str(final_confusion_mat),True)
 statistics.stagefrommat(final_confusion_mat)
-heatmap.draw(final_confusion_mat,name = 'final_test')
+heatmap.draw(final_confusion_mat,opt.label_name,opt.label_name,name = 'final_test')
