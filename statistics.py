@@ -1,49 +1,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import util
+import os
 
-def stage(opt,stages):	
-    #sleep stage: N3->0  N2->1  N1->2  REM->3  W->4
-    stage_cnt=np.zeros(opt.label,dtype=np.int64)
-    for i in range(len(stages)):
-        stage_cnt[stages[i]] += 1
-    stage_cnt_per = stage_cnt/len(stages) 
-    util.writelog(str(stage_cnt),True)
-    return stage_cnt,stage_cnt_per
+def label_statistics(labels):
+    #for sleep label: N3->0  N2->1  N1->2  REM->3  W->4
+    s = set()
+    for label in labels:
+        s.add(label)
+    label_num = len(list(s))
 
-# def reversal_label(mat):
-#     new_mat = np.zeros(mat.shape,dtype='int')
-#     new_mat[0]=mat[4]
-#     new_mat[1]=mat[2]
-#     new_mat[2]=mat[1]
-#     new_mat[3]=mat[0]
-#     new_mat[4]=mat[3]
-
-#     mat=new_mat.copy()
-
-#     new_mat[:,0]=mat[:,4]
-#     new_mat[:,1]=mat[:,2]
-#     new_mat[:,2]=mat[:,1]
-#     new_mat[:,3]=mat[:,0]
-#     new_mat[:,4]=mat[:,3]
-
-#     return new_mat
-
-# def class_5to4(mat):
-#     #[W N1 N2 N3 R] to [W N1+N2 N3 R]
-#     new_mat=np.zeros((4,5),dtype='int')
-#     new_mat[0] = mat[0]
-#     new_mat[1] = mat[1]+mat[2]
-#     new_mat[2] = mat[3]
-#     new_mat[3] = mat[4]
-#     mat = new_mat.copy()
-#     new_mat=np.zeros((4,4),dtype='int')
-#     new_mat[:,0] = mat[:,0]
-#     new_mat[:,1] = mat[:,1]+mat[:,2]
-#     new_mat[:,2] = mat[:,3]
-#     new_mat[:,3] = mat[:,4]
-#     return new_mat
-
+    label_cnt=np.zeros(label_num,dtype=np.int64)
+    for i in range(len(labels)):
+        label_cnt[labels[i]] += 1
+    label_cnt_per = label_cnt/len(labels)
+    return label_cnt,label_cnt_per,label_num
 
 def Kappa(mat):
     mat=mat/10000 # avoid overflow
@@ -60,37 +31,45 @@ def Kappa(mat):
 
 def result(mat,print_sub=False):
     wide=mat.shape[0]
-    sub_acc = np.zeros(wide)
     sub_recall = np.zeros(wide)
-    sub_sp = np.zeros(wide)
-    err = 0
+    sub_precise = np.zeros(wide)
+    sub_F1 = np.zeros(wide)
+    sub_acc = np.zeros(wide)
+    _err = 0
+
     for i in range(wide):
         TP = mat[i,i]
         FN = np.sum(mat[i])- mat[i,i]
         TN = (np.sum(mat)-np.sum(mat[i])-np.sum(mat[:,i])+mat[i,i])
         FP = np.sum(mat[:,i]) - mat[i,i]
 
-        err += mat[i,i]
+        _err += mat[i,i]
         sub_acc[i]=(TP+TN)/(TP+FN+TN+FP)
+        sub_precise[i] = TP/np.clip((TP+FP), 1e-5, 1e10)
         sub_recall[i]=(TP)/np.clip((TP+FN), 1e-5, 1e10) 
-        sub_sp[i] = TN/np.clip((TN+FP), 1e-5, 1e10)
+        #F1 score = 2 * P * R / (P + R)
+        sub_F1[i] = 2*sub_precise[i]*sub_recall[i] / np.clip((sub_precise[i]+sub_recall[i]),1e-5,1e10)
+
     if print_sub == True:
         print('sub_recall:',sub_recall,'\nsub_acc:',sub_acc,'\nsub_sp:',sub_sp)
-    avg_recall = np.mean(sub_recall)
-    avg_acc = np.mean(sub_acc)
-    avg_sp = np.mean(sub_sp)
-    err = 1-err/np.sum(mat)
+
+    err = 1-_err/np.sum(mat)
+    Macro_precision = np.mean(sub_precise)
+    Macro_recall = np.mean(sub_recall)
+    Macro_F1 = np.mean(sub_F1)
+    Macro_acc = np.mean(sub_acc)
+
     k = Kappa(mat)
-    return round(avg_recall,4),round(avg_acc,4),round(avg_sp,4),round(err,4),round(k, 4)
+    return round(Macro_precision,4),round(Macro_recall,4),round(Macro_F1,4),round(err,4),round(k, 4)
 
-def stagefrommat(mat):
+def labelfrommat(mat):
     wide=mat.shape[0]
-    stage_num = np.zeros(wide,dtype='int')
+    label_num = np.zeros(wide,dtype='int')
     for i in range(wide):
-        stage_num[i]=np.sum(mat[i])
-    util.writelog('statistics:\n'+str(stage_num),True)
+        label_num[i]=np.sum(mat[i])
+    util.writelog('statistics:\n'+str(label_num),True)
 
-def show(plot_result,epoch):
+def show(plot_result,epoch,opt):
     train = np.array(plot_result['train'])
     test = np.array(plot_result['test'])
     plt.figure('running recall')
@@ -108,7 +87,7 @@ def show(plot_result,epoch):
     plt.plot(test_x,test*100,label='test', linewidth = 2.0,color = 'blue')
     plt.legend(loc=1)
     plt.title('Running err.',fontsize='large')
-    plt.savefig('./checkpoints/running_err.png')
+    plt.savefig(os.path.join(opt.save_dir,'running_err.png'))
 
     # plt.draw()
     # plt.pause(0.01)

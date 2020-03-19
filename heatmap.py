@@ -1,55 +1,62 @@
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib
 import time
-zhfont1 = matplotlib.font_manager.FontProperties(fname='/home/hypo/.local/share/fonts/simsun.ttc')
-zhfont = matplotlib.font_manager.FontProperties(fname='/usr/share/fonts/times.ttf')
-FontSize=15
-BarFontSize = 15
-def heatmap(data, row_labels, col_labels, ax=None,
+import os
+
+'''
+heatmap: https://matplotlib.org/gallery/images_contours_and_fields/image_annotated_heatmap.html#sphx-glr-gallery-images-contours-and-fields-image-annotated-heatmap-py
+choose color:https://matplotlib.org/tutorials/colors/colormaps.html?highlight=wistia
+      recommend:  YlGn  Wistia Blues YlOrBr
+'''
+
+def create_heatmap(data, row_labels, col_labels, ax=None,
             cbar_kw={}, cbarlabel="", **kwargs):
     """
     Create a heatmap from a numpy array and two lists of labels.
 
-    Arguments:
-        data       : A 2D numpy array of shape (N,M)
-        row_labels : A list or array of length N with the labels
-                     for the rows
-        col_labels : A list or array of length M with the labels
-                     for the columns
-    Optional arguments:
-        ax         : A matplotlib.axes.Axes instance to which the heatmap
-                     is plotted. If not provided, use current axes or
-                     create a new one.
-        cbar_kw    : A dictionary with arguments to
-                     :meth:`matplotlib.Figure.colorbar`.
-        cbarlabel  : The label for the colorbar
-    All other arguments are directly passed on to the imshow call.
+    Parameters
+    ----------
+    data
+        A 2D numpy array of shape (N, M).
+    row_labels
+        A list or array of length N with the labels for the rows.
+    col_labels
+        A list or array of length M with the labels for the columns.
+    ax
+        A `matplotlib.axes.Axes` instance to which the heatmap is plotted.  If
+        not provided, use current axes or create a new one.  Optional.
+    cbar_kw
+        A dictionary with arguments to `matplotlib.Figure.colorbar`.  Optional.
+    cbarlabel
+        The label for the colorbar.  Optional.
+    **kwargs
+        All other arguments are forwarded to `imshow`.
     """
 
     if not ax:
         ax = plt.gca()
 
     # Plot the heatmap
-    im = ax.imshow(data, **kwargs,origin='lower')
+    im = ax.imshow(data, **kwargs)
 
     # Create colorbar
     cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
-    cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom",fontproperties=zhfont,fontsize=15)
-    cbar.ax.tick_params(labelsize=BarFontSize)
+    cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+
     # We want to show all ticks...
     ax.set_xticks(np.arange(data.shape[1]))
     ax.set_yticks(np.arange(data.shape[0]))
     # ... and label them with the respective list entries.
-    ax.set_xticklabels(col_labels,fontsize=FontSize)
-    ax.set_yticklabels(row_labels,fontsize=FontSize)
+    ax.set_xticklabels(col_labels)
+    ax.set_yticklabels(row_labels)
 
     # Let the horizontal axes labeling appear on top.
     ax.tick_params(top=False, bottom=True,
                    labeltop=False, labelbottom=True)
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), ha="right",
+    plt.setp(ax.get_xticklabels(), rotation=-30, ha="left",
              rotation_mode="anchor")
 
     # Turn spines off and create white grid.
@@ -61,30 +68,35 @@ def heatmap(data, row_labels, col_labels, ax=None,
     ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
     ax.tick_params(which="minor", bottom=False, left=False)
 
-    return im
+    return im, cbar
 
 
 def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
-                     textcolors=["black", "white"],
+                     textcolors=("black", "white"),
                      threshold=None, **textkw):
     """
     A function to annotate a heatmap.
 
-    Arguments:
-        im         : The AxesImage to be labeled.
-    Optional arguments:
-        data       : Data used to annotate. If None, the image's data is used.
-        valfmt     : The format of the annotations inside the heatmap.
-                     This should either use the string format method, e.g.
-                     "$ {x:.2f}", or be a :class:`matplotlib.ticker.Formatter`.
-        textcolors : A list or array of two color specifications. The first is
-                     used for values below a threshold, the second for those
-                     above.
-        threshold  : Value in data units according to which the colors from
-                     textcolors are applied. If None (the default) uses the
-                     middle of the colormap as separation.
-
-    Further arguments are passed on to the created text labels.
+    Parameters
+    ----------
+    im
+        The AxesImage to be labeled.
+    data
+        Data used to annotate.  If None, the image's data is used.  Optional.
+    valfmt
+        The format of the annotations inside the heatmap.  This should either
+        use the string format method, e.g. "$ {x:.2f}", or be a
+        `matplotlib.ticker.Formatter`.  Optional.
+    textcolors
+        A pair of colors.  The first is used for values below a threshold,
+        the second for those above.  Optional.
+    threshold
+        Value in data units according to which the colors from textcolors are
+        applied.  If None (the default) uses the middle of the colormap as
+        separation.  Optional.
+    **kwargs
+        All other arguments are forwarded to each call to `text` used to create
+        the text labels.
     """
 
     if not isinstance(data, (list, np.ndarray)):
@@ -99,7 +111,7 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
     # Set default alignment to center, but allow it to be
     # overwritten by textkw.
     kw = dict(horizontalalignment="center",
-              verticalalignment="center",fontsize=FontSize)
+              verticalalignment="center")
     kw.update(textkw)
 
     # Get the formatter in case a string is supplied
@@ -111,72 +123,48 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
     texts = []
     for i in range(data.shape[0]):
         for j in range(data.shape[1]):
-            kw.update(color=textcolors[im.norm(data[i, j]) > threshold])
+            kw.update(color=textcolors[int(im.norm(data[i, j]) > threshold)])
             text = im.axes.text(j, i, valfmt(data[i, j], None), **kw)
             texts.append(text)
 
     return texts
 
-# harvest = np.array(
 
-# [[0.7577741407528642, 0.05994694960212202, 0.0, 0.0, 0.0012135922330097086], [0.23895253682487724, 0.8779840848806366, 0.24684684684684685, 0.16026711185308848, 0.04004854368932039], [0.0016366612111292963, 0.03819628647214854, 0.5315315315315315, 0.1335559265442404, 0.12742718446601942], [0.0, 0.013262599469496022, 0.04504504504504504, 0.6878130217028381, 0.013349514563106795], [0.0016366612111292963, 0.010610079575596816, 0.17657657657657658, 0.018363939899833055, 0.8179611650485437]]
- 
-#                     )
-
-# mat = [[8027,6,5,0,0,15],
-#                 [83,408,41,0,1,66],
-#                 [21,15,3470,57,4,49],
-#                 [5,3,85,520,50,0],
-#                 [3,0,7,43,592,0],
-#                 [23,26,76,0,0,1474]
-#                 ]
-# harvest = np.array(mat).astype(int)
-# true_lable = ["N3", "N2", "N1", "REM","W"]
-# pred_lable = ["N3", "N2", "N1", "REM","W"]
-
-def draw(harvest,
-    true_lable = ["N3", "N2", "N1", "REM","W"],
-    pred_lable = ["N3", "N2", "N1", "REM","W"],
-    name = 'train'):
+def draw(mat,opt,name = 'train'):
     
-    harvest = harvest.astype(float)
-    wide = harvest.shape[0]
-    for i in range(wide):
-        harvest[i,:]=harvest[i,:]/np.sum(harvest[i])
+    mat = mat.astype(float)
+    for i in range(mat.shape[0]):
+        mat[i,:]=mat[i,:]/np.sum(mat[i])*100
 
-    h = harvest.shape[0]+1
-    w = int(h*0.75)+0.5
-    global BarFontSize
-    BarFontSize = int((BarFontSize+h)*0.5)
+    fig, ax = plt.subplots()
+    ax.set_ylabel('True',fontsize=12)
+    ax.set_xlabel('Pred',fontsize=12)
 
-    fig, ax = plt.subplots(figsize=(h, w))
+    im, cbar = create_heatmap(mat, opt.label_name, opt.label_name, ax=ax,
+                       cmap="Blues", cbarlabel="percentage")
+    texts = annotate_heatmap(im,valfmt="{x:.1f}%")
 
-    ax.set_ylabel('True',fontsize=FontSize)
-    ax.set_xlabel('Pred',fontsize=FontSize)
-    im = heatmap(harvest, true_lable, pred_lable, ax=ax,
-                       cmap="Wistia")
-    try:
-        texts = annotate_heatmap(im, valfmt="{x:.2f}")
-    except Exception as e:
-        print('Draw heatmap error:',e)
-    
     fig.tight_layout()
-    plt.savefig('checkpoints/'+name+'_heatmap.png')
     # plt.show()
-    # del fig
-    # plt.pause(1)
+    plt.savefig(os.path.join(opt.save_dir,name+'_heatmap.png'))
+
     plt.close('all')
 
 def main():
-    mat = [[8027,6,5,0,0,15],
-                    [83,408,41,0,1,66],
-                    [21,15,3470,57,4,49],
-                    [5,3,85,520,50,0],
-                    [3,0,7,43,592,0],
-                    [23,26,76,0,0,1474]
-                    ]
-    harvest = np.array(mat).astype(int)
-    draw(harvest,name = 'train')
+    vegetables = ["cucumber", "tomato", "lettuce", "asparagus",
+              "potato", "wheat", "barley"]
+    farmers = ["Farmer Joe", "Upland Bros.", "Smith Gardening",
+           "Agrifun", "Organiculture", "BioGoods Ltd.", "Cornylee Corp."]
+
+    harvest = np.array([[0.8, 2.4, 2.5, 3.9, 0.0, 4.0, 0.0],
+                    [2.4, 0.0, 4.0, 1.0, 2.7, 0.0, 0.0],
+                    [1.1, 2.4, 0.8, 4.3, 1.9, 4.4, 0.0],
+                    [0.6, 0.0, 0.3, 0.0, 3.1, 0.0, 0.0],
+                    [0.7, 1.7, 0.6, 2.6, 2.2, 6.2, 0.0],
+                    [1.3, 1.2, 0.0, 0.0, 0.0, 3.2, 5.1],
+                    [0.1, 2.0, 0.0, 1.4, 0.0, 1.9, 6.3]])
+
+    draw(harvest,vegetables,farmers,name = 'train')
 
 if __name__ == '__main__':
     main()

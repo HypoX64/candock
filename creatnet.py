@@ -8,17 +8,17 @@ def CreatNet(opt):
     if name =='lstm':
         net =  lstm.lstm(100,27,num_classes=label_num)
     elif name == 'cnn_1d':
-        net = cnn_1d.cnn(1,num_classes=label_num)
+        net = cnn_1d.cnn(opt.input_nc,num_classes=label_num)
     elif name == 'resnet18_1d':
         net = resnet_1d.resnet18()
-        net.conv1 = nn.Conv1d(1, 64, 7, 2, 3, bias=False)
+        net.conv1 = nn.Conv1d(opt.input_nc, 64, 7, 2, 3, bias=False)
         net.fc = nn.Linear(512, label_num)
     elif name == 'multi_scale_resnet_1d':
-        net = multi_scale_resnet_1d.Multi_Scale_ResNet(inchannel=1, num_classes=label_num)
+        net = multi_scale_resnet_1d.Multi_Scale_ResNet(inchannel=opt.input_nc, num_classes=label_num)
     elif name == 'micro_multi_scale_resnet_1d':
-        net = micro_multi_scale_resnet_1d.Multi_Scale_ResNet(inchannel=1, num_classes=label_num)
+        net = micro_multi_scale_resnet_1d.Multi_Scale_ResNet(inchannel=opt.input_nc, num_classes=label_num)
     elif name == 'multi_scale_resnet':
-        net = multi_scale_resnet.Multi_Scale_ResNet(inchannel=1, num_classes=label_num)
+        net = multi_scale_resnet.Multi_Scale_ResNet(inchannel=opt.input_nc, num_classes=label_num)
     elif name == 'dfcnn':
         net = dfcnn.dfcnn(num_classes = label_num)
     elif name in ['resnet101','resnet50','resnet18']:
@@ -31,7 +31,7 @@ def CreatNet(opt):
         elif name =='resnet18':
             net = resnet.resnet18(pretrained=False)
             net.fc = nn.Linear(512, label_num)
-        net.conv1 = nn.Conv2d(1, 64, 7, 2, 3, bias=False)        
+        net.conv1 = nn.Conv2d(opt.input_nc, 64, 7, 2, 3, bias=False)        
     
     elif 'densenet' in name:
         if name =='densenet121':

@@ -7,6 +7,7 @@ import numpy as np
 
 import dsp
 import transformer
+import statistics
 
 
 def trimdata(data,num):
@@ -14,6 +15,40 @@ def trimdata(data,num):
 
 def reducesample(data,mult):
     return data[::mult]
+
+def balance_label(signals,labels):
+
+    label_sta,_,label_num = statistics.label_statistics(labels)
+    ori_length = len(labels)
+    max_label_length = max(label_sta)
+    signals = signals[labels.argsort()]
+    labels = labels[labels.argsort()]
+
+    if signals.ndim == 2:
+        new_signals = np.zeros((max_label_length*label_num,signals.shape[1]), dtype=signals.dtype)
+    elif signals.ndim == 3:
+        new_signals = np.zeros((max_label_length*label_num,signals.shape[1],signals.shape[2]), dtype=signals.dtype)
+    new_labels = np.zeros((max_label_length*label_num), dtype=labels.dtype)
+    new_signals[:ori_length] = signals
+    new_labels[:ori_length] = labels
+    del(signals)
+    del(labels)
+
+    cnt = ori_length
+    for label in range(len(label_sta)):
+        if label_sta[label] < max_label_length:
+            if label == 0:
+                start = 0
+            else:
+                start = np.sum(label_sta[:label])
+            end = np.sum(label_sta[:label+1])-1
+
+            for i in range(max_label_length-label_sta[label]):
+                new_signals[cnt] = new_signals[random.randint(start,end)]
+                new_labels[cnt] = label
+                cnt +=1
+    return new_signals,new_labels
+
 
 # delete uesless label
 def del_UND(signals,stages):
@@ -126,7 +161,14 @@ def loaddata_sleep_edfx(filedir,filename,signal_name,BID,select_sleep_time):
     return signals.astype(np.float16),stages.astype(np.int16)
 
 #load all data in datasets
-def loaddataset(filedir,dataset_name,signal_name,num,BID,select_sleep_time,shuffle = False):
+def loaddataset(opt,shuffle = False): 
+    filedir=opt.dataset_dir
+    dataset_name = opt.dataset_name
+    signal_name = opt.signal_name
+    num = opt.sample_num
+    BID = opt.BID
+    select_sleep_time = opt.select_sleep_time
+
     print('load dataset, please wait...')
 
     signals_train=[];labels_train=[];signals_test=[];labels_test=[] 
@@ -134,7 +176,7 @@ def loaddataset(filedir,dataset_name,signal_name,num,BID,select_sleep_time,shuff
     if dataset_name == 'cc2018':
         import h5py
         filenames = os.listdir(filedir)
-        if shuffle:
+        if not opt.no_shuffle:
             random.shuffle(filenames)
         else:
             filenames.sort()
@@ -182,9 +224,18 @@ def loaddataset(filedir,dataset_name,signal_name,num,BID,select_sleep_time,shuff
             '\nTest samples_SC/ST:',round(num*153/197*0.2),round(num*44/197*0.2))
     
     elif dataset_name == 'preload':
-        signals_train = np.load(filedir+'/signals_train.npy')
-        labels_train = np.load(filedir+'/labels_train.npy')
-        signals_test = np.load(filedir+'/signals_test.npy')
-        labels_test = np.load(filedir+'/labels_test.npy')
+        if opt.separated:
+            signals_train = np.load(filedir+'/signals_train.npy')
+            labels_train = np.load(filedir+'/labels_train.npy')
+            signals_test = np.load(filedir+'/signals_test.npy')
+            labels_test = np.load(filedir+'/labels_test.npy')
+        else:
+            signals = np.load(filedir+'/signals.npy') 
+            labels = np.load(filedir+'/labels.npy')
+            if not opt.no_shuffle:
+                transformer.shuffledata(signals,labels)
 
-    return signals_train,labels_train,signals_test,labels_test
+    if opt.separated:
+        return signals_train,labels_train,signals_test,labels_test
+    else:
+        return signals,labels
