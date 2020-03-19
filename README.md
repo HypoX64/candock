@@ -2,6 +2,19 @@
 [这原本是一个用于记录毕业设计的日志仓库](<https://github.com/HypoX64/candock/tree/Graduation_Project>)，其目的是尝试多种不同的深度神经网络结构(如LSTM,ResNet,DFCNN等)对单通道EEG进行自动化睡眠阶段分期.<br>目前，毕业设计已经完成，我将继续跟进这个项目。项目重点将转变为如何将代码进行实际应用，我们将考虑运算量与准确率之间的平衡。另外，将提供一些预训练的模型便于使用。<br>同时我们相信这些代码也可以用于其他生理信号(如ECG,EMG等)的分类.希望这将有助于您的研究或项目.<br>
 ![image](https://github.com/HypoX64/candock/blob/master/image/compare.png)
 
+## 注意
+为了适应新的项目，代码已被大幅更改，不能确保仍然能正常运行如sleep-edfx等睡眠数据集，如果仍然需要运行，请按照输入格式标准自行加载数据，如果有时间我会修复这个问题。
+当然，也可以直接使用[老的版本](https://github.com/HypoX64/candock/tree/f24cc44933f494d2235b3bf965a04cde5e6a1ae9)
+```python
+'''
+#数据输入格式
+change your own data to train
+but the data needs meet the following conditions: 
+1.type   numpydata  signals:np.float16  labels:np.int16
+2.shape             signals:[num,ch,length]   labels:[num]
+'''
+```
+
 ## 如何运行
 如果你需要运行这些代码（训练自己的模型或者使用预训练模型对自己的数据进行预测）请进入以下页面<br>
 [How to run codes](https://github.com/HypoX64/candock/blob/master/how_to_run.md)<br>
@@ -70,3 +83,6 @@
 | micro_multi_scale_resnet_1d | 2.11M      | 27.01%    | 89.20%    | 73.12%   | No                      |
 | resnet18_1d                 | 3.85M      | 25.84%    | 89.66%    | 73.32%   | No                      |
 | multi_scale_resnet_1d       | 8.42M      | 25.27%    | 89.89%    | 73.63%   | No                      |
+```
+
+```
