@@ -111,8 +111,8 @@ def random_transform_1d(data,finesize,test_flag):
         #random amp
         result = result*random.uniform(0.9,1.1)
         #add noise
-        noise = np.random.rand(ch,finesize)
-        result = result + (noise-0.5)*0.01
+        # noise = np.random.rand(ch,finesize)
+        # result = result + (noise-0.5)*0.01
     return result
 
 def random_transform_2d(img,finesize = (224,122),test_flag = True):
@@ -150,7 +150,7 @@ def ToInputShape(data,opt,test_flag = False):
             result.append(dsp.getfeature(randomdata))
         result = np.array(result).reshape(batchsize,_finesize*5)
 
-    elif opt.model_name in['cnn_1d','resnet18_1d','multi_scale_resnet_1d','micro_multi_scale_resnet_1d']:
+    elif opt.model_name in['cnn_1d','resnet18_1d','resnet34_1d','multi_scale_resnet_1d','micro_multi_scale_resnet_1d']:
         result =[]
         for i in range(0,batchsize):
             randomdata=random_transform_1d(data[i],finesize = _finesize,test_flag=test_flag)

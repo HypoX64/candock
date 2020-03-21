@@ -16,6 +16,15 @@ def label_statistics(labels):
     label_cnt_per = label_cnt/len(labels)
     return label_cnt,label_cnt_per,label_num
 
+def mat2predtrue(mat):
+    y_pred = [];y_true = []
+    for i in range(mat.shape[0]):
+        for j in range(mat.shape[1]):
+            for x in range(mat[i][j]):
+                y_true.append(i)
+                y_pred.append(j)
+    return y_true,y_pred
+
 def Kappa(mat):
     mat=mat/10000 # avoid overflow
     mat_length=np.sum(mat)
@@ -32,7 +41,7 @@ def Kappa(mat):
 def result(mat,print_sub=False):
     wide=mat.shape[0]
     sub_recall = np.zeros(wide)
-    sub_precise = np.zeros(wide)
+    sub_precision = np.zeros(wide)
     sub_F1 = np.zeros(wide)
     sub_acc = np.zeros(wide)
     _err = 0
@@ -45,16 +54,16 @@ def result(mat,print_sub=False):
 
         _err += mat[i,i]
         sub_acc[i]=(TP+TN)/(TP+FN+TN+FP)
-        sub_precise[i] = TP/np.clip((TP+FP), 1e-5, 1e10)
+        sub_precision[i] = TP/np.clip((TP+FP), 1e-5, 1e10)
         sub_recall[i]=(TP)/np.clip((TP+FN), 1e-5, 1e10) 
         #F1 score = 2 * P * R / (P + R)
-        sub_F1[i] = 2*sub_precise[i]*sub_recall[i] / np.clip((sub_precise[i]+sub_recall[i]),1e-5,1e10)
+        sub_F1[i] = 2*sub_precision[i]*sub_recall[i] / np.clip((sub_precision[i]+sub_recall[i]),1e-5,1e10)
 
     if print_sub == True:
         print('sub_recall:',sub_recall,'\nsub_acc:',sub_acc,'\nsub_sp:',sub_sp)
 
     err = 1-_err/np.sum(mat)
-    Macro_precision = np.mean(sub_precise)
+    Macro_precision = np.mean(sub_precision)
     Macro_recall = np.mean(sub_recall)
     Macro_F1 = np.mean(sub_F1)
     Macro_acc = np.mean(sub_acc)

@@ -13,6 +13,10 @@ def CreatNet(opt):
         net = resnet_1d.resnet18()
         net.conv1 = nn.Conv1d(opt.input_nc, 64, 7, 2, 3, bias=False)
         net.fc = nn.Linear(512, label_num)
+    elif name == 'resnet34_1d':
+        net = resnet_1d.resnet34()
+        net.conv1 = nn.Conv1d(opt.input_nc, 64, 7, 2, 3, bias=False)
+        net.fc = nn.Linear(512, label_num)
     elif name == 'multi_scale_resnet_1d':
         net = multi_scale_resnet_1d.Multi_Scale_ResNet(inchannel=opt.input_nc, num_classes=label_num)
     elif name == 'micro_multi_scale_resnet_1d':

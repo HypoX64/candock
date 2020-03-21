@@ -15,6 +15,7 @@ import heatmap
 from creatnet import CreatNet
 from options import Options
 
+
 '''
 change your own data to train
 but the data needs meet the following conditions: 
@@ -26,14 +27,11 @@ but the data needs meet the following conditions:
 '''
 
 opt = Options().getparse()
-util.makedirs(opt.save_dir)
-localtime = time.asctime(time.localtime(time.time()))
-util.writelog('\n\n'+str(localtime)+'\n'+str(opt),opt)
+torch.cuda.set_device(opt.gpu_id)
 t1 = time.time()
 
 signals,labels = dataloader.loaddataset(opt)
 label_cnt,label_cnt_per,_ = statistics.label_statistics(labels)
-util.writelog('label statistics: '+str(label_cnt),opt,True)
 signals,labels = transformer.batch_generator(signals,labels,opt.batchsize,shuffle = False)
 train_sequences,test_sequences = transformer.k_fold_generator(len(labels),opt.k_fold)
 show_freq = int(len(train_sequences[0])/5)
@@ -43,6 +41,7 @@ t2 = time.time()
 print('load data cost time: %.2f'% (t2-t1),'s')
 
 net=CreatNet(opt)
+util.writelog('network:\n'+str(net),opt,True)
 
 util.show_paramsnumber(net,opt)
 weight = np.ones(opt.label)
@@ -50,7 +49,8 @@ if opt.weight_mod == 'auto':
     weight = np.log(1/label_cnt_per)
     weight = weight/np.median(weight)
     weight = np.clip(weight, 0.8, 2)
-print('Loss_weight:',weight)
+util.writelog('label statistics: '+str(label_cnt),opt,True)
+util.writelog('Loss_weight:'+str(weight),opt,True)
 weight = torch.from_numpy(weight).float()
 # print(net)
 
@@ -144,7 +144,7 @@ for fold in range(opt.k_fold):
 
         t2=time.time()
         if epoch+1==1:
-            print('>>> per epoch cost time: %.2f' % (t2-t1),'s')
+            util.writelog('>>> per epoch cost time:'+str(round((t2-t1),2))+'s',opt,True)
 
     #save result
     pos = plot_result['test'].index(min(plot_result['test']))-1
@@ -152,16 +152,16 @@ for fold in range(opt.k_fold):
     if opt.k_fold==1:
         util.writelog('------------------------------ final result ------------------------------',opt,True)
         util.writelog('final -> macro-prec,reca,F1,err,kappa: '+str(statistics.result(final_confusion_mat)),opt,True)
-        util.writelog('confusion_mat:\n'+str(final_confusion_mat),opt,True)
+        util.writelog('confusion_mat:\n'+str(final_confusion_mat)+'\n',opt,True)
         heatmap.draw(final_confusion_mat,opt,name = 'final_test')
     else:
         fold_final_confusion_mat += final_confusion_mat
         util.writelog('fold  -> macro-prec,reca,F1,err,kappa: '+str(statistics.result(final_confusion_mat)),opt,True)
-        util.writelog('confusion_mat:\n'+str(final_confusion_mat),opt,True)
+        util.writelog('confusion_mat:\n'+str(final_confusion_mat)+'\n',opt,True)
         heatmap.draw(final_confusion_mat,opt,name = 'fold'+str(fold+1)+'_test')
 
 if opt.k_fold != 1:
     util.writelog('------------------------------ final result ------------------------------',opt,True)
     util.writelog('final -> macro-prec,reca,F1,err,kappa: '+str(statistics.result(fold_final_confusion_mat)),opt,True)
-    util.writelog('confusion_mat:\n'+str(fold_final_confusion_mat),opt,True)
+    util.writelog('confusion_mat:\n'+str(fold_final_confusion_mat)+'\n',opt,True)
     heatmap.draw(fold_final_confusion_mat,opt,name = 'k-fold-final_test')

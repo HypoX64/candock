@@ -1,7 +1,7 @@
 import argparse
 import os
-import numpy as np
-import torch
+import time
+import util
 
 # python3 train.py --dataset_dir '/media/hypo/Hypo/physionet_org_train' --dataset_name cc2018 --signal_name 'C4-M1' --sample_num 20 --model_name lstm --batchsize 64 --epochs 20 --lr 0.0005 --no_cudnn
 # python3 train.py --dataset_dir './datasets/sleep-edfx/' --dataset_name sleep-edfx --signal_name 'EEG Fpz-Cz' --sample_num 50  --model_name lstm --batchsize 64 --network_save_freq 5 --epochs 25 --lr 0.0005 --BID 5_95_th --select_sleep_time --no_cudnn --select_sleep_time
@@ -14,6 +14,7 @@ class Options():
     def initialize(self):
         #base
         self.parser.add_argument('--no_cuda', action='store_true', help='if input, do not use gpu')
+        self.parser.add_argument('--gpu_id', type=int, default=0,help='choose which gpu want to use, 0 | 1 | 2 ...')        
         self.parser.add_argument('--no_cudnn', action='store_true', help='if input, do not use cudnn')
         self.parser.add_argument('--label', type=int, default=5,help='number of labels')
         self.parser.add_argument('--input_nc', type=int, default=3, help='# of input channels')
@@ -52,6 +53,12 @@ class Options():
 
         if self.opt.dataset_name == 'sleep-edf':
             self.opt.sample_num = 8
+        if self.opt.dataset_name not in ['sleep-edf','sleep-edfx','cc2018']:
+            self.opt.BID = 'not-supported'
+            self.opt.select_sleep_time = 'not-supported'
+            self.opt.signal_name = 'not-supported'
+            self.opt.sample_num = 'not-supported'
+
         if self.opt.no_cuda:
             self.opt.no_cudnn = True
 
@@ -72,4 +79,24 @@ class Options():
             names = names.split(",")
             self.opt.label_name = names
 
+
+        """Print and save options
+        It will print both current options and default values(if different).
+        It will save options into a text file / [checkpoints_dir] / opt.txt
+        """
+        message = ''
+        message += '----------------- Options ---------------\n'
+        for k, v in sorted(vars(self.opt).items()):
+            comment = ''
+            default = self.parser.get_default(k)
+            if v != default:
+                comment = '\t[default: %s]' % str(default)
+            message += '{:>20}: {:<30}{}\n'.format(str(k), str(v), comment)
+        message += '----------------- End -------------------'
+        localtime = time.asctime(time.localtime(time.time()))
+        util.makedirs(self.opt.save_dir)
+        util.writelog(str(localtime)+'\n'+message, self.opt,True)
+
+
         return self.opt
+ 
