@@ -28,6 +28,8 @@ class Options():
         self.parser.add_argument('--epochs', type=int, default=20,help='end epoch')
         self.parser.add_argument('--network_save_freq', type=int, default=5,help='the freq to save network')
         self.parser.add_argument('--k_fold', type=int, default=0,help='fold_num of k-fold.if 0 or 1,no k-fold')
+        self.parser.add_argument('--mergelabel', type=str, default='None',
+            help='merge some labels to one label and give the result, example:"[[0,1,4],[2,3,5]]" , label(0,1,4) regard as 0,label(2,3,5) regard as 1')
         
         self.parser.add_argument('--dataset_dir', type=str, default='./datasets/sleep-edfx/',
                                 help='your dataset path')
@@ -78,6 +80,8 @@ class Options():
             names = names.replace(" ", "")
             names = names.split(",")
             self.opt.label_name = names
+
+        self.opt.mergelabel = eval(self.opt.mergelabel)
 
 
         """Print and save options

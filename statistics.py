@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import util
 import os
+import heatmap
 
 def label_statistics(labels):
     #for sleep label: N3->0  N2->1  N1->2  REM->3  W->4
@@ -25,6 +26,25 @@ def mat2predtrue(mat):
                 y_pred.append(j)
     return y_true,y_pred
 
+def predtrue2mat(y_true,y_pred):
+    label_num = label_statistics(y_true)[2]
+    mat = np.zeros((label_num,label_num), dtype=np.int64)
+    for i in range(len(y_true)):
+        mat[y_true[i]][y_pred[i]] +=1
+    return mat
+
+def mergemat(mat,mergemethod):
+    y_true,y_pred = mat2predtrue(mat)
+    new_true = []
+    new_pred = []
+    for i in range(len(y_true)):
+        for j in range(len(mergemethod)):
+            if y_true[i] in mergemethod[j]:
+                new_true.append(j)
+            if y_pred[i] in mergemethod[j]:
+                new_pred.append(j)
+    return predtrue2mat(new_true, new_pred)
+
 def Kappa(mat):
     mat=mat/10000 # avoid overflow
     mat_length=np.sum(mat)
@@ -38,7 +58,7 @@ def Kappa(mat):
     k=(po-pe)/(1-pe)
     return k
 
-def result(mat,print_sub=False):
+def report(mat,print_sub=False):
     wide=mat.shape[0]
     sub_recall = np.zeros(wide)
     sub_precision = np.zeros(wide)
@@ -71,14 +91,7 @@ def result(mat,print_sub=False):
     k = Kappa(mat)
     return round(Macro_precision,4),round(Macro_recall,4),round(Macro_F1,4),round(err,4),round(k, 4)
 
-def labelfrommat(mat):
-    wide=mat.shape[0]
-    label_num = np.zeros(wide,dtype='int')
-    for i in range(wide):
-        label_num[i]=np.sum(mat[i])
-    util.writelog('statistics:\n'+str(label_num),True)
-
-def show(plot_result,epoch,opt):
+def plotloss(plot_result,epoch,opt):
     train = np.array(plot_result['train'])
     test = np.array(plot_result['test'])
     plt.figure('running recall')
@@ -98,8 +111,12 @@ def show(plot_result,epoch,opt):
     plt.title('Running err.',fontsize='large')
     plt.savefig(os.path.join(opt.save_dir,'running_err.png'))
 
-    # plt.draw()
-    # plt.pause(0.01)
+
+def statistics(mat,opt,logname,heatmapname):
+    util.writelog('------------------------------ '+logname+' result ------------------------------',opt,True)
+    util.writelog(logname+' -> macro-prec,reca,F1,err,kappa: '+str(report(mat)),opt,True)
+    util.writelog('confusion_mat:\n'+str(mat)+'\n',opt,True)
+    heatmap.draw(mat,opt,name = heatmapname)
 
 
 def main():

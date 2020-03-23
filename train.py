@@ -15,7 +15,6 @@ import heatmap
 from creatnet import CreatNet
 from options import Options
 
-
 '''
 change your own data to train
 but the data needs meet the following conditions: 
@@ -80,10 +79,10 @@ def evalnet(net,signals,labels,sequences,epoch,plot_result={}):
         for x in range(len(pred)):
             confusion_mat[label[x]][pred[x]] += 1
 
-    recall,acc,sp,err,k  = statistics.result(confusion_mat)
+    recall,acc,sp,err,k  = statistics.report(confusion_mat)
     plot_result['test'].append(err)   
     heatmap.draw(confusion_mat,opt,name = 'current_test')
-    print('epoch:'+str(epoch),' macro-prec,reca,F1,err,kappa: '+str(statistics.result(confusion_mat)))
+    print('epoch:'+str(epoch),' macro-prec,reca,F1,err,kappa: '+str(statistics.report(confusion_mat)))
     return plot_result,confusion_mat
 
 print('begin to train ...')
@@ -126,14 +125,13 @@ for fold in range(opt.k_fold):
             for x in range(len(pred)):
                 confusion_mat[label[x]][pred[x]] += 1
             if i%show_freq==0:       
-                plot_result['train'].append(statistics.result(confusion_mat)[3])
+                plot_result['train'].append(statistics.report(confusion_mat)[3])
                 heatmap.draw(confusion_mat,opt,name = 'current_train')
-                statistics.show(plot_result,epoch+i/(train_sequences.shape[1]),opt)
+                statistics.plotloss(plot_result,epoch+i/(train_sequences.shape[1]),opt)
                 confusion_mat[:]=0
 
         plot_result,confusion_mat = evalnet(net,signals,labels,test_sequences[fold],epoch+1,plot_result)
         confusion_mats.append(confusion_mat)
-        # scheduler.step()
 
         torch.save(net.cpu().state_dict(),os.path.join(opt.save_dir,'last.pth'))
         if (epoch+1)%opt.network_save_freq == 0:
@@ -150,18 +148,16 @@ for fold in range(opt.k_fold):
     pos = plot_result['test'].index(min(plot_result['test']))-1
     final_confusion_mat = confusion_mats[pos]
     if opt.k_fold==1:
-        util.writelog('------------------------------ final result ------------------------------',opt,True)
-        util.writelog('final -> macro-prec,reca,F1,err,kappa: '+str(statistics.result(final_confusion_mat)),opt,True)
-        util.writelog('confusion_mat:\n'+str(final_confusion_mat)+'\n',opt,True)
-        heatmap.draw(final_confusion_mat,opt,name = 'final_test')
+        statistics.statistics(final_confusion_mat, opt, 'final', 'final_test')
     else:
         fold_final_confusion_mat += final_confusion_mat
-        util.writelog('fold  -> macro-prec,reca,F1,err,kappa: '+str(statistics.result(final_confusion_mat)),opt,True)
+        util.writelog('fold  -> macro-prec,reca,F1,err,kappa: '+str(statistics.report(final_confusion_mat)),opt,True)
         util.writelog('confusion_mat:\n'+str(final_confusion_mat)+'\n',opt,True)
         heatmap.draw(final_confusion_mat,opt,name = 'fold'+str(fold+1)+'_test')
 
 if opt.k_fold != 1:
-    util.writelog('------------------------------ final result ------------------------------',opt,True)
-    util.writelog('final -> macro-prec,reca,F1,err,kappa: '+str(statistics.result(fold_final_confusion_mat)),opt,True)
-    util.writelog('confusion_mat:\n'+str(fold_final_confusion_mat)+'\n',opt,True)
-    heatmap.draw(fold_final_confusion_mat,opt,name = 'k-fold-final_test')
+    statistics.statistics(fold_final_confusion_mat, opt, 'final', 'k-fold-final_test')
+
+if opt.mergelabel:
+    mat = statistics.mergemat(fold_final_confusion_mat, opt.mergelabel)
+    statistics.statistics(mat, opt, 'merge', 'mergelabel_test')
