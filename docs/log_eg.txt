@@ -1,0 +1,270 @@
+Sun Mar 22 00:30:40 2020
+----------------- Options ---------------
+                 BID: not-supported                 	[default: 5_95_th]
+           batchsize: 16                            	[default: 64]
+      continue_train: False                         
+         dataset_dir: /home/hypo/MyProject/Ear_AU/datasets/emotion/candock_6class_60s_pad_selectlabel	[default: ./datasets/sleep-edfx/]
+        dataset_name: preload                       
+              epochs: 150                           	[default: 20]
+              gpu_id: 1                             	[default: 0]
+            input_nc: 5                             	[default: 3]
+              k_fold: 5                             	[default: 0]
+               label: 6                             	[default: 5]
+          label_name: ['Amus', 'Neut', 'Sadn', 'Tend', 'Disg', 'Fear']	[default: auto]
+                  lr: 0.001                         
+          model_name: multi_scale_resnet_1d         	[default: lstm]
+   network_save_freq: 1000                          	[default: 5]
+             no_cuda: False                         
+            no_cudnn: False                         
+          no_shuffle: False                         
+          pretrained: False                         
+          sample_num: not-supported                 	[default: 20]
+            save_dir: ./checkpoints/EMDB_5ch_6class_last60s_pad_weightauto_selectlabel_multiscale	[default: ./checkpoints/]
+   select_sleep_time: not-supported                 	[default: False]
+           separated: False                         
+         signal_name: not-supported                 	[default: EEG Fpz-Cz]
+          weight_mod: auto                          	[default: normal]
+----------------- End -------------------
+network:
+Multi_Scale_ResNet(
+  (pre_conv): Sequential(
+    (0): Conv1d(5, 64, kernel_size=(15,), stride=(2,), padding=(7,), bias=False)
+    (1): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): ReLU(inplace=True)
+    (3): MaxPool1d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+  )
+  (Route1): Route(
+    (block1): ResidualBlock(
+      (conv): Sequential(
+        (0): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(1,), bias=False)
+        (1): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+        (3): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(1,), bias=False)
+        (4): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (shortcut): Sequential(
+        (0): Conv1d(64, 64, kernel_size=(1,), stride=(2,), bias=False)
+        (1): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (block2): ResidualBlock(
+      (conv): Sequential(
+        (0): Conv1d(64, 128, kernel_size=(3,), stride=(2,), padding=(1,), bias=False)
+        (1): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+        (3): Conv1d(128, 128, kernel_size=(3,), stride=(1,), padding=(1,), bias=False)
+        (4): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (shortcut): Sequential(
+        (0): Conv1d(64, 128, kernel_size=(1,), stride=(2,), bias=False)
+        (1): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (block3): ResidualBlock(
+      (conv): Sequential(
+        (0): Conv1d(128, 256, kernel_size=(3,), stride=(2,), padding=(1,), bias=False)
+        (1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+        (3): Conv1d(256, 256, kernel_size=(3,), stride=(1,), padding=(1,), bias=False)
+        (4): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (shortcut): Sequential(
+        (0): Conv1d(128, 256, kernel_size=(1,), stride=(2,), bias=False)
+        (1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (block4): ResidualBlock(
+      (conv): Sequential(
+        (0): Conv1d(256, 512, kernel_size=(3,), stride=(2,), padding=(1,), bias=False)
+        (1): BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+        (3): Conv1d(512, 512, kernel_size=(3,), stride=(1,), padding=(1,), bias=False)
+        (4): BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (shortcut): Sequential(
+        (0): Conv1d(256, 512, kernel_size=(1,), stride=(2,), bias=False)
+        (1): BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (avgpool): AdaptiveAvgPool1d(output_size=1)
+  )
+  (Route2): Route(
+    (block1): ResidualBlock(
+      (conv): Sequential(
+        (0): Conv1d(64, 64, kernel_size=(5,), stride=(1,), padding=(2,), bias=False)
+        (1): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+        (3): Conv1d(64, 64, kernel_size=(5,), stride=(1,), padding=(2,), bias=False)
+        (4): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (shortcut): Sequential(
+        (0): Conv1d(64, 64, kernel_size=(1,), stride=(2,), bias=False)
+        (1): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (block2): ResidualBlock(
+      (conv): Sequential(
+        (0): Conv1d(64, 128, kernel_size=(5,), stride=(2,), padding=(2,), bias=False)
+        (1): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+        (3): Conv1d(128, 128, kernel_size=(5,), stride=(1,), padding=(2,), bias=False)
+        (4): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (shortcut): Sequential(
+        (0): Conv1d(64, 128, kernel_size=(1,), stride=(2,), bias=False)
+        (1): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (block3): ResidualBlock(
+      (conv): Sequential(
+        (0): Conv1d(128, 256, kernel_size=(5,), stride=(2,), padding=(2,), bias=False)
+        (1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+        (3): Conv1d(256, 256, kernel_size=(5,), stride=(1,), padding=(2,), bias=False)
+        (4): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (shortcut): Sequential(
+        (0): Conv1d(128, 256, kernel_size=(1,), stride=(2,), bias=False)
+        (1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (block4): ResidualBlock(
+      (conv): Sequential(
+        (0): Conv1d(256, 512, kernel_size=(5,), stride=(2,), padding=(2,), bias=False)
+        (1): BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+        (3): Conv1d(512, 512, kernel_size=(5,), stride=(1,), padding=(2,), bias=False)
+        (4): BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (shortcut): Sequential(
+        (0): Conv1d(256, 512, kernel_size=(1,), stride=(2,), bias=False)
+        (1): BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (avgpool): AdaptiveAvgPool1d(output_size=1)
+  )
+  (Route3): Route(
+    (block1): ResidualBlock(
+      (conv): Sequential(
+        (0): Conv1d(64, 64, kernel_size=(7,), stride=(1,), padding=(3,), bias=False)
+        (1): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+        (3): Conv1d(64, 64, kernel_size=(7,), stride=(1,), padding=(3,), bias=False)
+        (4): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (shortcut): Sequential(
+        (0): Conv1d(64, 64, kernel_size=(1,), stride=(2,), bias=False)
+        (1): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (block2): ResidualBlock(
+      (conv): Sequential(
+        (0): Conv1d(64, 128, kernel_size=(7,), stride=(2,), padding=(3,), bias=False)
+        (1): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+        (3): Conv1d(128, 128, kernel_size=(7,), stride=(1,), padding=(3,), bias=False)
+        (4): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (shortcut): Sequential(
+        (0): Conv1d(64, 128, kernel_size=(1,), stride=(2,), bias=False)
+        (1): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (block3): ResidualBlock(
+      (conv): Sequential(
+        (0): Conv1d(128, 256, kernel_size=(7,), stride=(2,), padding=(3,), bias=False)
+        (1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+        (3): Conv1d(256, 256, kernel_size=(7,), stride=(1,), padding=(3,), bias=False)
+        (4): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (shortcut): Sequential(
+        (0): Conv1d(128, 256, kernel_size=(1,), stride=(2,), bias=False)
+        (1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (block4): ResidualBlock(
+      (conv): Sequential(
+        (0): Conv1d(256, 512, kernel_size=(7,), stride=(2,), padding=(3,), bias=False)
+        (1): BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+        (3): Conv1d(512, 512, kernel_size=(7,), stride=(1,), padding=(3,), bias=False)
+        (4): BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (shortcut): Sequential(
+        (0): Conv1d(256, 512, kernel_size=(1,), stride=(2,), bias=False)
+        (1): BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (avgpool): AdaptiveAvgPool1d(output_size=1)
+  )
+  (fc): Linear(in_features=1536, out_features=6, bias=True)
+)
+net parameters: 8.42M
+label statistics: [715 643 518 254 517 436]
+Loss_weight:[0.81885882 0.87833147 0.99945861 1.39877569 1.00054139 1.09602268]
+------------------------------ k-fold:1 ------------------------------
+>>> per epoch cost time:99.97s
+fold  -> macro-prec,reca,F1,err,kappa: (0.3178, 0.3181, 0.2995, 0.6234, 0.2222)
+confusion_mat:
+[[64 42  4  3 16  6]
+ [18 82  8  5 20  5]
+ [24 41 21  2 16  6]
+ [12 18  4  0  7  2]
+ [ 8 24  7  0 50 10]
+ [ 8 28  6  2 27 12]]
+
+------------------------------ k-fold:2 ------------------------------
+>>> per epoch cost time:96.49s
+fold  -> macro-prec,reca,F1,err,kappa: (0.3149, 0.3155, 0.3127, 0.6464, 0.2092)
+confusion_mat:
+[[71 21 18 12 14 11]
+ [13 56 22  6  7 11]
+ [17 28 30  7  9 10]
+ [15 11  4  4  8  7]
+ [ 9 23 15  0 33 27]
+ [ 9 16 15  5 23 21]]
+
+------------------------------ k-fold:3 ------------------------------
+>>> per epoch cost time:95.27s
+fold  -> macro-prec,reca,F1,err,kappa: (0.3436, 0.3481, 0.3369, 0.6036, 0.2566)
+confusion_mat:
+[[86 17 18  8 13  2]
+ [16 53 24  4 15  7]
+ [24 20 38  3  9  5]
+ [15 16 14  3  7  2]
+ [10 18 12  4 49 12]
+ [11 23 16  2 20 12]]
+
+------------------------------ k-fold:4 ------------------------------
+>>> per epoch cost time:50.3s
+fold  -> macro-prec,reca,F1,err,kappa: (0.349, 0.354, 0.3469, 0.6102, 0.2523)
+confusion_mat:
+[[73 21 13 12 19  4]
+ [27 44 18  9 12 14]
+ [26 14 33  5 15 11]
+ [15 17  7  4  5  6]
+ [12 12  3  4 61 11]
+ [ 9  5  7  5 33 22]]
+
+------------------------------ k-fold:5 ------------------------------
+>>> per epoch cost time:49.65s
+fold  -> macro-prec,reca,F1,err,kappa: (0.3306, 0.3352, 0.3303, 0.6217, 0.2363)
+confusion_mat:
+[[68 18 18  9 20  7]
+ [17 61 29  5 13 12]
+ [18 23 30  5 14  7]
+ [ 9 14 13  2  5  3]
+ [11 14  5  3 45 19]
+ [ 9 17 11  3 27 24]]
+
+------------------------------ final result ------------------------------
+final -> macro-prec,reca,F1,err,kappa: (0.3299, 0.3345, 0.3284, 0.6211, 0.2357)
+confusion_mat:
+[[362 119  71  44  82  30]
+ [ 91 296 101  29  67  49]
+ [109 126 152  22  63  39]
+ [ 66  76  42  13  32  20]
+ [ 50  91  42  11 238  79]
+ [ 46  89  55  17 130  91]]
+

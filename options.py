@@ -3,9 +3,6 @@ import os
 import time
 import util
 
-# python3 train.py --dataset_dir '/media/hypo/Hypo/physionet_org_train' --dataset_name cc2018 --signal_name 'C4-M1' --sample_num 20 --model_name lstm --batchsize 64 --epochs 20 --lr 0.0005 --no_cudnn
-# python3 train.py --dataset_dir './datasets/sleep-edfx/' --dataset_name sleep-edfx --signal_name 'EEG Fpz-Cz' --sample_num 50  --model_name lstm --batchsize 64 --network_save_freq 5 --epochs 25 --lr 0.0005 --BID 5_95_th --select_sleep_time --no_cudnn --select_sleep_time
-
 class Options():
     def __init__(self):
         self.parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -19,7 +16,7 @@ class Options():
         self.parser.add_argument('--label', type=int, default=5,help='number of labels')
         self.parser.add_argument('--input_nc', type=int, default=3, help='# of input channels')
         self.parser.add_argument('--label_name', type=str, default='auto',help='name of labels,example:"a,b,c,d,e,f"')
-        self.parser.add_argument('--model_name', type=str, default='lstm',help='Choose model  lstm | multi_scale_resnet_1d | resnet18 | micro_multi_scale_resnet_1d...')
+        self.parser.add_argument('--model_name', type=str, default='micro_multi_scale_resnet_1d',help='Choose model  lstm | multi_scale_resnet_1d | resnet18 | micro_multi_scale_resnet_1d...')
         self.parser.add_argument('--pretrained', action='store_true', help='if input, use pretrained models')
         self.parser.add_argument('--continue_train', action='store_true', help='if input, continue train')
         self.parser.add_argument('--lr', type=float, default=0.001,help='learning rate') 
@@ -30,7 +27,8 @@ class Options():
         self.parser.add_argument('--k_fold', type=int, default=0,help='fold_num of k-fold.if 0 or 1,no k-fold')
         self.parser.add_argument('--mergelabel', type=str, default='None',
             help='merge some labels to one label and give the result, example:"[[0,1,4],[2,3,5]]" , label(0,1,4) regard as 0,label(2,3,5) regard as 1')
-        
+        self.parser.add_argument('--mergelabel_name', type=str, default='None',help='name of labels,example:"a,b,c,d,e,f"')
+
         self.parser.add_argument('--dataset_dir', type=str, default='./datasets/sleep-edfx/',
                                 help='your dataset path')
         self.parser.add_argument('--save_dir', type=str, default='./checkpoints/',help='save checkpoints')
@@ -76,12 +74,14 @@ class Options():
                     names.append(str(i))
                 self.opt.label_name = names
         else:
-            names = self.opt.label_name
-            names = names.replace(" ", "")
-            names = names.split(",")
-            self.opt.label_name = names
+            self.opt.label_name = self.opt.label_name.replace(" ", "").split(",")
+
 
         self.opt.mergelabel = eval(self.opt.mergelabel)
+        if self.opt.mergelabel_name != 'None':
+            self.opt.mergelabel_name = self.opt.mergelabel_name.replace(" ", "").split(",")
+
+
 
 
         """Print and save options

@@ -131,16 +131,22 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
 
 
 def draw(mat,opt,name = 'train'):
+    if 'merge' in name:
+        label_name = opt.mergelabel_name
+    else:
+        label_name = opt.label_name
     
     mat = mat.astype(float)
     for i in range(mat.shape[0]):
         mat[i,:]=mat[i,:]/np.sum(mat[i])*100
-
-    fig, ax = plt.subplots()
+    if len(mat)>8:
+        fig, ax = plt.subplots(figsize=(len(mat)+2.5, len(mat)))
+    else:
+        fig, ax = plt.subplots()
     ax.set_ylabel('True',fontsize=12)
     ax.set_xlabel('Pred',fontsize=12)
 
-    im, cbar = create_heatmap(mat, opt.label_name, opt.label_name, ax=ax,
+    im, cbar = create_heatmap(mat, label_name, label_name, ax=ax,
                        cmap="Blues", cbarlabel="percentage")
     texts = annotate_heatmap(im,valfmt="{x:.1f}%")
 

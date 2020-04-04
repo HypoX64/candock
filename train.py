@@ -45,9 +45,11 @@ util.writelog('network:\n'+str(net),opt,True)
 util.show_paramsnumber(net,opt)
 weight = np.ones(opt.label)
 if opt.weight_mod == 'auto':
-    weight = np.log(1/label_cnt_per)
-    weight = weight/np.median(weight)
-    weight = np.clip(weight, 0.8, 2)
+    weight = 1/label_cnt_per
+    weight = weight/np.min(weight)
+    # weight = np.log(1/label_cnt_per)
+    # weight = weight/np.median(weight)
+    # weight = np.clip(weight, 0.8, 2)
 util.writelog('label statistics: '+str(label_cnt),opt,True)
 util.writelog('Loss_weight:'+str(weight),opt,True)
 weight = torch.from_numpy(weight).float()
@@ -149,6 +151,7 @@ for fold in range(opt.k_fold):
     final_confusion_mat = confusion_mats[pos]
     if opt.k_fold==1:
         statistics.statistics(final_confusion_mat, opt, 'final', 'final_test')
+        np.save(os.path.join(opt.save_dir,'confusion_mat.npy'), final_confusion_mat)
     else:
         fold_final_confusion_mat += final_confusion_mat
         util.writelog('fold  -> macro-prec,reca,F1,err,kappa: '+str(statistics.report(final_confusion_mat)),opt,True)
@@ -157,7 +160,8 @@ for fold in range(opt.k_fold):
 
 if opt.k_fold != 1:
     statistics.statistics(fold_final_confusion_mat, opt, 'final', 'k-fold-final_test')
-
+    np.save(os.path.join(opt.save_dir,'confusion_mat.npy'), fold_final_confusion_mat)
+    
 if opt.mergelabel:
     mat = statistics.mergemat(fold_final_confusion_mat, opt.mergelabel)
-    statistics.statistics(mat, opt, 'merge', 'mergelabel_test')
+    statistics.statistics(mat, opt, 'merge', 'mergelabel_final')

@@ -137,5 +137,4 @@ dmypy.json
 /python_test.py
 *.pth
 *.edf
-*log*
 *.png
