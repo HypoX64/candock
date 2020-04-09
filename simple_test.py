@@ -29,10 +29,10 @@ if not opt.no_cuda:
 
 for signal,true_label in zip(signals, labels):
     signal = signal.reshape(1,1,-1) #batchsize,ch,length
-    true_label = true_label.reshape(1,-1) #batchsize,label
+    true_label = true_label.reshape(1) #batchsize
     signal,true_label = transformer.ToTensor(signal,true_label,no_cuda =opt.no_cuda)
     out = net(signal)
     pred_label = torch.max(out, 1)[1]
     pred_label=pred_label.data.cpu().numpy()
     true_label=true_label.data.cpu().numpy()
-    print(("true:{0:d} predict:{1:d}").format(true_label[0][0],pred_label[0]))
+    print(("true:{0:d} predict:{1:d}").format(true_label[0],pred_label[0]))

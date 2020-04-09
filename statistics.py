@@ -105,8 +105,8 @@ def plotloss(plot_result,epoch,opt):
         plt.xlim((0,10))
     else:
         plt.xlim((0,epoch))
-    plt.plot(train_x,train*100,label='train',linewidth = 2.0,color = 'red')
-    plt.plot(test_x,test*100,label='test', linewidth = 2.0,color = 'blue')
+    plt.plot(train_x,train*100,label='train',linewidth = 1.5,color = 'red')
+    plt.plot(test_x,test*100,label='test', linewidth = 1.5,color = 'blue')
     plt.legend(loc=1)
     plt.title('Running err.',fontsize='large')
     plt.savefig(os.path.join(opt.save_dir,'running_err.png'))

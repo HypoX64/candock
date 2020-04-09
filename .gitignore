@@ -135,7 +135,8 @@ dmypy.json
 /datasets/au
 /sftp-config.json
 /python_test.py
+/train_backup.py
 *.pth
 *.edf
-# *log*
-# *.png
+*log*
+*.png

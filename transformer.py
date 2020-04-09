@@ -29,31 +29,13 @@ def k_fold_generator(length,fold_num):
             train_sequence[i] = np.concatenate((sequence[0:test_length*i],sequence[test_length*(i+1):]),axis=0)[:train_length]
     return train_sequence,test_sequence
 
-def batch_generator(data,target,batchsize,shuffle = True):
-    if shuffle:
-        shuffledata(data,target)
-    # data = trimdata(data,batchsize)
-    # target = trimdata(target,batchsize)
-    # if data.ndim == 2:
-    #     data = data.reshape(-1,batchsize,data.shape[1])
-    # elif data.ndim == 3:
-    #     data = data.reshape(-1,batchsize,data.shape[1],data.shape[2])
-    # target = target.reshape(-1,batchsize)
-    if len(target)%batchsize ==0:
-        out_length = int(len(target)/batchsize)
-        flat = True
-    else:
-        out_length = int(len(target)/batchsize)+1
-        flat = False
-    out_data = []
-    out_target = []
-    for i in range(out_length):
-        if i != out_length or flat:
-            out_data.append(data[i*batchsize:(i+1)*batchsize])
-            out_target.append(target[i*batchsize:(i+1)*batchsize])
-        else:
-            out_data.append(data[i*batchsize:])
-            out_target.append(target[i*batchsize:])
+def batch_generator(data,target,sequence,shuffle = True):
+    batchsize = len(sequence)
+    out_data = np.zeros((batchsize,data.shape[1],data.shape[2]), data.dtype)
+    out_target = np.zeros((batchsize), target.dtype)
+    for i in range(batchsize):
+        out_data[i] = data[sequence[i]]
+        out_target[i] = target[sequence[i]]
 
     return out_data,out_target
 
@@ -136,6 +118,7 @@ def random_transform_2d(img,finesize = (224,122),test_flag = True):
 def ToInputShape(data,opt,test_flag = False):
     data = data.astype(np.float32)
     batchsize = data.shape[0]
+
     if data.ndim == 2:
         loadsize = data.shape[1]
     elif data.ndim == 3:
@@ -143,33 +126,33 @@ def ToInputShape(data,opt,test_flag = False):
     
     _finesize = int(loadsize*0.9)
 
-    if opt.model_name=='lstm':
-        result =[]
+    if opt.model_name in['cnn_1d','resnet18_1d','resnet34_1d','multi_scale_resnet_1d','micro_multi_scale_resnet_1d']:
+        result = np.zeros((batchsize,opt.input_nc,_finesize),dtype=np.float64)
         for i in range(0,batchsize):
-            randomdata=random_transform_1d(data[i],finesize = _finesize,test_flag=test_flag)
-            result.append(dsp.getfeature(randomdata))
-        result = np.array(result).reshape(batchsize,_finesize*5)
+            result[i]=random_transform_1d(data[i],finesize = _finesize,test_flag=test_flag)
 
-    elif opt.model_name in['cnn_1d','resnet18_1d','resnet34_1d','multi_scale_resnet_1d','micro_multi_scale_resnet_1d']:
-        result =[]
-        for i in range(0,batchsize):
-            randomdata=random_transform_1d(data[i],finesize = _finesize,test_flag=test_flag)
-            result.append(randomdata)
-        result = np.array(result)
-        result = result.reshape(batchsize,opt.input_nc,_finesize)
+    # unsupported now
+    # elif opt.model_name=='lstm':
+    #     result =[]
+    #     for i in range(0,batchsize):
+    #         randomdata=random_transform_1d(data[i],finesize = _finesize,test_flag=test_flag)
+    #         result.append(dsp.getfeature(randomdata))
+    #     result = np.array(result).reshape(batchsize,_finesize*5)
 
-    elif opt.model_name in ['squeezenet','multi_scale_resnet','dfcnn','resnet18','densenet121','densenet201','resnet101','resnet50']:
-        result =[]
-        data = (data-0.5)*2
-        for i in range(0,batchsize):
-            spectrum = dsp.signal2spectrum(data[i])
-            spectrum = random_transform_2d(spectrum,(224,122),test_flag=test_flag)
-            result.append(spectrum)
-        result = np.array(result)
-        #datasets    th_95    avg       mid
-        # sleep_edfx 0.0458   0.0128    0.0053
-        # CC2018     0.0507   0.0161    0.00828
-        result = Normalize(result, maxmin=0.5, avg=0.0150, sigma=0.0500)
-        result = result.reshape(batchsize,1,224,122)
+
+
+    # elif opt.model_name in ['squeezenet','multi_scale_resnet','dfcnn','resnet18','densenet121','densenet201','resnet101','resnet50']:
+    #     result =[]
+    #     data = (data-0.5)*2
+    #     for i in range(0,batchsize):
+    #         spectrum = dsp.signal2spectrum(data[i])
+    #         spectrum = random_transform_2d(spectrum,(224,122),test_flag=test_flag)
+    #         result.append(spectrum)
+    #     result = np.array(result)
+    #     #datasets    th_95    avg       mid
+    #     # sleep_edfx 0.0458   0.0128    0.0053
+    #     # CC2018     0.0507   0.0161    0.00828
+    #     result = Normalize(result, maxmin=0.5, avg=0.0150, sigma=0.0500)
+    #     result = result.reshape(batchsize,1,224,122)
 
     return result

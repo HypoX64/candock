@@ -10,15 +10,15 @@ class Options():
 
     def initialize(self):
         #base
-        self.parser.add_argument('--no_cuda', action='store_true', help='if input, do not use gpu')
+        self.parser.add_argument('--no_cuda', action='store_true', help='if specified, do not use gpu')
         self.parser.add_argument('--gpu_id', type=int, default=0,help='choose which gpu want to use, 0 | 1 | 2 ...')        
-        self.parser.add_argument('--no_cudnn', action='store_true', help='if input, do not use cudnn')
+        self.parser.add_argument('--no_cudnn', action='store_true', help='if specified, do not use cudnn')
         self.parser.add_argument('--label', type=int, default=5,help='number of labels')
         self.parser.add_argument('--input_nc', type=int, default=3, help='# of input channels')
         self.parser.add_argument('--label_name', type=str, default='auto',help='name of labels,example:"a,b,c,d,e,f"')
         self.parser.add_argument('--model_name', type=str, default='micro_multi_scale_resnet_1d',help='Choose model  lstm | multi_scale_resnet_1d | resnet18 | micro_multi_scale_resnet_1d...')
-        self.parser.add_argument('--pretrained', action='store_true', help='if input, use pretrained models')
-        self.parser.add_argument('--continue_train', action='store_true', help='if input, continue train')
+        self.parser.add_argument('--pretrained', action='store_true', help='if specified, use pretrained models')
+        self.parser.add_argument('--continue_train', action='store_true', help='if specified, continue train')
         self.parser.add_argument('--lr', type=float, default=0.001,help='learning rate') 
         self.parser.add_argument('--batchsize', type=int, default=64,help='batchsize')
         self.parser.add_argument('--weight_mod', type=str, default='normal',help='Choose weight mode: auto | normal')
@@ -28,19 +28,19 @@ class Options():
         self.parser.add_argument('--mergelabel', type=str, default='None',
             help='merge some labels to one label and give the result, example:"[[0,1,4],[2,3,5]]" , label(0,1,4) regard as 0,label(2,3,5) regard as 1')
         self.parser.add_argument('--mergelabel_name', type=str, default='None',help='name of labels,example:"a,b,c,d,e,f"')
+        self.parser.add_argument('--plotfreq', type=int, default=100,help='frequency of plotting results')
 
         self.parser.add_argument('--dataset_dir', type=str, default='./datasets/sleep-edfx/',
                                 help='your dataset path')
         self.parser.add_argument('--save_dir', type=str, default='./checkpoints/',help='save checkpoints')
         self.parser.add_argument('--dataset_name', type=str, default='preload',
             help='Choose dataset preload | sleep-edfx | cc2018  ,preload:your data->shape:(num,ch,length), sleep-edfx&cc2018:sleep stage')
-        self.parser.add_argument('--separated', action='store_true', help='for preload data, if input, load separated train and test datasets')
-        self.parser.add_argument('--no_shuffle', action='store_true', help='do not shuffle data when load')
-
+        self.parser.add_argument('--separated', action='store_true', help='if specified,for preload data, if input, load separated train and test datasets')
+        self.parser.add_argument('--no_shuffle', action='store_true', help='if specified,do not shuffle data when load(use to evaluate individual differences)')
 
         #for EEG datasets  
         self.parser.add_argument('--BID', type=str, default='5_95_th',help='Balance individualized differences  5_95_th | median |None')
-        self.parser.add_argument('--select_sleep_time', action='store_true', help='if input, for sleep-cassette only use sleep time to train')
+        self.parser.add_argument('--select_sleep_time', action='store_true', help='if specified, for sleep-cassette only use sleep time to train')
         self.parser.add_argument('--signal_name', type=str, default='EEG Fpz-Cz',help='Choose the EEG channel C4-M1 | EEG Fpz-Cz |...')
         self.parser.add_argument('--sample_num', type=int, default=20,help='the amount you want to load')
         
@@ -81,9 +81,6 @@ class Options():
         if self.opt.mergelabel_name != 'None':
             self.opt.mergelabel_name = self.opt.mergelabel_name.replace(" ", "").split(",")
 
-
-
-
         """Print and save options
         It will print both current options and default values(if different).
         It will save options into a text file / [checkpoints_dir] / opt.txt
@@ -100,7 +97,6 @@ class Options():
         localtime = time.asctime(time.localtime(time.time()))
         util.makedirs(self.opt.save_dir)
         util.writelog(str(localtime)+'\n'+message, self.opt,True)
-
 
         return self.opt
  
