@@ -78,18 +78,18 @@ def ToTensor(data,target=None,no_cuda = False):
         return data
 
 def random_transform_1d(data,finesize,test_flag):
-    ch,length = data.shape
+    batch_size,ch,length = data.shape
 
     if test_flag:
         move = int((length-finesize)*0.5)
-        result = data[:,move:move+finesize]
+        result = data[:,:,move:move+finesize]
     else:
         #random crop    
         move = int((length-finesize)*random.random())
-        result = data[:,move:move+finesize]
+        result = data[:,:,move:move+finesize]
         #random flip
         if random.random()<0.5:
-            result = result[:,::-1]
+            result = result[:,:,::-1]
         #random amp
         result = result*random.uniform(0.9,1.1)
         #add noise
@@ -126,10 +126,11 @@ def ToInputShape(data,opt,test_flag = False):
     
     _finesize = int(loadsize*0.9)
 
-    if opt.model_name in['cnn_1d','resnet18_1d','resnet34_1d','multi_scale_resnet_1d','micro_multi_scale_resnet_1d']:
-        result = np.zeros((batchsize,opt.input_nc,_finesize),dtype=np.float64)
-        for i in range(0,batchsize):
-            result[i]=random_transform_1d(data[i],finesize = _finesize,test_flag=test_flag)
+    if opt.model_name in['lstm','cnn_1d','resnet18_1d','resnet34_1d','multi_scale_resnet_1d','micro_multi_scale_resnet_1d']:
+        result = random_transform_1d(data, _finesize, test_flag=test_flag)
+        # result = np.zeros((batchsize,opt.input_nc,_finesize),dtype=np.float64)
+        # for i in range(0,batchsize):
+        #     result[i]=random_transform_1d(data[i],finesize = _finesize,test_flag=test_flag)
 
     # unsupported now
     # elif opt.model_name=='lstm':

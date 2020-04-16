@@ -35,14 +35,14 @@ def predtrue2mat(y_true,y_pred):
 
 def mergemat(mat,mergemethod):
     y_true,y_pred = mat2predtrue(mat)
-    new_true = []
-    new_pred = []
+    new_true = np.zeros(len(y_true), dtype=np.int64)
+    new_pred = np.zeros(len(y_true), dtype=np.int64)
     for i in range(len(y_true)):
         for j in range(len(mergemethod)):
             if y_true[i] in mergemethod[j]:
-                new_true.append(j)
+                new_true[i]=j
             if y_pred[i] in mergemethod[j]:
-                new_pred.append(j)
+                new_pred[i]=j
     return predtrue2mat(new_true, new_pred)
 
 def Kappa(mat):

@@ -6,7 +6,7 @@ def CreatNet(opt):
     name = opt.model_name
     label_num = opt.label
     if name =='lstm':
-        net =  lstm.lstm(100,27,num_classes=label_num)
+        net =  lstm.lstm(opt.input_size,opt.time_step,input_nc=opt.input_nc,num_classes=label_num)
     elif name == 'cnn_1d':
         net = cnn_1d.cnn(opt.input_nc,num_classes=label_num)
     elif name == 'resnet18_1d':

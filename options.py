@@ -17,6 +17,10 @@ class Options():
         self.parser.add_argument('--input_nc', type=int, default=3, help='# of input channels')
         self.parser.add_argument('--label_name', type=str, default='auto',help='name of labels,example:"a,b,c,d,e,f"')
         self.parser.add_argument('--model_name', type=str, default='micro_multi_scale_resnet_1d',help='Choose model  lstm | multi_scale_resnet_1d | resnet18 | micro_multi_scale_resnet_1d...')
+        # for lstm 
+        self.parser.add_argument('--input_size', type=int, default=100,help='input_size of LSTM')
+        self.parser.add_argument('--time_step', type=int, default=270,help='time_step of LSTM')
+        
         self.parser.add_argument('--pretrained', action='store_true', help='if specified, use pretrained models')
         self.parser.add_argument('--continue_train', action='store_true', help='if specified, continue train')
         self.parser.add_argument('--lr', type=float, default=0.001,help='learning rate') 
