@@ -4,7 +4,12 @@
 
 ## 注意
 为了适应新的项目，代码已被大幅更改，不能确保仍然能正常运行如sleep-edfx等睡眠数据集，如果仍然需要运行，请参照下文按照输入格式标准自行加载数据，如果有时间我会修复这个问题。
-当然，如果需要加载睡眠数据集也可以直接使用[老的版本](https://github.com/HypoX64/candock/tree/f24cc44933f494d2235b3bf965a04cde5e6a1ae9)
+当然，如果需要加载睡眠数据集也可以直接使用[老的版本](https://github.com/HypoX64/candock/tree/f24cc44933f494d2235b3bf965a04cde5e6a1ae9)<br>
+感谢[@swalltail99](https://github.com/swalltail99)指出的错误，为了适应sleep-edfx数据集的读取，使用这个版本的代码时，请安装mne==0.18.0<br>
+
+```bash
+pip install mne==0.18.0
+```
 
 ## Getting Started
 ### Prerequisites
