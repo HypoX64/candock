@@ -1,6 +1,8 @@
 from torch import nn
-from models import cnn_1d,densenet,dfcnn,lstm,mobilenet,resnet,resnet_1d,squeezenet
-from models import multi_scale_resnet,multi_scale_resnet_1d,micro_multi_scale_resnet_1d
+from . import cnn_1d,densenet,dfcnn,lstm,mobilenet,resnet,resnet_1d,squeezenet, \
+multi_scale_resnet,multi_scale_resnet_1d,micro_multi_scale_resnet_1d
+# from models import cnn_1d,densenet,dfcnn,lstm,mobilenet,resnet,resnet_1d,squeezenet
+# from models import multi_scale_resnet,multi_scale_resnet_1d,micro_multi_scale_resnet_1d
 
 def CreatNet(opt):
     name = opt.model_name

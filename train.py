@@ -7,15 +7,10 @@ from torch import nn, optim
 import warnings
 warnings.filterwarnings("ignore")
 
-import util
-import transformer
-import dataloader
-import statistics
-import heatmap
-from creatnet import CreatNet
-from options import Options
+from util import util,transformer,dataloader,statistics,heatmap,options
+from models import creatnet
 
-opt = Options().getparse()
+opt = options.Options().getparse()
 torch.cuda.set_device(opt.gpu_id)
 t1 = time.time()
 
@@ -37,7 +32,7 @@ train_sequences,test_sequences = transformer.k_fold_generator(len(labels),opt.k_
 t2 = time.time()
 print('load data cost time: %.2f'% (t2-t1),'s')
 
-net=CreatNet(opt)
+net=creatnet.CreatNet(opt)
 util.writelog('network:\n'+str(net),opt,True)
 
 util.show_paramsnumber(net,opt)

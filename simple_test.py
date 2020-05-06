@@ -3,19 +3,16 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
-import util
-import transformer
-import dataloader
-from options import Options
-from creatnet import CreatNet
+from util import util,transformer,dataloader,statistics,heatmap,options
+from models import creatnet
 
 '''
 --------------------------------preload data--------------------------------
 @hypox64
 2020/04/03
 '''
-opt = Options().getparse()
-net = CreatNet(opt)
+opt = options.Options().getparse()
+net = creatnet.CreatNet(opt)
 
 #load data
 signals = np.load('./datasets/simple_test/signals.npy')

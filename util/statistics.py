@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import util
 import os
-import heatmap
+from . import heatmap
 
 def label_statistics(labels):
     #for sleep label: N3->0  N2->1  N1->2  REM->3  W->4

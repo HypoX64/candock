@@ -40,7 +40,7 @@ cd candock
 python3 train.py --label 50 --input_nc 1 --dataset_dir ./datasets/simple_test --save_dir ./checkpoints/simple_test --model_name micro_multi_scale_resnet_1d --gpu_id 0 --batchsize 64 --k_fold 5
 # if you want to use cpu to train, please input --no_cuda
 ```
-* More [options](./options.py).
+* More [options](./util/options.py).
 #### Use your own data to train
 * step1: Generate signals.npy and labels.npy in the following format.
 ```python
@@ -57,3 +57,4 @@ labels = np.array([0,0,0,0,0,1,1,1,1,1])      #0->class0    1->class1
 python3 simple_test.py --label 50 --input_nc 1 --model_name micro_multi_scale_resnet_1d --gpu_id 0
 # if you want to use cpu to test, please input --no_cuda
 ```
+

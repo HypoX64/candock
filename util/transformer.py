@@ -2,7 +2,8 @@ import os
 import random
 import numpy as np
 import torch
-import dsp
+from . import dsp
+# import dsp
 
 def trimdata(data,num):
     return data[:num*int(len(data)/num)]

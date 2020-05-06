@@ -5,9 +5,10 @@ import random
 import scipy.io as sio
 import numpy as np
 
-import dsp
-import transformer
-import statistics
+from . import dsp,transformer,statistics
+# import dsp
+# import transformer
+# import statistics
 
 
 def trimdata(data,num):

@@ -1,7 +1,7 @@
 import argparse
 import os
 import time
-import util
+from . import util
 
 class Options():
     def __init__(self):
@@ -25,7 +25,7 @@ class Options():
         self.parser.add_argument('--continue_train', action='store_true', help='if specified, continue train')
         self.parser.add_argument('--lr', type=float, default=0.001,help='learning rate') 
         self.parser.add_argument('--batchsize', type=int, default=64,help='batchsize')
-        self.parser.add_argument('--weight_mod', type=str, default='normal',help='Choose weight mode: auto | normal')
+        self.parser.add_argument('--weight_mod', type=str, default='auto',help='Choose weight mode: auto | normal')
         self.parser.add_argument('--epochs', type=int, default=20,help='end epoch')
         self.parser.add_argument('--network_save_freq', type=int, default=5,help='the freq to save network')
         self.parser.add_argument('--k_fold', type=int, default=0,help='fold_num of k-fold.if 0 or 1,no k-fold')
