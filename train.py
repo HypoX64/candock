@@ -66,7 +66,6 @@ def evalnet(net,signals,labels,sequences,epoch,plot_result={}):
         signal = transformer.ToInputShape(signal,opt,test_flag =True)
         signal,label = transformer.ToTensor(signal,label,no_cuda =opt.no_cuda)
         with torch.no_grad():
-
             if opt.model_name == 'autoencoder':
                 out,feature = net(signal)
                 loss = criterion_auto(out, signal)
@@ -139,18 +138,14 @@ for fold in range(opt.k_fold):
             loss.backward()
             optimizer.step()
 
-            # iter_cnt += 1
-            # if iter_cnt%opt.plotfreq==0 and i>(len(train_sequences[fold])//opt.batchsize)/2:       
-            #     plot_result['train'].append(epoch_loss/i)
-            #     plot.draw_loss(plot_result,epoch+i/(train_sequences.shape[1]/opt.batchsize),opt)
-            #     if opt.model_name != 'autoencoder':
-            #         plot.draw_heatmap(confusion_mat,opt,name = 'current_train')
-            #         confusion_mat[:]=0
-        ###tmp
-        plot_result['train'].append(epoch_loss/i)
-        plot.draw_loss(plot_result,epoch+i/(train_sequences.shape[1]/opt.batchsize),opt)
-        #plot.draw_scatter(features, opt)
-        ###
+            iter_cnt += 1
+            if iter_cnt%opt.plotfreq==0 and i>(len(train_sequences[fold])//opt.batchsize)/2:       
+                plot_result['train'].append(epoch_loss/i)
+                plot.draw_loss(plot_result,epoch+i/(train_sequences.shape[1]/opt.batchsize),opt)
+                if opt.model_name != 'autoencoder':
+                    plot.draw_heatmap(confusion_mat,opt,name = 'current_train')
+                    confusion_mat[:]=0
+
         plot_result,confusion_mat_eval = evalnet(net,signals,labels,test_sequences[fold],epoch+1,plot_result)
         confusion_mats.append(confusion_mat_eval)
 
@@ -164,23 +159,25 @@ for fold in range(opt.k_fold):
         t2=time.time()
         if epoch+1==1:
             util.writelog('>>> per epoch cost time:'+str(round((t2-t1),2))+'s',opt,True)
-
-#     #save result
-#     pos = plot_result['test'].index(min(plot_result['test']))-1
-#     final_confusion_mat = confusion_mats[pos]
-#     if opt.k_fold==1:
-#         statistics.statistics(final_confusion_mat, opt, 'final', 'final_test')
-#         np.save(os.path.join(opt.save_dir,'confusion_mat.npy'), final_confusion_mat)
-#     else:
-#         fold_final_confusion_mat += final_confusion_mat
-#         util.writelog('fold  -> macro-prec,reca,F1,err,kappa: '+str(statistics.report(final_confusion_mat)),opt,True)
-#         util.writelog('confusion_mat:\n'+str(final_confusion_mat)+'\n',opt,True)
-#         plot.draw_heatmap(final_confusion_mat,opt,name = 'fold'+str(fold+1)+'_test')
-
-# if opt.k_fold != 1:
-#     statistics.statistics(fold_final_confusion_mat, opt, 'final', 'k-fold-final_test')
-#     np.save(os.path.join(opt.save_dir,'confusion_mat.npy'), fold_final_confusion_mat)
     
-# if opt.mergelabel:
-#     mat = statistics.mergemat(fold_final_confusion_mat, opt.mergelabel)
-#     statistics.statistics(mat, opt, 'merge', 'mergelabel_final')
+    #save result
+    if opt.model_name != 'autoencoder':
+        pos = plot_result['test'].index(min(plot_result['test']))-1
+        final_confusion_mat = confusion_mats[pos]
+        if opt.k_fold==1:
+            statistics.statistics(final_confusion_mat, opt, 'final', 'final_test')
+            np.save(os.path.join(opt.save_dir,'confusion_mat.npy'), final_confusion_mat)
+        else:
+            fold_final_confusion_mat += final_confusion_mat
+            util.writelog('fold  -> macro-prec,reca,F1,err,kappa: '+str(statistics.report(final_confusion_mat)),opt,True)
+            util.writelog('confusion_mat:\n'+str(final_confusion_mat)+'\n',opt,True)
+            plot.draw_heatmap(final_confusion_mat,opt,name = 'fold'+str(fold+1)+'_test')
+
+if opt.model_name != 'autoencoder':
+    if opt.k_fold != 1:
+        statistics.statistics(fold_final_confusion_mat, opt, 'final', 'k-fold-final_test')
+        np.save(os.path.join(opt.save_dir,'confusion_mat.npy'), fold_final_confusion_mat)
+        
+    if opt.mergelabel:
+        mat = statistics.mergemat(fold_final_confusion_mat, opt.mergelabel)
+        statistics.statistics(mat, opt, 'merge', 'mergelabel_final')

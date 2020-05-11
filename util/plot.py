@@ -179,11 +179,10 @@ def draw_loss(plot_result,epoch,opt):
     plt.plot(test_x,test,label='test', linewidth = 1.5)
     plt.legend(loc=1)
     plt.title('Running loss',fontsize='large')
-    plt.savefig(os.path.join(opt.save_dir,'running_loss'+'%06d' % plotcnt+'.png'))
+    plt.savefig(os.path.join(opt.save_dir,'running_loss.png'))
 
 
 #---------------------------------scatter---------------------------------
-plotcnt = 0
 def label_statistics(labels):
     labels = (np.array(labels)).astype(np.int64)
     label_num = np.max(labels)+1
@@ -218,12 +217,8 @@ def draw_scatter(data,opt):
             ax.scatter(data[cnt:cnt+label_cnt[i],0], data[cnt:cnt+label_cnt[i],1], data[cnt:cnt+label_cnt[i],2],
             )
             cnt += label_cnt[i]
-    global plotcnt
-    plotcnt += 1
-    plt.xlim(-1.5,1.5)
-    plt.ylim(-1.5,1.5)
 
-    plt.savefig(os.path.join(opt.save_dir,'feature_scatter'+'%06d' % plotcnt+'.png'))
+    plt.savefig(os.path.join(opt.save_dir,'feature_scatter.png'))
     np.save(os.path.join(opt.save_dir,'feature_scatter.npy'), data)
     plt.close('all')
 
@@ -234,7 +229,7 @@ def draw_autoencoder_result(true_signal,pred_signal,opt):
     plt.subplot(212)
     plt.plot(pred_signal[0][0])
     plt.title('Pred')
-    plt.savefig(os.path.join(opt.save_dir,'autoencoder_result'+'%06d' % plotcnt+'.png'))
+    plt.savefig(os.path.join(opt.save_dir,'autoencoder_result.png'))
     plt.close('all')
 
 def showscatter3d(data):
@@ -245,8 +240,9 @@ def showscatter3d(data):
 
     cnt = 0
     for i in range(label_num):
+        #c = colors[i%10],marker = markers[i//10]
         ax.scatter(data[cnt:cnt+label_cnt[i],0], data[cnt:cnt+label_cnt[i],1], data[cnt:cnt+label_cnt[i],2],
-            c = colors[i%10],marker = markers[i//10])
+            )
         cnt += label_cnt[i]
 
     plt.show()
