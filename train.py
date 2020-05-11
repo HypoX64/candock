@@ -7,7 +7,7 @@ from torch import nn, optim
 import warnings
 warnings.filterwarnings("ignore")
 
-from util import util,transformer,dataloader,statistics,heatmap,options
+from util import util,transformer,dataloader,statistics,plot,options,scatter3d
 from models import creatnet
 
 opt = options.Options().getparse()
@@ -52,29 +52,45 @@ if not opt.no_cudnn:
     torch.backends.cudnn.benchmark = True
 
 optimizer = torch.optim.Adam(net.parameters(), lr=opt.lr)
-criterion = nn.CrossEntropyLoss(weight)
+criterion_class = nn.CrossEntropyLoss(weight)
+criterion_auto = nn.MSELoss()
 torch.save(net.cpu().state_dict(),os.path.join(opt.save_dir,'tmp.pth'))
 
 def evalnet(net,signals,labels,sequences,epoch,plot_result={}):
     # net.eval()
     confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
-    for i in range(int(len(sequences)/opt.batchsize)):
+    features = np.zeros((len(sequences)//opt.batchsize*opt.batchsize,opt.feature+1))
+    epoch_loss = 0
+    for i in range(len(sequences)//opt.batchsize):
         signal,label = transformer.batch_generator(signals, labels, sequences[i*opt.batchsize:(i+1)*opt.batchsize])
         signal = transformer.ToInputShape(signal,opt,test_flag =True)
         signal,label = transformer.ToTensor(signal,label,no_cuda =opt.no_cuda)
         with torch.no_grad():
-            out = net(signal)
-        pred = torch.max(out, 1)[1]
 
-        pred=pred.data.cpu().numpy()
-        label=label.data.cpu().numpy()
-        for x in range(len(pred)):
-            confusion_mat[label[x]][pred[x]] += 1
+            if opt.model_name == 'autoencoder':
+                out,feature = net(signal)
+                loss = criterion_auto(out, signal)
+                features[i*opt.batchsize:(i+1)*opt.batchsize,:opt.feature] = (feature.data.cpu().numpy()).reshape(opt.batchsize,-1)
+                features[i*opt.batchsize:(i+1)*opt.batchsize,opt.feature] = label.data.cpu().numpy()
+            else:
+                out = net(signal)
+                loss = criterion_class(out, label)
+                pred = (torch.max(out, 1)[1]).data.cpu().numpy()
+                label=label.data.cpu().numpy()
+                for x in range(len(pred)):
+                    confusion_mat[label[x]][pred[x]] += 1
+            epoch_loss += loss.item()
 
-    recall,acc,sp,err,k  = statistics.report(confusion_mat)
-    plot_result['test'].append(err)   
-    heatmap.draw(confusion_mat,opt,name = 'current_test')
-    print('epoch:'+str(epoch),' macro-prec,reca,F1,err,kappa: '+str(statistics.report(confusion_mat)))
+    if opt.model_name != 'autoencoder':
+        recall,acc,sp,err,k  = statistics.report(confusion_mat)         
+        plot.draw_heatmap(confusion_mat,opt,name = 'current_test')
+        print('epoch:'+str(epoch),' macro-prec,reca,F1,err,kappa: '+str(statistics.report(confusion_mat)))
+    else:
+        plot.draw_autoencoder_result(signal.data.cpu().numpy(), out.data.cpu().numpy(),opt)
+        print('epoch:'+str(epoch),' loss: '+str(round(epoch_loss/i,5)))
+        plot.draw_scatter(features, opt)
+    plot_result['test'].append(epoch_loss/i) 
+
     return plot_result,confusion_mat
 
 print('begin to train ...')
@@ -92,36 +108,49 @@ for fold in range(opt.k_fold):
 
     final_confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
     confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
+    features = np.zeros((len(train_sequences[fold])//opt.batchsize*opt.batchsize,opt.feature+1))
     confusion_mats = []
-    plot_result={'train':[1.],'test':[1.]}
-    
+    plot_result = {'train':[],'test':[]}
     for epoch in range(opt.epochs):
+        epoch_loss = 0
         t1 = time.time()
         np.random.shuffle(train_sequences[fold])
         net.train()
-        for i in range(int(len(train_sequences[fold])/opt.batchsize)):
+        for i in range(len(train_sequences[fold])//opt.batchsize):
             signal,label = transformer.batch_generator(signals, labels, train_sequences[fold][i*opt.batchsize:(i+1)*opt.batchsize])
             signal = transformer.ToInputShape(signal,opt,test_flag =False)
             signal,label = transformer.ToTensor(signal,label,no_cuda =opt.no_cuda)
 
-            out = net(signal)
-            loss = criterion(out, label)
-            pred = torch.max(out, 1)[1]
+            if opt.model_name == 'autoencoder':
+                out,feature = net(signal)
+                loss = criterion_auto(out, signal)
+                features[i*opt.batchsize:(i+1)*opt.batchsize,:opt.feature] = (feature.data.cpu().numpy()).reshape(opt.batchsize,-1)
+                features[i*opt.batchsize:(i+1)*opt.batchsize,opt.feature] = label.data.cpu().numpy()
+            else:
+                out = net(signal)
+                loss = criterion_class(out, label)
+                pred = (torch.max(out, 1)[1]).data.cpu().numpy()
+                label=label.data.cpu().numpy()
+                for x in range(len(pred)):
+                    confusion_mat[label[x]][pred[x]] += 1
+
+            epoch_loss += loss.item()     
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            pred=pred.data.cpu().numpy()
-            label=label.data.cpu().numpy()
-            for x in range(len(pred)):
-                confusion_mat[label[x]][pred[x]] += 1
-            iter_cnt += 1
-            if iter_cnt%opt.plotfreq==0:       
-                plot_result['train'].append(statistics.report(confusion_mat)[3])
-                heatmap.draw(confusion_mat,opt,name = 'current_train')
-                statistics.plotloss(plot_result,epoch+i/(train_sequences.shape[1]/opt.batchsize),opt)
-                confusion_mat[:]=0
-
+            # iter_cnt += 1
+            # if iter_cnt%opt.plotfreq==0 and i>(len(train_sequences[fold])//opt.batchsize)/2:       
+            #     plot_result['train'].append(epoch_loss/i)
+            #     plot.draw_loss(plot_result,epoch+i/(train_sequences.shape[1]/opt.batchsize),opt)
+            #     if opt.model_name != 'autoencoder':
+            #         plot.draw_heatmap(confusion_mat,opt,name = 'current_train')
+            #         confusion_mat[:]=0
+        ###tmp
+        plot_result['train'].append(epoch_loss/i)
+        plot.draw_loss(plot_result,epoch+i/(train_sequences.shape[1]/opt.batchsize),opt)
+        #plot.draw_scatter(features, opt)
+        ###
         plot_result,confusion_mat_eval = evalnet(net,signals,labels,test_sequences[fold],epoch+1,plot_result)
         confusion_mats.append(confusion_mat_eval)
 
@@ -136,22 +165,22 @@ for fold in range(opt.k_fold):
         if epoch+1==1:
             util.writelog('>>> per epoch cost time:'+str(round((t2-t1),2))+'s',opt,True)
 
-    #save result
-    pos = plot_result['test'].index(min(plot_result['test']))-1
-    final_confusion_mat = confusion_mats[pos]
-    if opt.k_fold==1:
-        statistics.statistics(final_confusion_mat, opt, 'final', 'final_test')
-        np.save(os.path.join(opt.save_dir,'confusion_mat.npy'), final_confusion_mat)
-    else:
-        fold_final_confusion_mat += final_confusion_mat
-        util.writelog('fold  -> macro-prec,reca,F1,err,kappa: '+str(statistics.report(final_confusion_mat)),opt,True)
-        util.writelog('confusion_mat:\n'+str(final_confusion_mat)+'\n',opt,True)
-        heatmap.draw(final_confusion_mat,opt,name = 'fold'+str(fold+1)+'_test')
+#     #save result
+#     pos = plot_result['test'].index(min(plot_result['test']))-1
+#     final_confusion_mat = confusion_mats[pos]
+#     if opt.k_fold==1:
+#         statistics.statistics(final_confusion_mat, opt, 'final', 'final_test')
+#         np.save(os.path.join(opt.save_dir,'confusion_mat.npy'), final_confusion_mat)
+#     else:
+#         fold_final_confusion_mat += final_confusion_mat
+#         util.writelog('fold  -> macro-prec,reca,F1,err,kappa: '+str(statistics.report(final_confusion_mat)),opt,True)
+#         util.writelog('confusion_mat:\n'+str(final_confusion_mat)+'\n',opt,True)
+#         plot.draw_heatmap(final_confusion_mat,opt,name = 'fold'+str(fold+1)+'_test')
 
-if opt.k_fold != 1:
-    statistics.statistics(fold_final_confusion_mat, opt, 'final', 'k-fold-final_test')
-    np.save(os.path.join(opt.save_dir,'confusion_mat.npy'), fold_final_confusion_mat)
+# if opt.k_fold != 1:
+#     statistics.statistics(fold_final_confusion_mat, opt, 'final', 'k-fold-final_test')
+#     np.save(os.path.join(opt.save_dir,'confusion_mat.npy'), fold_final_confusion_mat)
     
-if opt.mergelabel:
-    mat = statistics.mergemat(fold_final_confusion_mat, opt.mergelabel)
-    statistics.statistics(mat, opt, 'merge', 'mergelabel_final')
+# if opt.mergelabel:
+#     mat = statistics.mergemat(fold_final_confusion_mat, opt.mergelabel)
+#     statistics.statistics(mat, opt, 'merge', 'mergelabel_final')

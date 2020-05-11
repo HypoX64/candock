@@ -3,6 +3,7 @@ import random
 import numpy as np
 import torch
 from . import dsp
+from . import array_operation as arr
 # import dsp
 
 def trimdata(data,num):
@@ -80,6 +81,10 @@ def ToTensor(data,target=None,no_cuda = False):
 
 def random_transform_1d(data,finesize,test_flag):
     batch_size,ch,length = data.shape
+    # if finesize>length:
+    #     result = np.zeros((batch_size,ch,length), dtype=data.dtype)
+    #     for i in range(batchsize)
+    #         result[i] = arr.p
 
     if test_flag:
         move = int((length-finesize)*0.5)
@@ -129,9 +134,10 @@ def ToInputShape(data,opt,test_flag = False):
 
     if opt.model_name in['lstm','cnn_1d','resnet18_1d','resnet34_1d','multi_scale_resnet_1d','micro_multi_scale_resnet_1d']:
         result = random_transform_1d(data, _finesize, test_flag=test_flag)
-        # result = np.zeros((batchsize,opt.input_nc,_finesize),dtype=np.float64)
-        # for i in range(0,batchsize):
-        #     result[i]=random_transform_1d(data[i],finesize = _finesize,test_flag=test_flag)
+    elif opt.model_name == 'autoencoder':
+        # _finesize = loadsize
+        result = random_transform_1d(data, opt.finesize, test_flag=test_flag)
+
 
     # unsupported now
     # elif opt.model_name=='lstm':

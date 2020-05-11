@@ -1,17 +1,21 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import util
 import os
-from . import heatmap
+from . import plot
 
 def label_statistics(labels):
     #for sleep label: N3->0  N2->1  N1->2  REM->3  W->4
-    s = set()
-    for label in labels:
-        s.add(label)
-    label_num = len(list(s))
-
-    label_cnt=np.zeros(label_num,dtype=np.int64)
+    # if not opt:
+    #     s = set()
+    #     labels = (np.array(labels)).astype(np.int64)
+    #     for label in labels:
+    #         s.add(label)
+    #     label_num = len(list(s))
+    # else:
+    #     label_num = opt.label
+    labels = (np.array(labels)).astype(np.int64)
+    label_num = np.max(labels)+1
+    label_cnt = np.zeros(label_num,dtype=np.int64)
     for i in range(len(labels)):
         label_cnt[labels[i]] += 1
     label_cnt_per = label_cnt/len(labels)
@@ -91,32 +95,12 @@ def report(mat,print_sub=False):
     k = Kappa(mat)
     return round(Macro_precision,4),round(Macro_recall,4),round(Macro_F1,4),round(err,4),round(k, 4)
 
-def plotloss(plot_result,epoch,opt):
-    train = np.array(plot_result['train'])
-    test = np.array(plot_result['test'])
-    plt.figure('running recall')
-    plt.clf()
-    train_x = np.linspace(0,epoch,len(train))
-    test_x = np.linspace(0,int(epoch),len(test))
-    plt.xlabel('Epoch')
-    plt.ylabel('%')
-    plt.ylim((0,100))
-    if epoch <10:
-        plt.xlim((0,10))
-    else:
-        plt.xlim((0,epoch))
-    plt.plot(train_x,train*100,label='train',linewidth = 1.5,color = 'red')
-    plt.plot(test_x,test*100,label='test', linewidth = 1.5,color = 'blue')
-    plt.legend(loc=1)
-    plt.title('Running err.',fontsize='large')
-    plt.savefig(os.path.join(opt.save_dir,'running_err.png'))
-
 
 def statistics(mat,opt,logname,heatmapname):
     util.writelog('------------------------------ '+logname+' result ------------------------------',opt,True)
     util.writelog(logname+' -> macro-prec,reca,F1,err,kappa: '+str(report(mat)),opt,True)
     util.writelog('confusion_mat:\n'+str(mat)+'\n',opt,True)
-    heatmap.draw(mat,opt,name = heatmapname)
+    plot.draw_heatmap(mat,opt,name = heatmapname)
 
 
 def main():

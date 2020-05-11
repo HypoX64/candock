@@ -1,15 +1,19 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib
-import time
 import os
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+colors= ['blue','orange','green','red','purple','brown','pink','gray','olive','cyan']
+markers = ['o','^','.',',','v','<','>','1','2','3','4','s','p','*','h','H','+','x','D','d','|','_']
+
+#---------------------------------heatmap---------------------------------
 
 '''
 heatmap: https://matplotlib.org/gallery/images_contours_and_fields/image_annotated_heatmap.html#sphx-glr-gallery-images-contours-and-fields-image-annotated-heatmap-py
 choose color:https://matplotlib.org/tutorials/colors/colormaps.html?highlight=wistia
       recommend:  YlGn  Wistia Blues YlOrBr
 '''
-
 def create_heatmap(data, row_labels, col_labels, ax=None,
             cbar_kw={}, cbarlabel="", **kwargs):
     """
@@ -130,7 +134,7 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
     return texts
 
 
-def draw(mat,opt,name = 'train'):
+def draw_heatmap(mat,opt,name = 'train'):
     if 'merge' in name:
         label_name = opt.mergelabel_name
     else:
@@ -153,10 +157,108 @@ def draw(mat,opt,name = 'train'):
     fig.tight_layout()
     # plt.show()
     plt.savefig(os.path.join(opt.save_dir,name+'_heatmap.png'))
-
     plt.close('all')
 
+
+#---------------------------------loss---------------------------------
+
+def draw_loss(plot_result,epoch,opt):
+    train = np.array(plot_result['train'])
+    test = np.array(plot_result['test'])
+    plt.figure('running loss')
+    plt.clf()
+    train_x = np.linspace(0,epoch,len(train))
+    test_x = np.linspace(0,int(epoch),len(test))
+    plt.xlabel('Epoch')
+    plt.ylabel('loss')
+    if epoch <10:
+        plt.xlim((0,10))
+    else:
+        plt.xlim((0,epoch))
+    plt.plot(train_x,train,label='train',linewidth = 1.5)
+    plt.plot(test_x,test,label='test', linewidth = 1.5)
+    plt.legend(loc=1)
+    plt.title('Running loss',fontsize='large')
+    plt.savefig(os.path.join(opt.save_dir,'running_loss'+'%06d' % plotcnt+'.png'))
+
+
+#---------------------------------scatter---------------------------------
+plotcnt = 0
+def label_statistics(labels):
+    labels = (np.array(labels)).astype(np.int64)
+    label_num = np.max(labels)+1
+    label_cnt = np.zeros(label_num,dtype=np.int64)
+    for i in range(len(labels)):
+        label_cnt[labels[i]] += 1
+    label_cnt_per = label_cnt/len(labels)
+    return label_cnt,label_cnt_per,label_num
+
+def draw_scatter(data,opt):
+    label_cnt,_,label_num = label_statistics(data[:,-1])
+    fig = plt.figure(figsize=(12,9))
+    cnt = 0
+    data_dimension = data.shape[1]-1
+
+    if data_dimension>3:
+        from sklearn.decomposition import PCA
+        pca=PCA(n_components=3)     
+        data=pca.fit_transform(data[:,:-1])
+        data_dimension = 3
+    
+    if data_dimension == 2:
+        for i in range(label_num):
+            plt.scatter(data[cnt:cnt+label_cnt[i],0], data[cnt:cnt+label_cnt[i],1],
+            )
+            cnt += label_cnt[i]
+
+
+    elif data_dimension == 3:
+        ax = fig.add_subplot(111, projection='3d')
+        for i in range(label_num):
+            ax.scatter(data[cnt:cnt+label_cnt[i],0], data[cnt:cnt+label_cnt[i],1], data[cnt:cnt+label_cnt[i],2],
+            )
+            cnt += label_cnt[i]
+    global plotcnt
+    plotcnt += 1
+    plt.xlim(-1.5,1.5)
+    plt.ylim(-1.5,1.5)
+
+    plt.savefig(os.path.join(opt.save_dir,'feature_scatter'+'%06d' % plotcnt+'.png'))
+    np.save(os.path.join(opt.save_dir,'feature_scatter.npy'), data)
+    plt.close('all')
+
+def draw_autoencoder_result(true_signal,pred_signal,opt):
+    plt.subplot(211)
+    plt.plot(true_signal[0][0])
+    plt.title('True')
+    plt.subplot(212)
+    plt.plot(pred_signal[0][0])
+    plt.title('Pred')
+    plt.savefig(os.path.join(opt.save_dir,'autoencoder_result'+'%06d' % plotcnt+'.png'))
+    plt.close('all')
+
+def showscatter3d(data):
+    label_cnt,_,label_num = label_statistics(data[:,3])
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    cnt = 0
+    for i in range(label_num):
+        ax.scatter(data[cnt:cnt+label_cnt[i],0], data[cnt:cnt+label_cnt[i],1], data[cnt:cnt+label_cnt[i],2],
+            c = colors[i%10],marker = markers[i//10])
+        cnt += label_cnt[i]
+
+    plt.show()
+
+
+
 def main():
+    data = np.load('../checkpoints/au/feature_scatter.npy')
+    show(data)
+
+    #heatmap test
+    '''
     vegetables = ["cucumber", "tomato", "lettuce", "asparagus",
               "potato", "wheat", "barley"]
     farmers = ["Farmer Joe", "Upland Bros.", "Smith Gardening",
@@ -171,6 +273,6 @@ def main():
                     [0.1, 2.0, 0.0, 1.4, 0.0, 1.9, 6.3]])
 
     draw(harvest,vegetables,farmers,name = 'train')
-
+    '''
 if __name__ == '__main__':
     main()
