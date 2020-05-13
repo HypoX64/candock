@@ -65,26 +65,22 @@ def Balance_individualized_differences(signals,BID):
         signals=Normalize(signals,maxmin=10e3,avg=0,sigma=30,is_01=True)
     return signals
 
-def ToTensor(data,target=None,no_cuda = False):
+def ToTensor(data,target=None,gpu_id=0):
     if target is not None:
         data = torch.from_numpy(data).float()
         target = torch.from_numpy(target).long()
-        if not no_cuda:
+        if gpu_id != -1:
             data = data.cuda()
             target = target.cuda()
         return data,target
     else:
         data = torch.from_numpy(data).float()
-        if not no_cuda:
+        if gpu_id != -1:
             data = data.cuda()
         return data
 
 def random_transform_1d(data,finesize,test_flag):
     batch_size,ch,length = data.shape
-    # if finesize>length:
-    #     result = np.zeros((batch_size,ch,length), dtype=data.dtype)
-    #     for i in range(batchsize)
-    #         result[i] = arr.p
 
     if test_flag:
         move = int((length-finesize)*0.5)
@@ -122,22 +118,11 @@ def random_transform_2d(img,finesize = (224,122),test_flag = True):
     return result
 
 def ToInputShape(data,opt,test_flag = False):
-    data = data.astype(np.float32)
+    #data = data.astype(np.float32)
     batchsize = data.shape[0]
 
-    if data.ndim == 2:
-        loadsize = data.shape[1]
-    elif data.ndim == 3:
-        loadsize = data.shape[2]
-    
-    _finesize = int(loadsize*0.9)
-
-    if opt.model_name in['lstm','cnn_1d','resnet18_1d','resnet34_1d','multi_scale_resnet_1d','micro_multi_scale_resnet_1d']:
-        result = random_transform_1d(data, _finesize, test_flag=test_flag)
-    elif opt.model_name == 'autoencoder':
-        # _finesize = loadsize
+    if opt.model_name in['lstm','cnn_1d','resnet18_1d','resnet34_1d','multi_scale_resnet_1d','micro_multi_scale_resnet_1d','autoencoder']:
         result = random_transform_1d(data, opt.finesize, test_flag=test_flag)
-
 
     # unsupported now
     # elif opt.model_name=='lstm':

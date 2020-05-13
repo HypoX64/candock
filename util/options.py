@@ -1,6 +1,8 @@
 import argparse
 import os
 import time
+import numpy as np
+import torch
 from . import util
 
 class Options():
@@ -10,19 +12,18 @@ class Options():
 
     def initialize(self):
         #base
-        self.parser.add_argument('--no_cuda', action='store_true', help='if specified, do not use gpu')
         self.parser.add_argument('--gpu_id', type=int, default=0,help='choose which gpu want to use, 0 | 1 | 2 ...')        
         self.parser.add_argument('--no_cudnn', action='store_true', help='if specified, do not use cudnn')
-        self.parser.add_argument('--label', type=int, default=5,help='number of labels')
-        self.parser.add_argument('--input_nc', type=int, default=3, help='of input channels')
+        self.parser.add_argument('--label', type=str, default='auto',help='number of labels')
+        self.parser.add_argument('--input_nc', type=str, default='auto', help='of input channels')
+        self.parser.add_argument('--finesize', type=str, default='auto', help='crop your data into this size')
         self.parser.add_argument('--label_name', type=str, default='auto',help='name of labels,example:"a,b,c,d,e,f"')
         self.parser.add_argument('--model_name', type=str, default='micro_multi_scale_resnet_1d',help='Choose model  lstm | multi_scale_resnet_1d | resnet18 | micro_multi_scale_resnet_1d...')
         # ------------
         # for lstm 
-        self.parser.add_argument('--input_size', type=int, default=100,help='input_size of LSTM')
-        self.parser.add_argument('--time_step', type=int, default=270,help='time_step of LSTM')
+        self.parser.add_argument('--input_size', type=str, default='auto',help='input_size of LSTM')
+        self.parser.add_argument('--time_step', type=int, default=100,help='time_step of LSTM')
         # for autoencoder
-        self.parser.add_argument('--finesize', type=int, default=1800, help='crop your data into this size')
         self.parser.add_argument('--feature', type=int, default=3, help='number of encoder features')
         # ------------
         self.parser.add_argument('--pretrained', action='store_true', help='if specified, use pretrained models')
@@ -59,6 +60,15 @@ class Options():
             self.initialize()
         self.opt = self.parser.parse_args()
 
+        if self.opt.label !='auto':
+            self.opt.label = int(self.opt.label)
+        if self.opt.input_nc !='auto':
+            self.opt.input_nc = int(self.opt.input_nc)
+        if self.opt.finesize !='auto':
+            self.opt.finesize = int(self.opt.finesize)
+        if self.opt.input_size !='auto':
+            self.opt.input_size = int(self.opt.input_size)
+
         if self.opt.dataset_name == 'sleep-edf':
             self.opt.sample_num = 8
         if self.opt.dataset_name not in ['sleep-edf','sleep-edfx','cc2018']:
@@ -67,23 +77,8 @@ class Options():
             self.opt.signal_name = 'not-supported'
             self.opt.sample_num = 'not-supported'
 
-        if self.opt.no_cuda:
-            self.opt.no_cudnn = True
-
         if self.opt.k_fold == 0 :
             self.opt.k_fold = 1
-
-        if self.opt.label_name == 'auto':
-            if self.opt.dataset_name in ['sleep-edf','sleep-edfx','cc2018']:
-                self.opt.label_name = ["N3", "N2", "N1", "REM","W"]
-            else:
-                names = []
-                for i in range(self.opt.label):
-                    names.append(str(i))
-                self.opt.label_name = names
-        else:
-            self.opt.label_name = self.opt.label_name.replace(" ", "").split(",")
-
 
         self.opt.mergelabel = eval(self.opt.mergelabel)
         if self.opt.mergelabel_name != 'None':
@@ -107,4 +102,38 @@ class Options():
         util.writelog(str(localtime)+'\n'+message, self.opt,True)
 
         return self.opt
- 
+
+def get_auto_options(opt,label_cnt_per,label_num,shape):
+    
+    if opt.label =='auto':
+        opt.label = label_num
+    if opt.input_nc =='auto':
+        opt.input_nc = shape[1]
+    if opt.finesize =='auto':
+        opt.finesize = int(shape[2]*0.9)
+    if opt.input_size =='auto':
+        opt.input_size = opt.finesize//opt.time_step
+
+    # weight
+    opt.weight = np.ones(opt.label)
+    if opt.weight_mod == 'auto':
+        opt.weight = 1/label_cnt_per
+        opt.weight = opt.weight/np.min(opt.weight)
+    util.writelog('Loss_weight:'+str(opt.weight),opt,True)
+    opt.weight = torch.from_numpy(opt.weight).float()
+    if opt.gpu_id != -1:      
+        opt.weight = opt.weight.cuda()
+
+    # label name
+    if opt.label_name == 'auto':
+        if opt.dataset_name in ['sleep-edf','sleep-edfx','cc2018']:
+            opt.label_name = ["N3", "N2", "N1", "REM","W"]
+        else:
+            names = []
+            for i in range(opt.label):
+                names.append(str(i))
+            opt.label_name = names
+    else:
+        opt.label_name = opt.label_name.replace(" ", "").split(",")
+    
+    return opt

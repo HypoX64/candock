@@ -1,18 +1,9 @@
 import numpy as np
-import util
 import os
 from . import plot
+from . import util
 
 def label_statistics(labels):
-    #for sleep label: N3->0  N2->1  N1->2  REM->3  W->4
-    # if not opt:
-    #     s = set()
-    #     labels = (np.array(labels)).astype(np.int64)
-    #     for label in labels:
-    #         s.add(label)
-    #     label_num = len(list(s))
-    # else:
-    #     label_num = opt.label
     labels = (np.array(labels)).astype(np.int64)
     label_num = np.max(labels)+1
     label_cnt = np.zeros(label_num,dtype=np.int64)

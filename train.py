@@ -7,7 +7,7 @@ from torch import nn, optim
 import warnings
 warnings.filterwarnings("ignore")
 
-from util import util,transformer,dataloader,statistics,plot,options,scatter3d
+from util import util,transformer,dataloader,statistics,plot,options,network
 from models import creatnet
 
 opt = options.Options().getparse()
@@ -27,32 +27,24 @@ labels = np.array([0,0,0,0,0,1,1,1,1,1])      #0->class0    1->class1
 '''
 
 signals,labels = dataloader.loaddataset(opt)
-label_cnt,label_cnt_per,_ = statistics.label_statistics(labels)
+label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels)
+util.writelog('label statistics: '+str(label_cnt),opt,True)
+opt = options.get_auto_options(opt, label_cnt_per, label_num, signals.shape)
 train_sequences,test_sequences = transformer.k_fold_generator(len(labels),opt.k_fold)
 t2 = time.time()
 print('load data cost time: %.2f'% (t2-t1),'s')
 
 net=creatnet.CreatNet(opt)
 util.writelog('network:\n'+str(net),opt,True)
+network.show_paramsnumber(net,opt)
 
-util.show_paramsnumber(net,opt)
-weight = np.ones(opt.label)
-if opt.weight_mod == 'auto':
-    weight = 1/label_cnt_per
-    weight = weight/np.min(weight)
-util.writelog('label statistics: '+str(label_cnt),opt,True)
-util.writelog('Loss_weight:'+str(weight),opt,True)
-weight = torch.from_numpy(weight).float()
-# print(net)
-
-if not opt.no_cuda:
+if opt.gpu_id != -1:
     net.cuda()
-    weight = weight.cuda()
-if not opt.no_cudnn:
-    torch.backends.cudnn.benchmark = True
+    if not opt.no_cudnn:
+        torch.backends.cudnn.benchmark = True
 
 optimizer = torch.optim.Adam(net.parameters(), lr=opt.lr)
-criterion_class = nn.CrossEntropyLoss(weight)
+criterion_class = nn.CrossEntropyLoss(opt.weight)
 criterion_auto = nn.MSELoss()
 torch.save(net.cpu().state_dict(),os.path.join(opt.save_dir,'tmp.pth'))
 
@@ -64,7 +56,7 @@ def evalnet(net,signals,labels,sequences,epoch,plot_result={}):
     for i in range(len(sequences)//opt.batchsize):
         signal,label = transformer.batch_generator(signals, labels, sequences[i*opt.batchsize:(i+1)*opt.batchsize])
         signal = transformer.ToInputShape(signal,opt,test_flag =True)
-        signal,label = transformer.ToTensor(signal,label,no_cuda =opt.no_cuda)
+        signal,label = transformer.ToTensor(signal,label,gpu_id =opt.gpu_id)
         with torch.no_grad():
             if opt.model_name == 'autoencoder':
                 out,feature = net(signal)
@@ -102,7 +94,7 @@ for fold in range(opt.k_fold):
         net.load_state_dict(torch.load(os.path.join(opt.save_dir,'pretrained/'+opt.dataset_name+'/'+opt.model_name+'.pth')))
     if opt.continue_train:
         net.load_state_dict(torch.load(os.path.join(opt.save_dir,'last.pth')))
-    if not opt.no_cuda:
+    if opt.gpu_id != -1:
         net.cuda()
 
     final_confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
@@ -118,7 +110,7 @@ for fold in range(opt.k_fold):
         for i in range(len(train_sequences[fold])//opt.batchsize):
             signal,label = transformer.batch_generator(signals, labels, train_sequences[fold][i*opt.batchsize:(i+1)*opt.batchsize])
             signal = transformer.ToInputShape(signal,opt,test_flag =False)
-            signal,label = transformer.ToTensor(signal,label,no_cuda =opt.no_cuda)
+            signal,label = transformer.ToTensor(signal,label,gpu_id =opt.gpu_id)
 
             if opt.model_name == 'autoencoder':
                 out,feature = net(signal)
@@ -153,7 +145,7 @@ for fold in range(opt.k_fold):
         if (epoch+1)%opt.network_save_freq == 0:
             torch.save(net.cpu().state_dict(),os.path.join(opt.save_dir,opt.model_name+'_epoch'+str(epoch+1)+'.pth'))
             print('network saved.')
-        if not opt.no_cuda:
+        if opt.gpu_id != -1:
             net.cuda()
 
         t2=time.time()
