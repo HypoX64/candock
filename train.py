@@ -7,11 +7,10 @@ from torch import nn, optim
 import warnings
 warnings.filterwarnings("ignore")
 
-from util import util,transformer,dataloader,statistics,plot,options,network
-from models import creatnet
+from util import util,transformer,dataloader,statistics,plot,options
+from models import core
 
 opt = options.Options().getparse()
-torch.cuda.set_device(opt.gpu_id)
 t1 = time.time()
 
 '''
@@ -25,7 +24,6 @@ signals = np.zeros((10,1,10),dtype='np.float64')
 labels = np.array([0,0,0,0,0,1,1,1,1,1])      #0->class0    1->class1
 * step2: input  ```--dataset_dir your_dataset_dir``` when running code.
 '''
-
 signals,labels = dataloader.loaddataset(opt)
 label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels)
 util.writelog('label statistics: '+str(label_cnt),opt,True)
@@ -34,119 +32,26 @@ train_sequences,test_sequences = transformer.k_fold_generator(len(labels),opt.k_
 t2 = time.time()
 print('load data cost time: %.2f'% (t2-t1),'s')
 
-net=creatnet.CreatNet(opt)
-util.writelog('network:\n'+str(net),opt,True)
-network.show_paramsnumber(net,opt)
-
-if opt.gpu_id != -1:
-    net.cuda()
-    if not opt.no_cudnn:
-        torch.backends.cudnn.benchmark = True
-
-optimizer = torch.optim.Adam(net.parameters(), lr=opt.lr)
-criterion_class = nn.CrossEntropyLoss(opt.weight)
-criterion_auto = nn.MSELoss()
-torch.save(net.cpu().state_dict(),os.path.join(opt.save_dir,'tmp.pth'))
-
-def evalnet(net,signals,labels,sequences,epoch,plot_result={}):
-    # net.eval()
-    confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
-    features = np.zeros((len(sequences)//opt.batchsize*opt.batchsize,opt.feature+1))
-    epoch_loss = 0
-    for i in range(len(sequences)//opt.batchsize):
-        signal,label = transformer.batch_generator(signals, labels, sequences[i*opt.batchsize:(i+1)*opt.batchsize])
-        signal = transformer.ToInputShape(signal,opt,test_flag =True)
-        signal,label = transformer.ToTensor(signal,label,gpu_id =opt.gpu_id)
-        with torch.no_grad():
-            if opt.model_name == 'autoencoder':
-                out,feature = net(signal)
-                loss = criterion_auto(out, signal)
-                features[i*opt.batchsize:(i+1)*opt.batchsize,:opt.feature] = (feature.data.cpu().numpy()).reshape(opt.batchsize,-1)
-                features[i*opt.batchsize:(i+1)*opt.batchsize,opt.feature] = label.data.cpu().numpy()
-            else:
-                out = net(signal)
-                loss = criterion_class(out, label)
-                pred = (torch.max(out, 1)[1]).data.cpu().numpy()
-                label=label.data.cpu().numpy()
-                for x in range(len(pred)):
-                    confusion_mat[label[x]][pred[x]] += 1
-            epoch_loss += loss.item()
-
-    if opt.model_name != 'autoencoder':
-        recall,acc,sp,err,k  = statistics.report(confusion_mat)         
-        plot.draw_heatmap(confusion_mat,opt,name = 'current_test')
-        print('epoch:'+str(epoch),' macro-prec,reca,F1,err,kappa: '+str(statistics.report(confusion_mat)))
-    else:
-        plot.draw_autoencoder_result(signal.data.cpu().numpy(), out.data.cpu().numpy(),opt)
-        print('epoch:'+str(epoch),' loss: '+str(round(epoch_loss/i,5)))
-        plot.draw_scatter(features, opt)
-    plot_result['test'].append(epoch_loss/i) 
-
-    return plot_result,confusion_mat
+core = core.Core(opt)
+core.network_init(printflag=True)
 
 print('begin to train ...')
 fold_final_confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
 for fold in range(opt.k_fold):
     if opt.k_fold != 1:util.writelog('------------------------------ k-fold:'+str(fold+1)+' ------------------------------',opt,True)
-    iter_cnt = 0
-    net.load_state_dict(torch.load(os.path.join(opt.save_dir,'tmp.pth')))
-    if opt.pretrained:
-        net.load_state_dict(torch.load(os.path.join(opt.save_dir,'pretrained/'+opt.dataset_name+'/'+opt.model_name+'.pth')))
-    if opt.continue_train:
-        net.load_state_dict(torch.load(os.path.join(opt.save_dir,'last.pth')))
-    if opt.gpu_id != -1:
-        net.cuda()
+    core.network_init()
 
     final_confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
-    confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
-    features = np.zeros((len(train_sequences[fold])//opt.batchsize*opt.batchsize,opt.feature+1))
     confusion_mats = []
     plot_result = {'train':[],'test':[]}
     for epoch in range(opt.epochs):
-        epoch_loss = 0
+        
         t1 = time.time()
         np.random.shuffle(train_sequences[fold])
-        net.train()
-        for i in range(len(train_sequences[fold])//opt.batchsize):
-            signal,label = transformer.batch_generator(signals, labels, train_sequences[fold][i*opt.batchsize:(i+1)*opt.batchsize])
-            signal = transformer.ToInputShape(signal,opt,test_flag =False)
-            signal,label = transformer.ToTensor(signal,label,gpu_id =opt.gpu_id)
-
-            if opt.model_name == 'autoencoder':
-                out,feature = net(signal)
-                loss = criterion_auto(out, signal)
-                features[i*opt.batchsize:(i+1)*opt.batchsize,:opt.feature] = (feature.data.cpu().numpy()).reshape(opt.batchsize,-1)
-                features[i*opt.batchsize:(i+1)*opt.batchsize,opt.feature] = label.data.cpu().numpy()
-            else:
-                out = net(signal)
-                loss = criterion_class(out, label)
-                pred = (torch.max(out, 1)[1]).data.cpu().numpy()
-                label=label.data.cpu().numpy()
-                for x in range(len(pred)):
-                    confusion_mat[label[x]][pred[x]] += 1
-
-            epoch_loss += loss.item()     
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            iter_cnt += 1
-            if iter_cnt%opt.plotfreq==0 and i>(len(train_sequences[fold])//opt.batchsize)/2:       
-                plot_result['train'].append(epoch_loss/i)
-                plot.draw_loss(plot_result,epoch+i/(train_sequences.shape[1]/opt.batchsize),opt)
-                if opt.model_name != 'autoencoder':
-                    plot.draw_heatmap(confusion_mat,opt,name = 'current_train')
-                    confusion_mat[:]=0
-
-        plot_result,confusion_mat_eval = evalnet(net,signals,labels,test_sequences[fold],epoch+1,plot_result)
+        plot_result = core.train(signals,labels,train_sequences[fold],plot_result)
+        plot_result,confusion_mat_eval = core.eval(signals,labels,test_sequences[fold],plot_result)
         confusion_mats.append(confusion_mat_eval)
-
-        torch.save(net.cpu().state_dict(),os.path.join(opt.save_dir,'last.pth'))
-        if (epoch+1)%opt.network_save_freq == 0:
-            torch.save(net.cpu().state_dict(),os.path.join(opt.save_dir,opt.model_name+'_epoch'+str(epoch+1)+'.pth'))
-            print('network saved.')
-        if opt.gpu_id != -1:
-            net.cuda()
+        core.save()
 
         t2=time.time()
         if epoch+1==1:

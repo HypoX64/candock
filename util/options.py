@@ -16,6 +16,7 @@ class Options():
         self.parser.add_argument('--no_cudnn', action='store_true', help='if specified, do not use cudnn')
         self.parser.add_argument('--label', type=str, default='auto',help='number of labels')
         self.parser.add_argument('--input_nc', type=str, default='auto', help='of input channels')
+        self.parser.add_argument('--loadsize', type=str, default='auto', help='load data in this size')
         self.parser.add_argument('--finesize', type=str, default='auto', help='crop your data into this size')
         self.parser.add_argument('--label_name', type=str, default='auto',help='name of labels,example:"a,b,c,d,e,f"')
         self.parser.add_argument('--model_name', type=str, default='micro_multi_scale_resnet_1d',help='Choose model  lstm | multi_scale_resnet_1d | resnet18 | micro_multi_scale_resnet_1d...')
@@ -26,7 +27,7 @@ class Options():
         # for autoencoder
         self.parser.add_argument('--feature', type=int, default=3, help='number of encoder features')
         # ------------
-        self.parser.add_argument('--pretrained', action='store_true', help='if specified, use pretrained models')
+        self.parser.add_argument('--pretrained', type=str, default='',help='pretrained model path. If not specified, fo not use pretrained model')
         self.parser.add_argument('--continue_train', action='store_true', help='if specified, continue train')
         self.parser.add_argument('--lr', type=float, default=0.001,help='learning rate') 
         self.parser.add_argument('--batchsize', type=int, default=64,help='batchsize')
@@ -64,6 +65,8 @@ class Options():
             self.opt.label = int(self.opt.label)
         if self.opt.input_nc !='auto':
             self.opt.input_nc = int(self.opt.input_nc)
+        if self.opt.loadsize !='auto':
+            self.opt.loadsize = int(self.opt.loadsize)
         if self.opt.finesize !='auto':
             self.opt.finesize = int(self.opt.finesize)
         if self.opt.input_size !='auto':
@@ -109,6 +112,8 @@ def get_auto_options(opt,label_cnt_per,label_num,shape):
         opt.label = label_num
     if opt.input_nc =='auto':
         opt.input_nc = shape[1]
+    if opt.loadsize =='auto':
+        opt.loadsize = shape[2]
     if opt.finesize =='auto':
         opt.finesize = int(shape[2]*0.9)
     if opt.input_size =='auto':

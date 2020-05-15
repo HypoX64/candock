@@ -3,7 +3,7 @@ from .net_1d import cnn_1d,lstm,resnet_1d,multi_scale_resnet_1d,micro_multi_scal
 from .net_2d import densenet,dfcnn,mobilenet,resnet,squeezenet,multi_scale_resnet
 
 
-def CreatNet(opt):
+def creatnet(opt):
     name = opt.model_name
     #---------------------------------1d---------------------------------
     #encoder
