@@ -28,7 +28,7 @@ signals,labels = dataloader.loaddataset(opt)
 label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels)
 util.writelog('label statistics: '+str(label_cnt),opt,True)
 opt = options.get_auto_options(opt, label_cnt_per, label_num, signals.shape)
-train_sequences,test_sequences = transformer.k_fold_generator(len(labels),opt.k_fold)
+train_sequences,eval_sequences = transformer.k_fold_generator(len(labels),opt.k_fold)
 t2 = time.time()
 print('load data cost time: %.2f'% (t2-t1),'s')
 
@@ -42,37 +42,35 @@ for fold in range(opt.k_fold):
     core.network_init()
 
     final_confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
-    confusion_mats = []
-    plot_result = {'train':[],'test':[]}
+    # confusion_mats = []
     for epoch in range(opt.epochs):
         
         t1 = time.time()
-        np.random.shuffle(train_sequences[fold])
-        plot_result = core.train(signals,labels,train_sequences[fold],plot_result)
-        plot_result,confusion_mat_eval = core.eval(signals,labels,test_sequences[fold],plot_result)
-        confusion_mats.append(confusion_mat_eval)
+        
+        core.train(signals,labels,train_sequences[fold])
+        core.eval(signals,labels,eval_sequences[fold])
+        # confusion_mats.append(confusion_mat_eval)
         core.save()
-
         t2=time.time()
         if epoch+1==1:
             util.writelog('>>> per epoch cost time:'+str(round((t2-t1),2))+'s',opt,True)
     
     #save result
     if opt.model_name != 'autoencoder':
-        pos = plot_result['test'].index(min(plot_result['test']))-1
-        final_confusion_mat = confusion_mats[pos]
+        pos = core.plot_result['eval'].index(min(core.plot_result['eval']))-1
+        final_confusion_mat = core.confusion_mats[pos]
         if opt.k_fold==1:
-            statistics.statistics(final_confusion_mat, opt, 'final', 'final_test')
+            statistics.statistics(final_confusion_mat, opt, 'final', 'final_eval')
             np.save(os.path.join(opt.save_dir,'confusion_mat.npy'), final_confusion_mat)
         else:
             fold_final_confusion_mat += final_confusion_mat
             util.writelog('fold  -> macro-prec,reca,F1,err,kappa: '+str(statistics.report(final_confusion_mat)),opt,True)
             util.writelog('confusion_mat:\n'+str(final_confusion_mat)+'\n',opt,True)
-            plot.draw_heatmap(final_confusion_mat,opt,name = 'fold'+str(fold+1)+'_test')
+            plot.draw_heatmap(final_confusion_mat,opt,name = 'fold'+str(fold+1)+'_eval')
 
 if opt.model_name != 'autoencoder':
     if opt.k_fold != 1:
-        statistics.statistics(fold_final_confusion_mat, opt, 'final', 'k-fold-final_test')
+        statistics.statistics(fold_final_confusion_mat, opt, 'final', 'k-fold-final_eval')
         np.save(os.path.join(opt.save_dir,'confusion_mat.npy'), fold_final_confusion_mat)
         
     if opt.mergelabel:

@@ -11,7 +11,7 @@ from models import creatnet
 2020/04/03
 '''
 opt = options.Options().getparse()
-net = creatnet.CreatNet(opt)
+net = creatnet.creatnet(opt)
 
 #load data
 signals = np.load('./datasets/simple_test/signals.npy')

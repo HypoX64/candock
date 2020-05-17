@@ -2,7 +2,6 @@ import argparse
 import os
 import time
 import numpy as np
-import torch
 from . import util
 
 class Options():
@@ -60,6 +59,9 @@ class Options():
         if not self.initialized:
             self.initialize()
         self.opt = self.parser.parse_args()
+
+        if self.opt.gpu_id != -1:
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(self.opt.gpu_id)
 
         if self.opt.label !='auto':
             self.opt.label = int(self.opt.label)
@@ -125,6 +127,7 @@ def get_auto_options(opt,label_cnt_per,label_num,shape):
         opt.weight = 1/label_cnt_per
         opt.weight = opt.weight/np.min(opt.weight)
     util.writelog('Loss_weight:'+str(opt.weight),opt,True)
+    import torch
     opt.weight = torch.from_numpy(opt.weight).float()
     if opt.gpu_id != -1:      
         opt.weight = opt.weight.cuda()
@@ -138,7 +141,7 @@ def get_auto_options(opt,label_cnt_per,label_num,shape):
             for i in range(opt.label):
                 names.append(str(i))
             opt.label_name = names
-    else:
+    elif not isinstance(opt.label_name,list):
         opt.label_name = opt.label_name.replace(" ", "").split(",")
     
     return opt

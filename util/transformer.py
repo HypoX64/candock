@@ -148,4 +148,4 @@ def ToInputShape(data,opt,test_flag = False):
     #     result = Normalize(result, maxmin=0.5, avg=0.0150, sigma=0.0500)
     #     result = result.reshape(batchsize,1,224,122)
 
-    return result
+    return result.astype(np.float32)

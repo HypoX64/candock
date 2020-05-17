@@ -164,11 +164,11 @@ def draw_heatmap(mat,opt,name = 'train'):
 
 def draw_loss(plot_result,epoch,opt):
     train = np.array(plot_result['train'])
-    test = np.array(plot_result['test'])
+    val = np.array(plot_result['eval'])
     plt.figure('running loss')
     plt.clf()
     train_x = np.linspace(0,epoch,len(train))
-    test_x = np.linspace(0,int(epoch),len(test))
+    test_x = np.linspace(0,int(epoch),len(val))
     plt.xlabel('Epoch')
     plt.ylabel('loss')
     if epoch <10:
@@ -176,7 +176,7 @@ def draw_loss(plot_result,epoch,opt):
     else:
         plt.xlim((0,epoch))
     plt.plot(train_x,train,label='train',linewidth = 1.5)
-    plt.plot(test_x,test,label='test', linewidth = 1.5)
+    plt.plot(test_x,val,label='eval', linewidth = 1.5)
     plt.legend(loc=1)
     plt.title('Running loss',fontsize='large')
     plt.savefig(os.path.join(opt.save_dir,'running_loss.png'))
