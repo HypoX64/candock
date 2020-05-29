@@ -93,17 +93,16 @@ def balance_label(signals,labels):
 #load all data in datasets
 def loaddataset(opt,shuffle = False): 
     
-    if opt.dataset_name == 'preload':
-        if opt.separated:
-            signals_train = np.load(opt.dataset_dir+'/signals_train.npy')
-            labels_train = np.load(opt.dataset_dir+'/labels_train.npy')
-            signals_eval = np.load(opt.dataset_dir+'/signals_eval.npy')
-            labels_eval = np.load(opt.dataset_dir+'/labels_eval.npy')
-        else:
-            signals = np.load(opt.dataset_dir+'/signals.npy') 
-            labels = np.load(opt.dataset_dir+'/labels.npy')
-            if not opt.no_shuffle:
-                transformer.shuffledata(signals,labels)
+    if opt.separated:
+        signals_train = np.load(opt.dataset_dir+'/signals_train.npy')
+        labels_train = np.load(opt.dataset_dir+'/labels_train.npy')
+        signals_eval = np.load(opt.dataset_dir+'/signals_eval.npy')
+        labels_eval = np.load(opt.dataset_dir+'/labels_eval.npy')
+    else:
+        signals = np.load(opt.dataset_dir+'/signals.npy') 
+        labels = np.load(opt.dataset_dir+'/labels.npy')
+        if not opt.no_shuffle:
+            transformer.shuffledata(signals,labels)
 
     if opt.separated:
         return signals_train,labels_train,signals_eval,labels_eval

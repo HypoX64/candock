@@ -4,8 +4,8 @@ import time
 import numpy as np
 import torch
 from torch import nn, optim
-# from multiprocessing import Process, Queue
-import torch.multiprocessing as mp
+from multiprocessing import Process, Queue
+# import torch.multiprocessing as mp
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -42,7 +42,7 @@ class Core(object):
         self.test_flag = True
 
         if printflag:
-            util.writelog('network:\n'+str(self.net),self.opt,True)
+            #util.writelog('network:\n'+str(self.net),self.opt,True)
             show_paramsnumber(self.net,self.opt)
 
         if self.opt.pretrained != '':
@@ -76,23 +76,24 @@ class Core(object):
             signal = transformer.ToInputShape(signal,self.opt,test_flag =self.test_flag)
             self.queue.put([signal,label])
 
-    # def process_pool_init(self,signals,labels,sequences):
-    #     self.queue = mp.Queue(self.opt.load_process*2)
-    #     part_len = len(sequences)//self.opt.load_process//self.opt.batchsize*self.opt.batchsize
-    #     for i in range(self.opt.load_process):
-    #         if i == (self.opt.load_process -1):
-    #             p = mp.Process(target=self.preprocessing,args=(signals,labels,sequences[i*part_len:]))         
-    #         else:
-    #             p = mp.Process(target=self.preprocessing,args=(signals,labels,sequences[i*part_len:(i+1)*part_len]))               
-    #         p.daemon = True
-    #         p.start()
-    
-    def process_pool_init(self,signals,labels,sequences):
-        self.queue = mp.Queue()
-        p = mp.Process(target=self.preprocessing,args=(signals,labels,sequences))         
+    def start_process(self,signals,labels,sequences):
+        p = Process(target=self.preprocessing,args=(signals,labels,sequences))         
         p.daemon = True
         p.start()
     
+    def process_pool_init(self,signals,labels,sequences):
+        self.queue = Queue(self.opt.load_thread*2)
+        process_batch_num = len(sequences)//self.opt.batchsize//self.opt.load_thread
+        if process_batch_num == 0:
+            print('\033[1;33m'+'Warning: too much load thread'+'\033[0m') 
+            self.start_process(signals,labels,sequences)
+        else:
+            for i in range(self.opt.load_thread):
+                if i != self.opt.load_thread-1:
+                    self.start_process(signals,labels,sequences[i*self.opt.load_thread*self.opt.batchsize:(i+1)*self.opt.load_thread*self.opt.batchsize])
+                else:
+                    self.start_process(signals,labels,sequences[i*self.opt.load_thread*self.opt.batchsize:])
+
     def forward(self,signal,label,features,confusion_mat):
         if self.opt.model_name == 'autoencoder':
             out,feature = self.net(signal)

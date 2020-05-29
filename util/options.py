@@ -2,7 +2,7 @@ import argparse
 import os
 import time
 import numpy as np
-from . import util
+from . import util,dsp
 
 class Options():
     def __init__(self):
@@ -10,7 +10,7 @@ class Options():
         self.initialized = False
 
     def initialize(self):
-        #base
+        # ------------------------Base------------------------
         self.parser.add_argument('--gpu_id', type=int, default=0,help='choose which gpu want to use, 0 | 1 | 2 ...')        
         self.parser.add_argument('--no_cudnn', action='store_true', help='if specified, do not use cudnn')
         self.parser.add_argument('--label', type=str, default='auto',help='number of labels')
@@ -18,14 +18,35 @@ class Options():
         self.parser.add_argument('--loadsize', type=str, default='auto', help='load data in this size')
         self.parser.add_argument('--finesize', type=str, default='auto', help='crop your data into this size')
         self.parser.add_argument('--label_name', type=str, default='auto',help='name of labels,example:"a,b,c,d,e,f"')
-        self.parser.add_argument('--model_name', type=str, default='micro_multi_scale_resnet_1d',help='Choose model  lstm | multi_scale_resnet_1d | resnet18 | micro_multi_scale_resnet_1d...')
-        # ------------
-        # for lstm 
-        self.parser.add_argument('--input_size', type=str, default='auto',help='input_size of LSTM')
-        self.parser.add_argument('--time_step', type=int, default=100,help='time_step of LSTM')
-        # for autoencoder
+        self.parser.add_argument('--normliaze', type=str, default='5_95', help='mode of normliaze, 5_95 | maxmin | None')
+        
+        # ------------------------Dataset------------------------
+        self.parser.add_argument('--dataset_dir', type=str, default='./datasets/simple_test',help='your dataset path')
+        self.parser.add_argument('--save_dir', type=str, default='./checkpoints/',help='save checkpoints')
+        self.parser.add_argument('--separated', action='store_true', help='if specified,for preload data, if input, load separated train and test datasets')
+        self.parser.add_argument('--no_shuffle', action='store_true', help='if specified, do not shuffle data when load(use to evaluate individual differences)')
+        self.parser.add_argument('--load_thread', type=int, default=8,help='how many threads when load data')        
+
+        # ------------------------Network------------------------
+        """Available Network
+        1d: lstm, cnn_1d, resnet18_1d, resnet34_1d, multi_scale_resnet_1d,
+            micro_multi_scale_resnet_1d,autoencoder
+        2d: dfcnn, multi_scale_resnet, resnet18, resnet50, resnet101,
+            densenet121, densenet201, squeezenet
+        """
+        self.parser.add_argument('--model_name', type=str, default='micro_multi_scale_resnet_1d',help='Choose model  lstm...')
+        self.parser.add_argument('--model_type', type=str, default='auto',help='1d | 2d')
+        # For lstm 
+        self.parser.add_argument('--lstm_inputsize', type=str, default='auto',help='lstm_inputsize of LSTM')
+        self.parser.add_argument('--lstm_timestep', type=int, default=100,help='time_step of LSTM')
+        # For autoecoder
         self.parser.add_argument('--feature', type=int, default=3, help='number of encoder features')
-        # ------------
+        # For 2d network(stft spectrum)
+        self.parser.add_argument('--stft_size', type=int, default=512, help='length of each fft segment')
+        self.parser.add_argument('--stft_stride', type=int, default=128, help='stride of each fft segment')
+        self.parser.add_argument('--stft_no_log', action='store_true', help='if specified, do not log1p spectrum')
+
+        # ------------------------Training Matters------------------------
         self.parser.add_argument('--pretrained', type=str, default='',help='pretrained model path. If not specified, fo not use pretrained model')
         self.parser.add_argument('--continue_train', action='store_true', help='if specified, continue train')
         self.parser.add_argument('--lr', type=float, default=0.001,help='learning rate') 
@@ -35,23 +56,10 @@ class Options():
         self.parser.add_argument('--network_save_freq', type=int, default=5,help='the freq to save network')
         self.parser.add_argument('--k_fold', type=int, default=0,help='fold_num of k-fold.if 0 or 1,no k-fold')
         self.parser.add_argument('--mergelabel', type=str, default='None',
-            help='merge some labels to one label and give the result, example:"[[0,1,4],[2,3,5]]" , label(0,1,4) regard as 0,label(2,3,5) regard as 1')
+            help='merge some labels to one label and give the result, example:"[[0,1,4],[2,3,5]]" -> label(0,1,4) regard as 0,label(2,3,5) regard as 1')
         self.parser.add_argument('--mergelabel_name', type=str, default='None',help='name of labels,example:"a,b,c,d,e,f"')
         self.parser.add_argument('--plotfreq', type=int, default=100,help='frequency of plotting results')
 
-        self.parser.add_argument('--dataset_dir', type=str, default='./datasets/sleep-edfx/',
-                                help='your dataset path')
-        self.parser.add_argument('--save_dir', type=str, default='./checkpoints/',help='save checkpoints')
-        self.parser.add_argument('--dataset_name', type=str, default='preload',
-            help='Choose dataset preload | sleep-edfx | cc2018  ,preload:your data->shape:(num,ch,length), sleep-edfx&cc2018:sleep stage')
-        self.parser.add_argument('--separated', action='store_true', help='if specified,for preload data, if input, load separated train and test datasets')
-        self.parser.add_argument('--no_shuffle', action='store_true', help='if specified,do not shuffle data when load(use to evaluate individual differences)')
-
-        #for EEG datasets  
-        self.parser.add_argument('--BID', type=str, default='5_95_th',help='Balance individualized differences  5_95_th | median |None')
-        self.parser.add_argument('--select_sleep_time', action='store_true', help='if specified, for sleep-cassette only use sleep time to train')
-        self.parser.add_argument('--signal_name', type=str, default='EEG Fpz-Cz',help='Choose the EEG channel C4-M1 | EEG Fpz-Cz |...')
-        self.parser.add_argument('--sample_num', type=int, default=20,help='the amount you want to load')
         
         self.initialized = True
 
@@ -63,7 +71,7 @@ class Options():
         if self.opt.gpu_id != -1:
             os.environ["CUDA_VISIBLE_DEVICES"] = str(self.opt.gpu_id)
 
-        if self.opt.label !='auto':
+        if self.opt.label != 'auto':
             self.opt.label = int(self.opt.label)
         if self.opt.input_nc !='auto':
             self.opt.input_nc = int(self.opt.input_nc)
@@ -71,16 +79,19 @@ class Options():
             self.opt.loadsize = int(self.opt.loadsize)
         if self.opt.finesize !='auto':
             self.opt.finesize = int(self.opt.finesize)
-        if self.opt.input_size !='auto':
-            self.opt.input_size = int(self.opt.input_size)
+        if self.opt.lstm_inputsize != 'auto':
+            self.opt.lstm_inputsize = int(self.opt.lstm_inputsize)
 
-        if self.opt.dataset_name == 'sleep-edf':
-            self.opt.sample_num = 8
-        if self.opt.dataset_name not in ['sleep-edf','sleep-edfx','cc2018']:
-            self.opt.BID = 'not-supported'
-            self.opt.select_sleep_time = 'not-supported'
-            self.opt.signal_name = 'not-supported'
-            self.opt.sample_num = 'not-supported'
+        if self.opt.model_type == 'auto':
+            if self.opt.model_name in ['lstm', 'cnn_1d', 'resnet18_1d', 'resnet34_1d', 
+                'multi_scale_resnet_1d','micro_multi_scale_resnet_1d','autoencoder']:
+                self.opt.model_type = '1d'
+            elif self.opt.model_name in ['dfcnn', 'multi_scale_resnet', 'resnet18', 'resnet50',
+                'resnet101','densenet121', 'densenet201', 'squeezenet']:
+                self.opt.model_type = '2d'
+            else:
+                print('\033[1;31m'+'Error: do not support this network '+self.opt.model_name+'\033[0m')
+                exit(0)
 
         if self.opt.k_fold == 0 :
             self.opt.k_fold = 1
@@ -121,8 +132,8 @@ def get_auto_options(opt,label_cnt_per,label_num,shape):
         opt.loadsize = shape[2]
     if opt.finesize =='auto':
         opt.finesize = int(shape[2]*0.9)
-    if opt.input_size =='auto':
-        opt.input_size = opt.finesize//opt.time_step
+    if opt.lstm_inputsize =='auto':
+        opt.lstm_inputsize = opt.finesize//opt.lstm_timestep
 
     # weight
     opt.weight = np.ones(opt.label)
@@ -137,14 +148,21 @@ def get_auto_options(opt,label_cnt_per,label_num,shape):
 
     # label name
     if opt.label_name == 'auto':
-        if opt.dataset_name in ['sleep-edf','sleep-edfx','cc2018']:
-            opt.label_name = ["N3", "N2", "N1", "REM","W"]
-        else:
-            names = []
-            for i in range(opt.label):
-                names.append(str(i))
-            opt.label_name = names
+        names = []
+        for i in range(opt.label):
+            names.append(str(i))
+        opt.label_name = names
     elif not isinstance(opt.label_name,list):
         opt.label_name = opt.label_name.replace(" ", "").split(",")
-    
+
+
+    # check stft spectrum
+    if opt.model_type =='2d':
+        h, w = opt.stft_size//2+1, opt.loadsize//opt.stft_stride
+        print('Shape of stft spectrum h,w:',(h,w))
+        if h<64 or w<64:
+            print('\033[1;33m'+'Warning: spectrum is too small'+'\033[0m') 
+        if h>512 or w>512:
+            print('\033[1;33m'+'Warning: spectrum is too large'+'\033[0m')
+
     return opt

@@ -2,93 +2,92 @@ import scipy.signal
 import scipy.fftpack as fftpack
 import numpy as np
 
-b1 = scipy.signal.firwin(31, [0.5, 4], pass_zero=False,fs=100)
-b2 = scipy.signal.firwin(31, [4,8], pass_zero=False,fs=100)
-b3 = scipy.signal.firwin(31, [8,12], pass_zero=False,fs=100)
-b4 = scipy.signal.firwin(31, [12,16], pass_zero=False,fs=100)
-b5 = scipy.signal.firwin(31, [16,45], pass_zero=False,fs=100)
+def sin(f,fs,time):
+    x = np.linspace(0, 2*np.pi*f*time, fs*time)
+    return np.sin(x)
 
-def getfir_b(fc1,fc2,fs):
-    if fc1==0.5 and fc2==4 and fs==100:
-        b=b1
-    elif fc1==4 and fc2==8 and fs==100:
-        b=b2
-    elif fc1==8 and fc2==12 and fs==100:
-        b=b3
-    elif fc1==12 and fc2==16 and fs==100:
-        b=b4
-    elif fc1==16 and fc2==45 and fs==100:
-        b=b5
-    else:
-        b=scipy.signal.firwin(51, [fc1, fc2], pass_zero=False,fs=fs)
-    return b
+def downsample(signal,fs1=0,fs2=0,alpha=0,mod = 'just_down'):
+    if alpha ==0:
+        alpha = int(fs1/fs2)
+    if mod == 'just_down':
+        return signal[::alpha]
+    elif mod == 'avg':
+        result = np.zeros(int(len(signal)/alpha))
+        for i in range(int(len(signal)/alpha)):
+            result[i] = np.mean(signal[i*alpha:(i+1)*alpha])
+        return result       
 
+def medfilt(signal,x):
+    return scipy.signal.medfilt(signal,x)
 
-def BPF(signal,fs,fc1,fc2,mod = 'fir'):
-    if mod == 'fft':
-        length=len(signal)#get N
-        k1=int(fc1*length/fs)#get k1=Nw1/fs
-        k2=int(fc2*length/fs)#get k1=Nw1/fs
-        #FFT
-        signal_fft=fftpack.fft(signal)
-        #Frequency truncation
-        signal_fft[0:k1]=0+0j
-        signal_fft[k2:length-k2]=0+0j
-        signal_fft[length-k1:length]=0+0j
-        #IFFT
-        signal_ifft=fftpack.ifft(signal_fft)
-        result = signal_ifft.real
-    else:
-        b=getfir_b(fc1,fc2,fs)
-        result = scipy.signal.lfilter(b, 1, signal)
+def cleanoffset(signal):
+    return signal - np.mean(signal)
+
+def bpf_fir(signal,fs,fc1,fc2,numtaps=101):
+    b=scipy.signal.firwin(numtaps, [fc1, fc2], pass_zero=False,fs=fs)
+    result = scipy.signal.lfilter(b, 1, signal)
     return result
 
-def getfeature(signal,mod = 'fft',ch_num = 5):
-    result=[]
-    signal =signal - np.mean(signal)
-    eeg=signal
+def fft_filter(signal,fs,fc=[],type = 'bandpass'):
+    '''
+    signal: Signal
+    fs: Sampling frequency
+    fc: [fc1,fc2...] Cut-off frequency 
+    type: bandpass | bandstop
+    '''
+    k = []
+    N=len(signal)#get N
 
-    beta=BPF(eeg,100,16,45,mod)    # β
-    theta=BPF(eeg,100,4,8,mod)   #θ
-    sigma=BPF(eeg,100,12,16,mod) #σ spindle
-    alpha=BPF(eeg,100,8,12,mod)  #α
-    delta=BPF(eeg,100,0.5,4,mod) #δ
-   
-    result.append(beta) 
-    result.append(theta)  
-    result.append(sigma)
-    result.append(alpha)
-    result.append(delta)
+    for i in range(len(fc)):
+        k.append(int(fc[i]*N/fs))
 
-    if ch_num == 6:
-        fft = abs(fftpack.fft(eeg))
-        fft = fft - np.median(fft)
-        result.append(fft)
+    #FFT
+    signal_fft=scipy.fftpack.fft(signal)
+    #Frequency truncation
 
-    result=np.array(result)
-    result=result.reshape(ch_num*len(signal),)
+    if type == 'bandpass':
+        a = np.zeros(N)
+        for i in range(int(len(fc)/2)):
+            a[k[2*i]:k[2*i+1]] = 1
+            a[N-k[2*i+1]:N-k[2*i]] = 1
+    elif type == 'bandstop':
+        a = np.ones(N)
+        for i in range(int(len(fc)/2)):
+            a[k[2*i]:k[2*i+1]] = 0
+            a[N-k[2*i+1]:N-k[2*i]] = 0
+    signal_fft = a*signal_fft
+    signal_ifft=scipy.fftpack.ifft(signal_fft)
+    result = signal_ifft.real
     return result
 
-# def signal2spectrum(data):
-#     # window : ('tukey',0.5) hann
+def rms(signal):
+    signal = signal.astype('float64')
+    return np.mean((signal*signal))**0.5
 
-#     zxx = scipy.signal.stft(data, fs=100, window='hann', nperseg=1024, noverlap=1024-12, nfft=1024, detrend=False, return_onesided=True, boundary='zeros', padded=True, axis=-1)[2]
-#     zxx =np.abs(zxx)[:512]
-#     spectrum=np.zeros((256,251))
-#     spectrum[0:128]=zxx[0:128]
-#     spectrum[128:192]=zxx[128:256][::2]
-#     spectrum[192:256]=zxx[256:512][::4]
-#     spectrum = np.log(spectrum+1)
-#     return spectrum
+def energy(signal,kernel_size,stride,padding = 0):
+    _signal = np.zeros(len(signal)+padding)
+    _signal[0:len(signal)] = signal
+    signal = _signal
+    out_len = int((len(signal)+1-kernel_size)/stride)
+    energy = np.zeros(out_len)
+    for i in range(out_len):
+        energy[i] = rms(signal[i*stride:i*stride+kernel_size]) 
+    return energy
 
-def signal2spectrum(data):
+def signal2spectrum(data,window_size,stride,log = True):
     # window : ('tukey',0.5) hann
 
-    zxx = scipy.signal.stft(data, fs=100, window='hann', nperseg=1024, noverlap=1024-24, nfft=1024, detrend=False, return_onesided=True, boundary='zeros', padded=True, axis=-1)[2]
-    zxx =np.abs(zxx)[:512]
-    spectrum=np.zeros((256,126))
-    spectrum[0:128]=zxx[0:128]
-    spectrum[128:192]=zxx[128:256][::2]
-    spectrum[192:256]=zxx[256:512][::4]
-    spectrum = np.log(spectrum+1)
+    zxx = scipy.signal.stft(data, window='hann', nperseg=window_size,noverlap=window_size-stride)[2]
+    spectrum = np.abs(zxx)
+
+    if log:
+        spectrum = np.log1p(spectrum)
+        h = window_size//2+1
+        tmp = np.linspace(0, h-1,num=h,dtype=np.int64)
+        index = np.log1p(tmp)*(h/np.log1p(h))
+        spectrum_new = np.zeros_like(spectrum)
+        for i in range(h-1):
+            spectrum_new[int(index[i]):int(index[i+1])] = spectrum[i]
+        spectrum = spectrum_new
+
     return spectrum

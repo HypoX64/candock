@@ -1,16 +1,16 @@
 import numpy as np
 
-def interp(y,length):
+def interp(y, length):
     xp = np.linspace(0, len(y)-1,num = len(y))
     fp = y
     x = np.linspace(0, len(y)-1,num = length)
     return np.interp(x, xp, fp)
 
-def pad(data,padding,mod='zero'):
-    if mod == 'zero':
+def pad(data, padding, mode = 'zero'):
+    if mode == 'zero':
         pad_data = np.zeros(padding, dtype = data.dtype)
         return np.append(data, pad_data)
-    elif mod == 'repeat':
+    elif mode == 'repeat':
         out_data = data.copy()
         repeat_num = int(padding/len(data))
 
@@ -20,28 +20,29 @@ def pad(data,padding,mod='zero'):
         pad_data = data[:padding-repeat_num*len(data)]
         return np.append(out_data, pad_data)
 
-def normliaze(data,mod = 'norm',sigma = 0,dtype=np.float64,truncated = 1):
+def normliaze(data, mode = 'norm', sigma = 0, dtype=np.float64, truncated = 2):
     '''
-    mod: norm | std | maxmin | 5_95
+    mode: norm | std | maxmin | 5_95
     dtype : np.float64,np.float16...
     '''
     data = data.astype(dtype)
-    if mod == 'norm':
-        result = (data-np.mean(data))/sigma
-    elif mod == 'std':
-        mu = np.mean(data, axis=0)
-        sigma = np.std(data, axis=0)
+    data_calculate = data.copy()
+    if mode == 'norm':
+        result = (data-np.mean(data_calculate))/sigma
+    elif mode == 'std':
+        mu = np.mean(data_calculate)
+        sigma = np.std(data_calculate)
         result = (data - mu) / sigma
-    elif mod == 'maxmin':
-        result = (data-np.mean(data))/sigma
-    elif mod == '5_95':
-        data_sort = np.sort(data)
+    elif mode == 'maxmin':
+        result = (data-np.mean(data_calculate))/(max(np.max(data_calculate),np.abs(np.min(data_calculate))))
+    elif mode == '5_95':
+        data_sort = np.sort(data_calculate,axis=None)
         th5 = data_sort[int(0.05*len(data_sort))]
         th95 = data_sort[int(0.95*len(data_sort))]
         baseline = (th5+th95)/2
         sigma = (th95-th5)/2
         if sigma == 0:
-            sigma =1
+            sigma = 1e-06
         result = (data-baseline)/sigma
 
     if truncated > 1:

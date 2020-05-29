@@ -247,6 +247,10 @@ def showscatter3d(data):
 
     plt.show()
 
+def draw_spectrum(spectrum,opt):
+    plt.imshow(spectrum)
+    plt.savefig(os.path.join(opt.save_dir,'spectrum_eg.png'))
+    plt.close('all')
 
 
 def main():
