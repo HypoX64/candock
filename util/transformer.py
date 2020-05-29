@@ -6,9 +6,6 @@ from . import dsp
 from . import array_operation as arr
 # import dsp
 
-def trimdata(data,num):
-    return data[:num*int(len(data)/num)]
-
 def shuffledata(data,target):
     state = np.random.get_state()
     np.random.shuffle(data)
@@ -16,20 +13,24 @@ def shuffledata(data,target):
     np.random.shuffle(target)
     # return data,target
 
-def k_fold_generator(length,fold_num):
-    if fold_num == 0 or fold_num == 1:
-        train_sequence = np.linspace(0,int(length*0.8)-1,int(length*0.8),dtype='int')[None]
-        test_sequence = np.linspace(int(length*0.8),length-1,int(length*0.2),dtype='int')[None]
+def k_fold_generator(length,fold_num,separated=False):
+    if separated:
+        sequence = np.linspace(0, length-1,num = length,dtype='int')
+        return sequence
     else:
-        sequence = np.linspace(0,length-1,length,dtype='int')
-        train_length = int(length/fold_num*(fold_num-1))
-        test_length = int(length/fold_num)
-        train_sequence = np.zeros((fold_num,train_length), dtype = 'int')
-        test_sequence = np.zeros((fold_num,test_length), dtype = 'int')
-        for i in range(fold_num):
-            test_sequence[i] = (sequence[test_length*i:test_length*(i+1)])[:test_length]
-            train_sequence[i] = np.concatenate((sequence[0:test_length*i],sequence[test_length*(i+1):]),axis=0)[:train_length]
-    return train_sequence,test_sequence
+        if fold_num == 0 or fold_num == 1:
+            train_sequence = np.linspace(0,int(length*0.8)-1,int(length*0.8),dtype='int')[None]
+            test_sequence = np.linspace(int(length*0.8),length-1,int(length*0.2),dtype='int')[None]
+        else:
+            sequence = np.linspace(0,length-1,length,dtype='int')
+            train_length = int(length/fold_num*(fold_num-1))
+            test_length = int(length/fold_num)
+            train_sequence = np.zeros((fold_num,train_length), dtype = 'int')
+            test_sequence = np.zeros((fold_num,test_length), dtype = 'int')
+            for i in range(fold_num):
+                test_sequence[i] = (sequence[test_length*i:test_length*(i+1)])[:test_length]
+                train_sequence[i] = np.concatenate((sequence[0:test_length*i],sequence[test_length*(i+1):]),axis=0)[:train_length]
+        return train_sequence,test_sequence
 
 def batch_generator(data,target,sequence,shuffle = True):
     batchsize = len(sequence)
@@ -48,22 +49,7 @@ def Normalize(data,maxmin,avg,sigma,is_01=False):
     else:
         return (data-avg)/sigma #(-1,1)
 
-def Balance_individualized_differences(signals,BID):
 
-    if BID == 'median':
-        signals = (signals*8/(np.median(abs(signals))))
-        signals=Normalize(signals,maxmin=10e3,avg=0,sigma=30,is_01=True)
-    elif BID == '5_95_th':
-        tmp = np.sort(signals.reshape(-1))
-        th_5 = -tmp[int(0.05*len(tmp))]
-        signals=Normalize(signals,maxmin=10e3,avg=0,sigma=th_5,is_01=True)
-    else:
-        #dataser 5_95_th(-1,1)  median
-        #CC2018  24.75   7.438
-        #sleep edfx  37.4   9.71
-        #sleep edfx sleeptime  39.03   10.125
-        signals=Normalize(signals,maxmin=10e3,avg=0,sigma=30,is_01=True)
-    return signals
 
 def ToTensor(data,target=None,gpu_id=0):
     if target is not None:

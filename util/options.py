@@ -85,6 +85,9 @@ class Options():
         if self.opt.k_fold == 0 :
             self.opt.k_fold = 1
 
+        if self.opt.separated:
+            self.opt.k_fold = 1
+
         self.opt.mergelabel = eval(self.opt.mergelabel)
         if self.opt.mergelabel_name != 'None':
             self.opt.mergelabel_name = self.opt.mergelabel_name.replace(" ", "").split(",")

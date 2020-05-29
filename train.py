@@ -24,11 +24,21 @@ signals = np.zeros((10,1,10),dtype='np.float64')
 labels = np.array([0,0,0,0,0,1,1,1,1,1])      #0->class0    1->class1
 * step2: input  ```--dataset_dir your_dataset_dir``` when running code.
 '''
-signals,labels = dataloader.loaddataset(opt)
-label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels)
-util.writelog('label statistics: '+str(label_cnt),opt,True)
-opt = options.get_auto_options(opt, label_cnt_per, label_num, signals.shape)
-train_sequences,eval_sequences = transformer.k_fold_generator(len(labels),opt.k_fold)
+
+#----------------------------Load Data----------------------------
+if opt.separated:
+    signals_train,labels_train,signals_eval,labels_eval = dataloader.loaddataset(opt)
+    label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels_train)
+    util.writelog('label statistics: '+str(label_cnt),opt,True)
+    opt = options.get_auto_options(opt, label_cnt_per, label_num, signals_train.shape)
+    train_sequences= transformer.k_fold_generator(len(labels_train),opt.k_fold,opt.separated)
+    eval_sequences= transformer.k_fold_generator(len(labels_eval),opt.k_fold,opt.separated)
+else:
+    signals,labels = dataloader.loaddataset(opt)
+    label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels)
+    util.writelog('label statistics: '+str(label_cnt),opt,True)
+    opt = options.get_auto_options(opt, label_cnt_per, label_num, signals.shape)
+    train_sequences,eval_sequences = transformer.k_fold_generator(len(labels),opt.k_fold)
 t2 = time.time()
 print('load data cost time: %.2f'% (t2-t1),'s')
 
@@ -40,17 +50,19 @@ fold_final_confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
 for fold in range(opt.k_fold):
     if opt.k_fold != 1:util.writelog('------------------------------ k-fold:'+str(fold+1)+' ------------------------------',opt,True)
     core.network_init()
-
     final_confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
-    # confusion_mats = []
-    for epoch in range(opt.epochs):
-        
+    for epoch in range(opt.epochs):  
         t1 = time.time()
         
-        core.train(signals,labels,train_sequences[fold])
-        core.eval(signals,labels,eval_sequences[fold])
-        # confusion_mats.append(confusion_mat_eval)
+        if opt.separated:
+            #print(signals_train.shape,labels_train.shape)
+            core.train(signals_train,labels_train,train_sequences)
+            core.eval(signals_eval,labels_eval,eval_sequences)
+        else:            
+            core.train(signals,labels,train_sequences[fold])
+            core.eval(signals,labels,eval_sequences[fold])
         core.save()
+
         t2=time.time()
         if epoch+1==1:
             util.writelog('>>> per epoch cost time:'+str(round((t2-t1),2))+'s',opt,True)
