@@ -30,22 +30,22 @@ if opt.separated:
     signals_train,labels_train,signals_eval,labels_eval = dataloader.loaddataset(opt)
     label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels_train)
     util.writelog('label statistics: '+str(label_cnt),opt,True)
-    opt = options.get_auto_options(opt, label_cnt_per, label_num, signals_train.shape)
+    opt = options.get_auto_options(opt, label_cnt_per, label_num, signals_train)
     train_sequences= transformer.k_fold_generator(len(labels_train),opt.k_fold,opt.separated)
     eval_sequences= transformer.k_fold_generator(len(labels_eval),opt.k_fold,opt.separated)
 else:
     signals,labels = dataloader.loaddataset(opt)
     label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels)
     util.writelog('label statistics: '+str(label_cnt),opt,True)
-    opt = options.get_auto_options(opt, label_cnt_per, label_num, signals.shape)
+    opt = options.get_auto_options(opt, label_cnt_per, label_num, signals)
     train_sequences,eval_sequences = transformer.k_fold_generator(len(labels),opt.k_fold)
 t2 = time.time()
-print('load data cost time: %.2f'% (t2-t1),'s')
+print('Cost time: %.2f'% (t2-t1),'s')
 
 core = core.Core(opt)
 core.network_init(printflag=True)
 
-print('begin to train ...')
+print('Begin to train ...')
 fold_final_confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
 for fold in range(opt.k_fold):
     if opt.k_fold != 1:util.writelog('------------------------------ k-fold:'+str(fold+1)+' ------------------------------',opt,True)
@@ -69,7 +69,7 @@ for fold in range(opt.k_fold):
     
     #save result
     if opt.model_name != 'autoencoder':
-        pos = core.plot_result['eval'].index(min(core.plot_result['eval']))-1
+        pos = core.plot_result['F1'].index(max(core.plot_result['F1']))
         final_confusion_mat = core.confusion_mats[pos]
         if opt.k_fold==1:
             statistics.statistics(final_confusion_mat, opt, 'final', 'final_eval')

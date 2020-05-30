@@ -247,9 +247,15 @@ def showscatter3d(data):
 
     plt.show()
 
-def draw_spectrum(spectrum,opt):
-    plt.imshow(spectrum)
-    plt.savefig(os.path.join(opt.save_dir,'spectrum_eg.png'))
+def draw_spectrums(spectrums,opt):
+    if len(spectrums) > 1:
+        plt.subplots(figsize=(6.4*2,4.8*2))
+        for i in range(len(spectrums)):
+            plt.subplot(len(spectrums)//2+1,2,i+1)
+            plt.imshow(spectrums[i])
+    else:
+        plt.imshow(spectrums[0])
+    plt.savefig(os.path.join(opt.save_dir,'spectrum_eg.jpg'))
     plt.close('all')
 
 

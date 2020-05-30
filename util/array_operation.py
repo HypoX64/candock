@@ -20,7 +20,7 @@ def pad(data, padding, mode = 'zero'):
         pad_data = data[:padding-repeat_num*len(data)]
         return np.append(out_data, pad_data)
 
-def normliaze(data, mode = 'norm', sigma = 0, dtype=np.float64, truncated = 2):
+def normliaze(data, mode = 'norm', sigma = 0, dtype=np.float32, truncated = 2):
     '''
     mode: norm | std | maxmin | 5_95
     dtype : np.float64,np.float16...

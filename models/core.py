@@ -37,7 +37,7 @@ class Core(object):
         self.criterion_class = nn.CrossEntropyLoss(self.opt.weight)
         self.criterion_auto = nn.MSELoss()
         self.epoch = 1
-        self.plot_result = {'train':[],'eval':[]}
+        self.plot_result = {'train':[],'eval':[],'F1':[]}
         self.confusion_mats = []
         self.test_flag = True
 
@@ -145,13 +145,14 @@ class Core(object):
             signal,label = self.queue.get()
             signal,label = transformer.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
             with torch.no_grad():
-                loss,features,confusion_mat=self.forward(signal, label, features, confusion_mat)
+                loss,features,confusion_mat = self.forward(signal, label, features, confusion_mat)
                 epoch_loss += loss.item()
 
         if self.opt.model_name != 'autoencoder':
             recall,acc,sp,err,k  = statistics.report(confusion_mat)         
             #plot.draw_heatmap(confusion_mat,self.opt,name = 'current_eval')
             print('epoch:'+str(self.epoch),' macro-prec,reca,F1,err,kappa: '+str(statistics.report(confusion_mat)))
+            self.plot_result['F1'].append(statistics.report(confusion_mat)[2])
         else:
             plot.draw_autoencoder_result(signal.data.cpu().numpy(), out.data.cpu().numpy(),self.opt)
             print('epoch:'+str(self.epoch),' loss: '+str(round(epoch_loss/i,5)))

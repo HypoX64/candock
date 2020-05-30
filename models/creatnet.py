@@ -30,9 +30,10 @@ def creatnet(opt):
 
     #---------------------------------2d---------------------------------
     elif name == 'dfcnn':
-        net = dfcnn.dfcnn(num_classes = opt.label)
+        net = dfcnn.dfcnn(num_classes = opt.label, input_nc = opt.input_nc)
     elif name == 'multi_scale_resnet':
-        net = multi_scale_resnet.Multi_Scale_ResNet(inchannel=opt.input_nc, num_classes=opt.label)
+        net = multi_scale_resnet.Multi_Scale_ResNet(input_nc = opt.input_nc, num_classes=opt.label)
+    
     elif name in ['resnet101','resnet50','resnet18']:
         if name =='resnet101':
             net = resnet.resnet101(pretrained=True)
@@ -47,10 +48,14 @@ def creatnet(opt):
     
     elif 'densenet' in name:
         if name =='densenet121':
-            net = densenet.densenet121(pretrained=True,num_classes=opt.label)
+            net = densenet.densenet121(pretrained=False,num_classes = opt.label)
         elif name == 'densenet201':
-            net = densenet.densenet201(pretrained=True,num_classes=opt.label)
-    elif name =='squeezenet':
-        net = squeezenet.squeezenet1_1(pretrained=True,num_classes=opt.label,inchannel = 1)
+            net = densenet.densenet201(pretrained=False,num_classes = opt.label)
+        net.features.conv0 = nn.Conv2d(opt.input_nc, 64, kernel_size=7, stride=2, padding=3, bias=False) 
+    
+    elif name == 'squeezenet':
+        net = squeezenet.squeezenet1_1(pretrained=False,num_classes = opt.label,inchannel = opt.input_nc)
 
+    elif name == 'mobilenet':
+        net = mobilenet.mobilenet_v2(pretrained=False, num_classes = opt.label, input_nc = opt.input_nc)
     return net

@@ -4,10 +4,10 @@ import torch.nn.functional as F
 
 
 class dfcnn(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, input_nc):
         super(dfcnn, self).__init__()
         self.layer1 = nn.Sequential(       
-            nn.Conv2d(1, 32, 3, 1, 1, bias=False),
+            nn.Conv2d(input_nc, 32, 3, 1, 1, bias=False),
             nn.BatchNorm2d(32),
             nn.ReLU(inplace = True),
             nn.Conv2d(32, 32, 3, 1, 1, bias=False),

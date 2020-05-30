@@ -2,7 +2,7 @@ import argparse
 import os
 import time
 import numpy as np
-from . import util,dsp
+from . import util,dsp,plot
 
 class Options():
     def __init__(self):
@@ -18,20 +18,20 @@ class Options():
         self.parser.add_argument('--loadsize', type=str, default='auto', help='load data in this size')
         self.parser.add_argument('--finesize', type=str, default='auto', help='crop your data into this size')
         self.parser.add_argument('--label_name', type=str, default='auto',help='name of labels,example:"a,b,c,d,e,f"')
-        self.parser.add_argument('--normliaze', type=str, default='5_95', help='mode of normliaze, 5_95 | maxmin | None')
         
         # ------------------------Dataset------------------------
         self.parser.add_argument('--dataset_dir', type=str, default='./datasets/simple_test',help='your dataset path')
         self.parser.add_argument('--save_dir', type=str, default='./checkpoints/',help='save checkpoints')
         self.parser.add_argument('--separated', action='store_true', help='if specified,for preload data, if input, load separated train and test datasets')
         self.parser.add_argument('--no_shuffle', action='store_true', help='if specified, do not shuffle data when load(use to evaluate individual differences)')
-        self.parser.add_argument('--load_thread', type=int, default=8,help='how many threads when load data')        
+        self.parser.add_argument('--load_thread', type=int, default=8,help='how many threads when load data')  
+        self.parser.add_argument('--normliaze', type=str, default='5_95', help='mode of normliaze, 5_95 | maxmin | None')      
 
         # ------------------------Network------------------------
         """Available Network
         1d: lstm, cnn_1d, resnet18_1d, resnet34_1d, multi_scale_resnet_1d,
             micro_multi_scale_resnet_1d,autoencoder
-        2d: dfcnn, multi_scale_resnet, resnet18, resnet50, resnet101,
+        2d: mobilenet, dfcnn, multi_scale_resnet, resnet18, resnet50, resnet101,
             densenet121, densenet201, squeezenet
         """
         self.parser.add_argument('--model_name', type=str, default='micro_multi_scale_resnet_1d',help='Choose model  lstm...')
@@ -42,9 +42,13 @@ class Options():
         # For autoecoder
         self.parser.add_argument('--feature', type=int, default=3, help='number of encoder features')
         # For 2d network(stft spectrum)
+        # Please cheek ./save_dir/spectrum_eg.jpg to change the following parameters
         self.parser.add_argument('--stft_size', type=int, default=512, help='length of each fft segment')
         self.parser.add_argument('--stft_stride', type=int, default=128, help='stride of each fft segment')
+        self.parser.add_argument('--stft_n_downsample', type=int, default=1, help='downsample befor stft')
         self.parser.add_argument('--stft_no_log', action='store_true', help='if specified, do not log1p spectrum')
+        self.parser.add_argument('--stft_shape', type=str, default='auto', help='shape of stft. It depend on \
+            stft_size,stft_stride,stft_n_downsample. Do not input this parameter.')
 
         # ------------------------Training Matters------------------------
         self.parser.add_argument('--pretrained', type=str, default='',help='pretrained model path. If not specified, fo not use pretrained model')
@@ -58,8 +62,6 @@ class Options():
         self.parser.add_argument('--mergelabel', type=str, default='None',
             help='merge some labels to one label and give the result, example:"[[0,1,4],[2,3,5]]" -> label(0,1,4) regard as 0,label(2,3,5) regard as 1')
         self.parser.add_argument('--mergelabel_name', type=str, default='None',help='name of labels,example:"a,b,c,d,e,f"')
-        self.parser.add_argument('--plotfreq', type=int, default=100,help='frequency of plotting results')
-
         
         self.initialized = True
 
@@ -87,7 +89,7 @@ class Options():
                 'multi_scale_resnet_1d','micro_multi_scale_resnet_1d','autoencoder']:
                 self.opt.model_type = '1d'
             elif self.opt.model_name in ['dfcnn', 'multi_scale_resnet', 'resnet18', 'resnet50',
-                'resnet101','densenet121', 'densenet201', 'squeezenet']:
+                'resnet101','densenet121', 'densenet201', 'squeezenet', 'mobilenet']:
                 self.opt.model_type = '2d'
             else:
                 print('\033[1;31m'+'Error: do not support this network '+self.opt.model_name+'\033[0m')
@@ -122,8 +124,9 @@ class Options():
 
         return self.opt
 
-def get_auto_options(opt,label_cnt_per,label_num,shape):
+def get_auto_options(opt,label_cnt_per,label_num,signals):
     
+    shape = signals.shape
     if opt.label =='auto':
         opt.label = label_num
     if opt.input_nc =='auto':
@@ -158,8 +161,16 @@ def get_auto_options(opt,label_cnt_per,label_num,shape):
 
     # check stft spectrum
     if opt.model_type =='2d':
-        h, w = opt.stft_size//2+1, opt.loadsize//opt.stft_stride
-        print('Shape of stft spectrum h,w:',(h,w))
+        spectrums = []
+        data = signals[np.random.randint(0,shape[0]-1)]
+        for i in range(shape[1]):
+            spectrums.append(dsp.signal2spectrum(data[i],opt.stft_size, opt.stft_stride, opt.stft_n_downsample, not opt.stft_no_log))
+        plot.draw_spectrums(spectrums,opt)
+        opt.stft_shape = spectrums[0].shape
+        h,w = opt.stft_shape
+        print('Shape of stft spectrum h,w:',opt.stft_shape)
+        print('\033[1;37m'+'Please cheek ./save_dir/spectrum_eg.jpg to change parameters'+'\033[0m')
+        
         if h<64 or w<64:
             print('\033[1;33m'+'Warning: spectrum is too small'+'\033[0m') 
         if h>512 or w>512:

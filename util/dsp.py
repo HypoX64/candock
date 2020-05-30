@@ -7,7 +7,7 @@ def sin(f,fs,time):
     return np.sin(x)
 
 def downsample(signal,fs1=0,fs2=0,alpha=0,mod = 'just_down'):
-    if alpha ==0:
+    if alpha == 0:
         alpha = int(fs1/fs2)
     if mod == 'just_down':
         return signal[::alpha]
@@ -74,8 +74,10 @@ def energy(signal,kernel_size,stride,padding = 0):
         energy[i] = rms(signal[i*stride:i*stride+kernel_size]) 
     return energy
 
-def signal2spectrum(data,window_size,stride,log = True):
+def signal2spectrum(data,window_size, stride, n_downsample=1, log = True, log_alpha = 0.1):
     # window : ('tukey',0.5) hann
+    if n_downsample != 1:
+        data = downsample(data,alpha=n_downsample)
 
     zxx = scipy.signal.stft(data, window='hann', nperseg=window_size,noverlap=window_size-stride)[2]
     spectrum = np.abs(zxx)
@@ -83,11 +85,25 @@ def signal2spectrum(data,window_size,stride,log = True):
     if log:
         spectrum = np.log1p(spectrum)
         h = window_size//2+1
-        tmp = np.linspace(0, h-1,num=h,dtype=np.int64)
-        index = np.log1p(tmp)*(h/np.log1p(h))
+        x = np.linspace(h*log_alpha, h-1,num=h+1,dtype=np.int64)
+        index = (np.log1p(x)-np.log1p(h*log_alpha))/(np.log1p(h)-np.log1p(h*log_alpha))*h
+
         spectrum_new = np.zeros_like(spectrum)
-        for i in range(h-1):
+        for i in range(h):
             spectrum_new[int(index[i]):int(index[i+1])] = spectrum[i]
         spectrum = spectrum_new
+        spectrum = (spectrum-0.05)/0.25
+
+        # spectrum = np.log1p(spectrum)
+        # h = window_size//2+1
+        # tmp = np.linspace(0, h-1,num=h,dtype=np.int64)
+        # index = np.log2(tmp+1)*(h/np.log2(h+1))
+        # spectrum_new = np.zeros_like(spectrum)
+        # for i in range(h-1):
+        #     spectrum_new[int(index[i]):int(index[i+1])] = spectrum[i]
+        # spectrum = spectrum_new
+        # spectrum = (spectrum-0.05)/0.25
+    else:
+        spectrum = (spectrum-0.02)/0.05
 
     return spectrum

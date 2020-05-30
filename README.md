@@ -1,16 +1,27 @@
+<div align="center">    
+<img src="./imgs/compare.png " alt="image" style="zoom:100%;" />
+</div>
 # candock
-[这原本是一个用于记录毕业设计的日志仓库](<https://github.com/HypoX64/candock/tree/Graduation_Project>)，其目的是尝试多种不同的深度神经网络结构(如LSTM,ResNet,DFCNN等)对单通道EEG进行自动化睡眠阶段分期.<br>目前，项目重点将转变为如何建立一个通用的一维时序信号分析,分类框架.<br>它将包含多种网络结构，并提供数据预处理,读取,训练,评估,测试等功能.<br>
-一些训练时的输出样例: [heatmap](./image/heatmap_eg.png)  [running_err](./image/running_err_eg.png)  [log.txt](./docs/log_eg.txt)
+| English | [中文版](./README_CN.md) |<br>
+A time series signal analysis and classification framework.<br>
+It contain multiple network  and provide data preprocessing, reading, training, evaluation, testing and other functions.<br>
+Some output examples: [heatmap](./image/heatmap_eg.png)  [running_err](./image/running_err_eg.png)  [log.txt](./docs/log_eg.txt)<br>Supported network:<br>
 
-## 注意
-为了适应新的项目，代码已被大幅更改，不能确保仍然能正常运行如sleep-edfx等睡眠数据集，如果仍然需要运行，请参照下文按照输入格式标准自行加载数据，如果有时间我会修复这个问题。
-当然，如果需要加载睡眠数据集也可以直接使用[老的版本](https://github.com/HypoX64/candock/tree/f24cc44933f494d2235b3bf965a04cde5e6a1ae9)<br>
-感谢[@swalltail99](https://github.com/swalltail99)指出的错误，为了适应sleep-edfx数据集的读取，使用这个版本的代码时，请安装mne==0.18.0<br>
+>1d
+>
+>>lstm, cnn_1d, resnet18_1d, resnet34_1d, multi_scale_resnet_1d, micro_multi_scale_resnet_1d
 
+
+>2d(stft spectrum)
+>
+>>mobilenet, resnet18, resnet50, resnet101, densenet121, densenet201, squeezenet, dfcnn, multi_scale_resnet,
+
+## A example: Use EEG to classify sleep stage
+[sleep-edfx](https://github.com/HypoX64/candock/tree/f24cc44933f494d2235b3bf965a04cde5e6a1ae9)<br>
+Thank [@swalltail99](https://github.com/swalltail99)for the bug. In other to load sleep-edfx dataset，please install mne==0.18.0<br>
 ```bash
 pip install mne==0.18.0
 ```
-
 ## Getting Started
 ### Prerequisites
 - Linux, Windows,mac
@@ -18,7 +29,7 @@ pip install mne==0.18.0
 - Python 3
 - Pytroch 1.0+
 ### Dependencies
-This code depends on torchvision, numpy, scipy , matplotlib,available via pip install.<br>
+This code depends on torchvision, numpy, scipy , matplotlib, available via pip install.<br>
 For example:<br>
 
 ```bash
@@ -41,7 +52,13 @@ python3 train.py --label 50 --input_nc 1 --dataset_dir ./datasets/simple_test --
 # if you want to use cpu to train, please input --gpu_id -1
 ```
 * More [options](./util/options.py).
-#### Use your own data to train
+### Test
+```bash
+python3 simple_test.py --label 50 --input_nc 1 --model_name micro_multi_scale_resnet_1d --gpu_id 0
+# if you want to use cpu to test, please input --gpu_id -1
+```
+
+## Training with your own dataset
 * step1: Generate signals.npy and labels.npy in the following format.
 ```python
 #1.type:numpydata   signals:np.float64   labels:np.int64
@@ -51,10 +68,5 @@ python3 train.py --label 50 --input_nc 1 --dataset_dir ./datasets/simple_test --
 signals = np.zeros((10,1,10),dtype='np.float64')
 labels = np.array([0,0,0,0,0,1,1,1,1,1])      #0->class0    1->class1
 ```
-* step2: input  ```--dataset_dir your_dataset_dir``` when running code.
-### Test
-```bash
-python3 simple_test.py --label 50 --input_nc 1 --model_name micro_multi_scale_resnet_1d --gpu_id 0
-# if you want to use cpu to test, please input --gpu_id -1
-```
+* step2: input  ```--dataset_dir "your_dataset_dir"``` when running code.
 

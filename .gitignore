@@ -139,4 +139,3 @@ dmypy.json
 *.pth
 *.edf
 *log*
-*.png

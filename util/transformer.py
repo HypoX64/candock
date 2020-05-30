@@ -77,15 +77,15 @@ def random_transform_1d(data,finesize,test_flag):
         # result = result + (noise-0.5)*0.01
     return result
 
-def random_transform_2d(img,finesize = (224,122),test_flag = True):
+def random_transform_2d(img,finesize = (224,244),test_flag = True):
     h,w = img.shape[:2]
     if test_flag:
-        h_move = 2
+        h_move = int((h-finesize[0])*0.5)
         w_move = int((w-finesize[1])*0.5)
         result = img[h_move:h_move+finesize[0],w_move:w_move+finesize[1]]
     else:
         #random crop
-        h_move = int(10*random.random()) #do not loss low freq signal infos
+        h_move = int((h-finesize[0])*random.random())
         w_move = int((w-finesize[1])*random.random())
         result = img[h_move:h_move+finesize[0],w_move:w_move+finesize[1]]
         #random flip
@@ -99,24 +99,16 @@ def ToInputShape(data,opt,test_flag = False):
     #data = data.astype(np.float32)
 
     if opt.model_type == '1d':
-        if opt.normliaze != 'None':
-            for i in range(opt.batchsize):
-                for j in range(opt.input_nc):
-                    data[i][j] = arr.normliaze(data[i][j],mode = opt.normliaze)
         result = random_transform_1d(data, opt.finesize, test_flag=test_flag)
 
     elif opt.model_type == '2d':
         result = []
+        h,w = opt.stft_shape
         for i in range(opt.batchsize):
             for j in range(opt.input_nc):
-                spectrum = dsp.signal2spectrum(data[i][j],opt.stft_size,opt.stft_stride, not opt.stft_no_log)
-                #spectrum = arr.normliaze(spectrum, mode = opt.normliaze)
-                spectrum = (spectrum-2)/5
-                # print(spectrum.shape)
-                #spectrum = random_transform_2d(spectrum,(224,122),test_flag=test_flag)
+                spectrum = dsp.signal2spectrum(data[i][j],opt.stft_size,opt.stft_stride, opt.stft_n_downsample, not opt.stft_no_log)
+                spectrum = random_transform_2d(spectrum,(h,int(w*0.9)),test_flag=test_flag)
                 result.append(spectrum)
-        h,w = spectrum.shape
-        result = (np.array(result)).reshape(opt.batchsize,opt.input_nc,h,w)
-
+        result = (np.array(result)).reshape(opt.batchsize,opt.input_nc,h,int(w*0.9))
 
     return result

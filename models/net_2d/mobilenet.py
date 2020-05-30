@@ -42,7 +42,7 @@ class InvertedResidual(nn.Module):
 
 
 class MobileNetV2(nn.Module):
-    def __init__(self, num_classes=1000, width_mult=1.0):
+    def __init__(self, num_classes=1000, input_nc=3, width_mult=1.0):
         super(MobileNetV2, self).__init__()
         block = InvertedResidual
         input_channel = 32
@@ -61,7 +61,7 @@ class MobileNetV2(nn.Module):
         # building first layer
         input_channel = int(input_channel * width_mult)
         self.last_channel = int(last_channel * max(1.0, width_mult))
-        features = [ConvBNReLU(3, input_channel, stride=2)]
+        features = [ConvBNReLU(input_nc, input_channel, stride=2)]
         # building inverted residual blocks
         for t, c, n, s in inverted_residual_setting:
             output_channel = int(c * width_mult)

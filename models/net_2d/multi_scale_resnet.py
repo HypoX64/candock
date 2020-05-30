@@ -2,18 +2,18 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 class ResidualBlock(nn.Module):
-    def __init__(self, inchannel, outchannel,kernel_size,stride=2):
+    def __init__(self, input_nc, outchannel,kernel_size,stride=2):
         super(ResidualBlock, self).__init__()
         self.stride = stride
         self.conv = nn.Sequential(
-            nn.Conv2d(inchannel, outchannel, kernel_size=kernel_size, stride=stride, padding=int((kernel_size-1)/2), bias=False),
+            nn.Conv2d(input_nc, outchannel, kernel_size=kernel_size, stride=stride, padding=int((kernel_size-1)/2), bias=False),
             nn.BatchNorm2d(outchannel),
             nn.ReLU(inplace=True),
             nn.Conv2d(outchannel, outchannel, kernel_size=kernel_size, stride=1, padding=int((kernel_size-1)/2), bias=False),
             nn.BatchNorm2d(outchannel)
         )
         self.shortcut = nn.Sequential(
-            nn.Conv2d(inchannel, outchannel, kernel_size=1, stride=2, bias=False),
+            nn.Conv2d(input_nc, outchannel, kernel_size=1, stride=2, bias=False),
             nn.BatchNorm2d(outchannel)
         )
 
@@ -42,10 +42,10 @@ class Route(nn.Module):
         return x
 
 class Multi_Scale_ResNet(nn.Module):
-    def __init__(self, inchannel, num_classes):
+    def __init__(self, input_nc, num_classes):
         super(Multi_Scale_ResNet, self).__init__()
         self.pre_conv = nn.Sequential(
-            nn.Conv2d(inchannel, 64, kernel_size=7, stride=2, padding=3, bias=False),
+            nn.Conv2d(input_nc, 64, kernel_size=7, stride=2, padding=3, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
