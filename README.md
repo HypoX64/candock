@@ -1,7 +1,9 @@
 <div align="center">    
 <img src="./imgs/compare.png " alt="image" style="zoom:100%;" />
 </div>
+
 # candock
+
 | English | [中文版](./README_CN.md) |<br>
 A time series signal analysis and classification framework.<br>
 It contain multiple network  and provide data preprocessing, reading, training, evaluation, testing and other functions.<br>

@@ -1,7 +1,9 @@
 <div align="center">    
 <img src="./imgs/compare.png " alt="image" style="zoom:100%;" />
 </div>
+
 # candock
+
 | [English](./README.md) | 中文版 |<br>
 一个通用的一维时序信号分析,分类框架.<br>
 它将包含多种网络结构，并提供数据预处理,读取,训练,评估,测试等功能.<br>
