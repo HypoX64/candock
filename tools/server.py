@@ -1,137 +1,137 @@
 import os
 import time
 import shutil
-import numpy as np
 import random
 import torch
-from torch import nn, optim
+import numpy as np
 import matplotlib.pyplot as plt
-import warnings
 
+import sys
+sys.path.append("..")
 from util import util,transformer,dataloader,statistics,plot,options
 from util import array_operation as arr
 from models import creatnet,core
 
+# -----------------------------Init-----------------------------
 opt = options.Options()
-opt.parser.add_argument('--ip',type=str,default='', help='')
+opt.parser.add_argument('--rec_tmp',type=str,default='./server_data/rec_data', help='')
 opt = opt.getparse()
-torch.cuda.set_device(opt.gpu_id)
 opt.k_fold = 0
-opt.save_dir = './datasets/server/tmp'
+opt.save_dir = './checkpoints'
 util.makedirs(opt.save_dir)
-'''load ori data'''
-# use separated mode
-signals_train,labels_train,signals_eval,labels_eval = dataloader.loaddataset(opt)
-label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels_train)
-opt = options.get_auto_options(opt, label_cnt_per, label_num, signals_train.shape)
-'''def network'''
+util.makedirs(opt.rec_tmp)
+
+# -----------------------------Load original data-----------------------------
+ori_signals_train,ori_labels_train,ori_signals_eval,ori_labels_eval = dataloader.loaddataset(opt)
+label_cnt,label_cnt_per,label_num = statistics.label_statistics(ori_labels_train)
+opt = options.get_auto_options(opt, label_cnt_per, label_num, ori_signals_train)
+
+# -----------------------------def network-----------------------------
 core = core.Core(opt)
 core.network_init(printflag=True)
 
-'''Receive data'''
-if os.path.isdir('./datasets/server/data'):
-    shutil.rmtree('./datasets/server/data')
-os.system('unzip ./datasets/server/data.zip -d ./datasets/server/')
-categorys = os.listdir('./datasets/server/data')
-categorys.sort()
-print('categorys:',categorys)
-category_num = len(categorys)
-# received_signals_train = [];received_labels_train = []
-# received_signals_eval = [];received_labels_eval = []
+# -----------------------------train-----------------------------
+def train(opt):
 
-# sample_num = 1000
-# eval_num = 1
-# for i in range(category_num):
-#     samples = os.listdir(os.path.join('./datasets/server/data',categorys[i]))
+    categorys = os.listdir(opt.rec_tmp)
+    categorys.sort()
+    print('categorys:',categorys)
+    category_num = len(categorys)
 
-#     for j in range(len(samples)):
-#         txt = util.loadtxt(os.path.join('./datasets/server/data',categorys[i],samples[j]))
-#         #print(os.path.join('./datasets/server/data',categorys[i],sample))
-#         txt_split = txt.split()
-#         signal_ori = np.zeros(len(txt_split))
-#         for point in range(len(txt_split)):
-#             signal_ori[point] = float(txt_split[point])
+    received_signals = [];received_labels = []
 
-#         for x in range(sample_num//len(samples)):
-#             ran = random.randint(1000, len(signal_ori)-2000-1)
-#             this_signal = signal_ori[ran:ran+2000]
-#             this_signal = arr.normliaze(this_signal,'5_95',truncated=4)
-#             # if i ==0:
-#             #     plt.plot(this_signal)
-#             #     plt.show()
-#             if j < (len(samples)-eval_num):               
-#                 received_signals_train.append(this_signal)
-#                 received_labels_train.append(i)
-#             else:
-#                 received_signals_eval.append(this_signal)
-#                 received_labels_eval.append(i)
+    sample_num = 1000
+    for i in range(category_num):
+        samples = os.listdir(os.path.join(opt.rec_tmp,categorys[i]))
+        random.shuffle(samples)
+        for j in range(len(samples)):
+            txt = util.loadtxt(os.path.join(opt.rec_tmp,categorys[i],samples[j]))
+            #print(os.path.join('./datasets/server/data',categorys[i],sample))
+            txt_split = txt.split()
+            signal_ori = np.zeros(len(txt_split))
+            for point in range(len(txt_split)):
+                signal_ori[point] = float(txt_split[point])
 
-# received_signals_train = np.array(received_signals_train).reshape(-1,opt.input_nc,opt.loadsize)
-# received_labels_train = np.array(received_labels_train).reshape(-1,1)
-# received_signals_eval = np.array(received_signals_eval).reshape(-1,opt.input_nc,opt.loadsize)
-# received_labels_eval = np.array(received_labels_eval).reshape(-1,1)
-#print(received_signals_train.shape,received_signals_eval.shape)
+            for x in range(sample_num//len(samples)):
+                ran = random.randint(1000, len(signal_ori)-2000-1)
+                this_signal = signal_ori[ran:ran+2000]
+                this_signal = arr.normliaze(this_signal,'5_95',truncated=4)
+                
+                received_signals.append(this_signal)
+                received_labels.append(i)
 
-received_signals = [];received_labels = []
+    received_signals = np.array(received_signals).reshape(-1,opt.input_nc,opt.loadsize)
+    received_labels = np.array(received_labels).reshape(-1,1)
+    received_signals_train,received_labels_train,received_signals_eval,received_labels_eval=\
+    dataloader.segment_dataset(received_signals, received_labels, 0.8,random=False)
+    print(received_signals_train.shape,received_signals_eval.shape)
 
-sample_num = 1000
-eval_num = 1
-for i in range(category_num):
-    samples = os.listdir(os.path.join('./datasets/server/data',categorys[i]))
-    random.shuffle(samples)
-    for j in range(len(samples)):
-        txt = util.loadtxt(os.path.join('./datasets/server/data',categorys[i],samples[j]))
-        #print(os.path.join('./datasets/server/data',categorys[i],sample))
-        txt_split = txt.split()
-        signal_ori = np.zeros(len(txt_split))
-        for point in range(len(txt_split)):
-            signal_ori[point] = float(txt_split[point])
+    '''merge data'''
+    signals_train,labels_train = dataloader.del_labels(ori_signals_train,ori_labels_train, np.linspace(0, category_num-1,category_num,dtype=np.int64))
+    signals_eval,labels_eval = dataloader.del_labels(ori_signals_eval,ori_labels_eval, np.linspace(0, category_num-1,category_num,dtype=np.int64))
 
-        for x in range(sample_num//len(samples)):
-            ran = random.randint(1000, len(signal_ori)-2000-1)
-            this_signal = signal_ori[ran:ran+2000]
-            this_signal = arr.normliaze(this_signal,'5_95',truncated=4)
-            
-            received_signals.append(this_signal)
-            received_labels.append(i)
+    signals_train = np.concatenate((signals_train, received_signals_train))
+    labels_train = np.concatenate((labels_train, received_labels_train))
+    signals_eval = np.concatenate((signals_eval, received_signals_eval))
+    labels_eval = np.concatenate((labels_eval, received_labels_eval))
 
-received_signals = np.array(received_signals).reshape(-1,opt.input_nc,opt.loadsize)
-received_labels = np.array(received_labels).reshape(-1,1)
-received_signals_train,received_labels_train,received_signals_eval,received_labels_eval=\
-dataloader.segment_dataset(received_signals, received_labels, 0.8,random=False)
-
-print(received_signals_train.shape,received_signals_eval.shape)
-
-# print(labels)
-'''merge data'''
-signals_train,labels_train = dataloader.del_labels(signals_train,labels_train, np.linspace(0, category_num-1,category_num,dtype=np.int64))
-signals_eval,labels_eval = dataloader.del_labels(signals_eval,labels_eval, np.linspace(0, category_num-1,category_num,dtype=np.int64))
+    label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels_train)
+    opt = options.get_auto_options(opt, label_cnt_per, label_num, signals_train)
+    train_sequences= transformer.k_fold_generator(len(labels_train),opt.k_fold,opt.separated)
+    eval_sequences= transformer.k_fold_generator(len(labels_eval),opt.k_fold,opt.separated)
 
 
-signals_train = np.concatenate((signals_train, received_signals_train))
-labels_train = np.concatenate((labels_train, received_labels_train))
+    for epoch in range(opt.epochs):
+        t1 = time.time()
+        if opt.separated:
+            #print(signals_train.shape,labels_train.shape)
+            core.train(signals_train,labels_train,train_sequences)
+            core.eval(signals_eval,labels_eval,eval_sequences)
+        else:            
+            core.train(signals,labels,train_sequences[fold])
+            core.eval(signals,labels,eval_sequences[fold])
+        t2=time.time()
+        if epoch+1==1:
+            util.writelog('>>> per epoch cost time:'+str(round((t2-t1),2))+'s',opt,True)
+    plot.draw_heatmap(core.confusion_mats[-1],opt,name = 'final')
+    core.save_traced_net()
 
-signals_eval = np.concatenate((signals_eval, received_signals_eval))
-labels_eval = np.concatenate((labels_eval, received_labels_eval))
+# -----------------------------server-----------------------------
+from flask import Flask, request
+import base64
+import shutil
 
+app = Flask(__name__)
 
-label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels_train)
-opt = options.get_auto_options(opt, label_cnt_per, label_num, signals_train.shape)
-train_sequences= transformer.k_fold_generator(len(labels_train),opt.k_fold,opt.separated)
-eval_sequences= transformer.k_fold_generator(len(labels_eval),opt.k_fold,opt.separated)
+key = '123456'
+@app.route("/handlepost", methods=["POST"])
+def handlepost():
+    if request.form['token'] != key:
+        return {'return':'token error'}
 
+    if request.form['mode'] == 'clean':
+        if os.path.isdir(opt.rec_tmp):
+            shutil.rmtree(opt.rec_tmp)
+        return {'return':'done'}
 
-for epoch in range(opt.epochs):
-    t1 = time.time()
-    if opt.separated:
-        #print(signals_train.shape,labels_train.shape)
-        core.train(signals_train,labels_train,train_sequences)
-        core.eval(signals_eval,labels_eval,eval_sequences)
-    else:            
-        core.train(signals,labels,train_sequences[fold])
-        core.eval(signals,labels,eval_sequences[fold])
-    t2=time.time()
-    if epoch+1==1:
-        util.writelog('>>> per epoch cost time:'+str(round((t2-t1),2))+'s',opt,True)
-plot.draw_heatmap(core.confusion_mats[-1],opt,name = 'final')
-core.save_traced_net()
+    if request.form['mode'] == 'send':
+        data = request.form['data']
+        util.makedirs(os.path.join(opt.rec_tmp, request.form['label']))
+        util.savetxt(data, os.path.join(opt.rec_tmp, request.form['label'],util.randomstr(8)))
+        return {'return':'done'}
+    
+    if request.form['mode'] == 'train':
+        train(opt)
+        file = util.loadfile(os.path.join(opt.save_dir,'model.pt'))
+        file = base64.b64encode(file).decode('utf-8')
+        heatmap = util.loadfile(os.path.join(opt.save_dir,'final_heatmap.png'))
+        heatmap = base64.b64encode(heatmap).decode('utf-8')
+        return {'return' : 'done',
+                'report' : 'macro-prec,reca,F1,err,kappa:'+str(statistics.report(core.confusion_mats[-1])),
+                'heatmap': heatmap,
+                'network': file
+                }
+
+    return {'return':'error'}
+
+app.run("0.0.0.0", port= 4000, debug=True)

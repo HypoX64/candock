@@ -18,7 +18,7 @@ Use your own data to train
 * step1: Generate signals.npy and labels.npy in the following format.
 # 1.type:numpydata   signals:np.float64   labels:np.int64
 # 2.shape  signals:[num,ch,length]    labels:[num]
-# num:samples_num, ch :channel_num,  num:length of each sample
+# num:samples_num, ch :channel_num,  length:length of each sample
 # for example:
 signals = np.zeros((10,1,10),dtype='np.float64')
 labels = np.array([0,0,0,0,0,1,1,1,1,1])      #0->class0    1->class1

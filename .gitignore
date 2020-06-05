@@ -129,13 +129,15 @@ dmypy.json
 .pyre/
 
 # MyRules
+checkpoints/
 /datasets
-/checkpoints
 /pythontest.py
 /datasets/au
 /sftp-config.json
 /python_test.py
 /train_backup.py
+/tools/client_data
+/tools/server_data
 *.pth
 *.edf
 *log*
