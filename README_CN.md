@@ -4,10 +4,10 @@
 
 # candock
 
-| [English](./README.md) | 中文版 |<br>
+| [English](./README.md) | 中文版 |<br><br>
 一个通用的一维时序信号分析,分类框架.<br>
 它将包含多种网络结构，并提供数据预处理,读取,训练,评估,测试等功能.<br>
-一些训练时的输出样例: [heatmap](./image/heatmap_eg.png)  [running_err](./image/running_err_eg.png)  [log.txt](./docs/log_eg.txt)<br>
+一些训练时的输出样例: [heatmap](./image/heatmap_eg.png)  [running_loss](./image/running_loss_eg.png)  [log.txt](./docs/log_eg.txt)<br>
 目前支持的网络结构:<br>
 >1d
 >

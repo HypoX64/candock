@@ -9,11 +9,11 @@ markers = ['o','^','.',',','v','<','>','1','2','3','4','s','p','*','h','H','+','
 
 #---------------------------------heatmap---------------------------------
 
-'''
+"""
 heatmap: https://matplotlib.org/gallery/images_contours_and_fields/image_annotated_heatmap.html#sphx-glr-gallery-images-contours-and-fields-image-annotated-heatmap-py
 choose color:https://matplotlib.org/tutorials/colors/colormaps.html?highlight=wistia
       recommend:  YlGn  Wistia Blues YlOrBr
-'''
+"""
 def create_heatmap(data, row_labels, col_labels, ax=None,
             cbar_kw={}, cbarlabel="", **kwargs):
     """
@@ -193,6 +193,8 @@ def label_statistics(labels):
     return label_cnt,label_cnt_per,label_num
 
 def draw_scatter(data,opt):
+    data = np.array(data)
+    data = data[np.argsort(data[:,-1])]
     label_cnt,_,label_num = label_statistics(data[:,-1])
     fig = plt.figure(figsize=(12,9))
     cnt = 0
@@ -205,22 +207,35 @@ def draw_scatter(data,opt):
         data_dimension = 3
     
     if data_dimension == 2:
+        plt.xlim(-1.5,1.5)
+        plt.ylim(-1.5,1.5)
         for i in range(label_num):
-            plt.scatter(data[cnt:cnt+label_cnt[i],0], data[cnt:cnt+label_cnt[i],1],
+            plt.scatter(
+                (data[cnt:cnt+label_cnt[i],0])[:100], 
+                (data[cnt:cnt+label_cnt[i],1])[:100],
+                label=str(i),
             )
             cnt += label_cnt[i]
-
 
     elif data_dimension == 3:
         ax = fig.add_subplot(111, projection='3d')
+        ax.set_zlim3d(-1.5, 1.5)
+        ax.set_ylim3d(-1.5, 1.5)
+        ax.set_xlim3d(-1.5, 1.5)
         for i in range(label_num):
-            ax.scatter(data[cnt:cnt+label_cnt[i],0], data[cnt:cnt+label_cnt[i],1], data[cnt:cnt+label_cnt[i],2],
+            ax.scatter(
+                (data[cnt:cnt+label_cnt[i],0])[:100], 
+                (data[cnt:cnt+label_cnt[i],1])[:100], 
+                (data[cnt:cnt+label_cnt[i],2])[:100],
+                label=str(i),
             )
             cnt += label_cnt[i]
-
+    plt.title('Autoencoder Embedding Result')
+    plt.legend(loc=2)
     plt.savefig(os.path.join(opt.save_dir,'feature_scatter.png'))
     np.save(os.path.join(opt.save_dir,'feature_scatter.npy'), data)
     plt.close('all')
+
 
 def draw_autoencoder_result(true_signal,pred_signal,opt):
     plt.subplot(211)

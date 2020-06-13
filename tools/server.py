@@ -32,6 +32,7 @@ core.network_init(printflag=True)
 
 # -----------------------------train-----------------------------
 def train(opt):
+    core.network_init(printflag=True)
 
     categorys = os.listdir(opt.rec_tmp)
     categorys.sort()

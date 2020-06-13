@@ -45,7 +45,7 @@ return: {'return' : 'done',
         }
 """
 data = {'token':opt.token,'mode': 'train'}
-r = requests.post(opt.url, data)
+r = requests.post(opt.url, data ,timeout=60)
 rec_data = r.json()
 print(rec_data['report'])
 

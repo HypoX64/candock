@@ -94,15 +94,6 @@ def signal2spectrum(data,window_size, stride, n_downsample=1, log = True, log_al
         spectrum = spectrum_new
         spectrum = (spectrum-0.05)/0.25
 
-        # spectrum = np.log1p(spectrum)
-        # h = window_size//2+1
-        # tmp = np.linspace(0, h-1,num=h,dtype=np.int64)
-        # index = np.log2(tmp+1)*(h/np.log2(h+1))
-        # spectrum_new = np.zeros_like(spectrum)
-        # for i in range(h-1):
-        #     spectrum_new[int(index[i]):int(index[i+1])] = spectrum[i]
-        # spectrum = spectrum_new
-        # spectrum = (spectrum-0.05)/0.25
     else:
         spectrum = (spectrum-0.02)/0.05
 

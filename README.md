@@ -4,10 +4,11 @@
 
 # candock
 
-| English | [中文版](./README_CN.md) |<br>
+| English | [中文版](./README_CN.md) |<br><br>
 A time series signal analysis and classification framework.<br>
 It contain multiple network  and provide data preprocessing, reading, training, evaluation, testing and other functions.<br>
-Some output examples: [heatmap](./image/heatmap_eg.png)  [running_err](./image/running_err_eg.png)  [log.txt](./docs/log_eg.txt)<br>Supported network:<br>
+Some output examples: [heatmap](./image/heatmap_eg.png)  [running_loss](./image/running_loss_eg.png)  [log.txt](./docs/log_eg.txt)<br>
+Supported network:<br>
 
 >1d
 >
