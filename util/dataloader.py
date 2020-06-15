@@ -20,10 +20,6 @@ def del_labels(signals,labels,dels):
     return signals,labels
 
 
-# def sortbylabel(signals,labels):
-#     signals
-
-
 def segment_dataset(signals,labels,a=0.8,random=True):
     length = len(labels)
     if random:
@@ -92,32 +88,17 @@ def balance_label(signals,labels):
 
 
 #load all data in datasets
-def loaddataset(opt,shuffle = False): 
+def loaddataset(opt): 
     print('Loading dataset...')
-    if opt.separated:
-        signals_train = np.load(opt.dataset_dir+'/signals_train.npy')
-        labels_train = np.load(opt.dataset_dir+'/labels_train.npy')
-        signals_eval = np.load(opt.dataset_dir+'/signals_eval.npy')
-        labels_eval = np.load(opt.dataset_dir+'/labels_eval.npy')
-        if opt.normliaze != 'None':
-            for i in range(signals_train.shape[0]):
-                for j in range(signals_train.shape[1]):
-                    signals_train[i][j] = arr.normliaze(signals_train[i][j], mode = opt.normliaze, truncated=5)
-            for i in range(signals_eval.shape[0]):
-                for j in range(signals_eval.shape[1]):
-                    signals_eval[i][j] = arr.normliaze(signals_eval[i][j], mode = opt.normliaze, truncated=5)
-    else:
-        signals = np.load(opt.dataset_dir+'/signals.npy') 
-        labels = np.load(opt.dataset_dir+'/labels.npy')
-        if opt.normliaze != 'None':
-            for i in range(signals.shape[0]):
-                for j in range(signals.shape[1]):
-                    signals[i][j] = arr.normliaze(signals[i][j], mode = opt.normliaze, truncated=5)
 
-        if not opt.no_shuffle:
-            transformer.shuffledata(signals,labels)
+    signals = np.load(os.path.join(opt.dataset_dir,'signals.npy'))
+    labels = np.load(os.path.join(opt.dataset_dir,'labels.npy'))
+    if opt.normliaze != 'None':
+        for i in range(signals.shape[0]):
+            for j in range(signals.shape[1]):
+                signals[i][j] = arr.normliaze(signals[i][j], mode = opt.normliaze, truncated=5)
 
-    if opt.separated:
-        return signals_train,labels_train,signals_eval,labels_eval
-    else:
-        return signals,labels
+    if opt.fold_index == 'auto':
+        transformer.shuffledata(signals,labels)
+
+    return signals,labels

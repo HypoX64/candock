@@ -4,7 +4,6 @@ import shutil
 import random
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
 
 import sys
 sys.path.append("..")
@@ -22,8 +21,10 @@ util.makedirs(opt.save_dir)
 util.makedirs(opt.rec_tmp)
 
 # -----------------------------Load original data-----------------------------
-ori_signals_train,ori_labels_train,ori_signals_eval,ori_labels_eval = dataloader.loaddataset(opt)
-label_cnt,label_cnt_per,label_num = statistics.label_statistics(ori_labels_train)
+signals,labels = dataloader.loaddataset(opt)
+ori_signals_train,ori_labels_train,ori_signals_eval,ori_labels_eval = \
+signals[:opt.fold_index[0]].copy(),labels[:opt.fold_index[0]].copy(),signals[opt.fold_index[0]:].copy(),labels[opt.fold_index[0]:].copy()
+label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels)
 opt = options.get_auto_options(opt, label_cnt_per, label_num, ori_signals_train)
 
 # -----------------------------def network-----------------------------
@@ -78,19 +79,15 @@ def train(opt):
 
     label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels_train)
     opt = options.get_auto_options(opt, label_cnt_per, label_num, signals_train)
-    train_sequences= transformer.k_fold_generator(len(labels_train),opt.k_fold,opt.separated)
-    eval_sequences= transformer.k_fold_generator(len(labels_eval),opt.k_fold,opt.separated)
-
+    train_sequences = np.linspace(0, len(labels_train)-1,len(labels_train),dtype=np.int64)
+    eval_sequences = np.linspace(0, len(labels_eval)-1,len(labels_eval),dtype=np.int64)
 
     for epoch in range(opt.epochs):
         t1 = time.time()
-        if opt.separated:
-            #print(signals_train.shape,labels_train.shape)
-            core.train(signals_train,labels_train,train_sequences)
-            core.eval(signals_eval,labels_eval,eval_sequences)
-        else:            
-            core.train(signals,labels,train_sequences[fold])
-            core.eval(signals,labels,eval_sequences[fold])
+
+        core.train(signals_train,labels_train,train_sequences)
+        core.eval(signals_eval,labels_eval,eval_sequences)
+
         t2=time.time()
         if epoch+1==1:
             util.writelog('>>> per epoch cost time:'+str(round((t2-t1),2))+'s',opt,True)

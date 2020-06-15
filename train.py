@@ -11,10 +11,8 @@ from util import util,transformer,dataloader,statistics,plot,options
 from models import core
 
 opt = options.Options().getparse()
-t1 = time.time()
 
-'''
-Use your own data to train
+"""Use your own data to train
 * step1: Generate signals.npy and labels.npy in the following format.
 # 1.type:numpydata   signals:np.float64   labels:np.int64
 # 2.shape  signals:[num,ch,length]    labels:[num]
@@ -23,22 +21,15 @@ Use your own data to train
 signals = np.zeros((10,1,10),dtype='np.float64')
 labels = np.array([0,0,0,0,0,1,1,1,1,1])      #0->class0    1->class1
 * step2: input  ```--dataset_dir your_dataset_dir``` when running code.
-'''
+"""
 
 #----------------------------Load Data----------------------------
-if opt.separated:
-    signals_train,labels_train,signals_eval,labels_eval = dataloader.loaddataset(opt)
-    label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels_train)
-    util.writelog('label statistics: '+str(label_cnt),opt,True)
-    opt = options.get_auto_options(opt, label_cnt_per, label_num, signals_train)
-    train_sequences= transformer.k_fold_generator(len(labels_train),opt.k_fold,opt.separated)
-    eval_sequences= transformer.k_fold_generator(len(labels_eval),opt.k_fold,opt.separated)
-else:
-    signals,labels = dataloader.loaddataset(opt)
-    label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels)
-    util.writelog('label statistics: '+str(label_cnt),opt,True)
-    opt = options.get_auto_options(opt, label_cnt_per, label_num, signals)
-    train_sequences,eval_sequences = transformer.k_fold_generator(len(labels),opt.k_fold)
+t1 = time.time()
+signals,labels = dataloader.loaddataset(opt)
+label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels)
+util.writelog('label statistics: '+str(label_cnt),opt,True)
+opt = options.get_auto_options(opt, label_cnt_per, label_num, signals)
+train_sequences,eval_sequences = transformer.k_fold_generator(len(labels),opt.k_fold,opt.fold_index)
 t2 = time.time()
 print('Cost time: %.2f'% (t2-t1),'s')
 
@@ -51,16 +42,11 @@ for fold in range(opt.k_fold):
     if opt.k_fold != 1:util.writelog('------------------------------ k-fold:'+str(fold+1)+' ------------------------------',opt,True)
     core.network_init()
     final_confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
-    for epoch in range(opt.epochs):  
+    for epoch in range(opt.epochs): 
+
         t1 = time.time()
-        
-        if opt.separated:
-            #print(signals_train.shape,labels_train.shape)
-            core.train(signals_train,labels_train,train_sequences)
-            core.eval(signals_eval,labels_eval,eval_sequences)
-        else:            
-            core.train(signals,labels,train_sequences[fold])
-            core.eval(signals,labels,eval_sequences[fold])
+        core.train(signals,labels,train_sequences[fold])
+        core.eval(signals,labels,eval_sequences[fold])
         core.save()
 
         t2=time.time()

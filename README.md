@@ -73,3 +73,28 @@ labels = np.array([0,0,0,0,0,1,1,1,1,1])      #0->class0    1->class1
 ```
 * step2: input  ```--dataset_dir "your_dataset_dir"``` when running code.
 
+### About k-fold
+```--k_fold```&```--fold_index```<br>
+
+* k_fold
+```python
+# fold_num of k-fold. If 0 or 1, no k-fold and cut 0.8 to train and other to eval.
+```
+* fold_index
+```python
+        """--fold_index
+        5-fold:
+        Cut dataset into sub-set using index , and then run k-fold with sub-set
+        If input 'auto', it will shuffle dataset and then cut dataset equally
+        If input: [2,4,6,7]
+        when len(dataset) == 10
+        sub-set: dataset[0:2],dataset[2:4],dataset[4:6],dataset[6:7],dataset[7:]
+        ---------------------------------------------------------------
+        No-fold:
+        If input 'auto', it will shuffle dataset and then cut 80% dataset to train and other to eval
+        If input: [5]
+        when len(dataset) == 10
+        train-set : dataset[0:5]  eval-set : dataset[5:]
+        """
+```
+### [ More options](./util/options.py).

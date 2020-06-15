@@ -22,11 +22,29 @@ class Options():
         # ------------------------Dataset------------------------
         self.parser.add_argument('--dataset_dir', type=str, default='./datasets/simple_test',help='your dataset path')
         self.parser.add_argument('--save_dir', type=str, default='./checkpoints/',help='save checkpoints')
-        self.parser.add_argument('--separated', action='store_true', help='if specified,for preload data, if input, load separated train and test datasets')
-        self.parser.add_argument('--no_shuffle', action='store_true', help='if specified, do not shuffle data when load(use to evaluate individual differences)')
         self.parser.add_argument('--load_thread', type=int, default=8,help='how many threads when load data')  
         self.parser.add_argument('--normliaze', type=str, default='5_95', help='mode of normliaze, 5_95 | maxmin | None')      
-
+        self.parser.add_argument('--k_fold', type=int, default=0,help='fold_num of k-fold.If 0 or 1, no k-fold and cut 0.8 to train and other to eval')
+        """--fold_index
+        5-fold:
+        Cut dataset into sub-set using index , and then run k-fold with sub-set
+        If input 'auto', it will shuffle dataset and then cut dataset equally
+        If input: [2,4,6,7]
+        when len(dataset) == 10
+        sub-set: dataset[0:2],dataset[2:4],dataset[4:6],dataset[6:7],dataset[7:]
+        ---------------------------------------------------------------
+        No-fold:
+        If input 'auto', it will shuffle dataset and then cut 80% dataset to train and other to eval
+        If input: [5]
+        when len(dataset) == 10
+        train-set : dataset[0:5]  eval-set : dataset[5:]
+        """
+        self.parser.add_argument('--fold_index', type=str, default='auto',
+            help='where to fold, eg. when 5-fold and input: [2,4,6,7] -> sub-set: dataset[0:2],dataset[2:4],dataset[4:6],dataset[6:7],dataset[7:]')
+        self.parser.add_argument('--mergelabel', type=str, default='None',
+            help='merge some labels to one label and give the result, example:"[[0,1,4],[2,3,5]]" -> label(0,1,4) regard as 0,label(2,3,5) regard as 1')
+        self.parser.add_argument('--mergelabel_name', type=str, default='None',help='name of labels,example:"a,b,c,d,e,f"')
+        
         # ------------------------Network------------------------
         """Available Network
         1d: lstm, cnn_1d, resnet18_1d, resnet34_1d, multi_scale_resnet_1d,
@@ -58,11 +76,7 @@ class Options():
         self.parser.add_argument('--weight_mod', type=str, default='auto',help='Choose weight mode: auto | normal')
         self.parser.add_argument('--epochs', type=int, default=20,help='end epoch')
         self.parser.add_argument('--network_save_freq', type=int, default=5,help='the freq to save network')
-        self.parser.add_argument('--k_fold', type=int, default=0,help='fold_num of k-fold.if 0 or 1,no k-fold')
-        self.parser.add_argument('--mergelabel', type=str, default='None',
-            help='merge some labels to one label and give the result, example:"[[0,1,4],[2,3,5]]" -> label(0,1,4) regard as 0,label(2,3,5) regard as 1')
-        self.parser.add_argument('--mergelabel_name', type=str, default='None',help='name of labels,example:"a,b,c,d,e,f"')
-        
+
         self.initialized = True
 
     def getparse(self):
@@ -98,8 +112,11 @@ class Options():
         if self.opt.k_fold == 0 :
             self.opt.k_fold = 1
 
-        if self.opt.separated:
-            self.opt.k_fold = 1
+        if self.opt.fold_index != 'auto':
+            self.opt.fold_index = eval(self.opt.fold_index)
+
+        if os.path.isfile(os.path.join(self.opt.dataset_dir,'index.npy')):
+            self.opt.fold_index = (np.load(os.path.join(self.opt.dataset_dir,'index.npy'))).tolist()
 
         self.opt.mergelabel = eval(self.opt.mergelabel)
         if self.opt.mergelabel_name != 'None':

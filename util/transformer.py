@@ -13,24 +13,31 @@ def shuffledata(data,target):
     np.random.shuffle(target)
     # return data,target
 
-def k_fold_generator(length,fold_num,separated=False):
-    if separated:
-        sequence = np.linspace(0, length-1,num = length,dtype='int')
-        return sequence
-    else:
-        if fold_num == 0 or fold_num == 1:
-            train_sequence = np.linspace(0,int(length*0.8)-1,int(length*0.8),dtype='int')[None]
-            test_sequence = np.linspace(int(length*0.8),length-1,int(length*0.2),dtype='int')[None]
+def k_fold_generator(length,fold_num,fold_index = 'auto'):
+    sequence = np.linspace(0,length-1,length,dtype='int')
+    train_sequence = [];eval_sequence = []
+    if fold_num == 0 or fold_num == 1:
+        if fold_index != 'auto' :
+            fold_index = [0]+fold_index+[length]
         else:
-            sequence = np.linspace(0,length-1,length,dtype='int')
-            train_length = int(length/fold_num*(fold_num-1))
-            test_length = int(length/fold_num)
-            train_sequence = np.zeros((fold_num,train_length), dtype = 'int')
-            test_sequence = np.zeros((fold_num,test_length), dtype = 'int')
+            fold_index = [0]+[int(length*0.8)]+[length]
+        train_sequence.append(sequence[:fold_index[1]])
+        eval_sequence.append(sequence[fold_index[1]:])
+    else:
+        if fold_index != 'auto' :
+            fold_index = [0]+fold_index+[length]
+        else:
+            fold_index = []
             for i in range(fold_num):
-                test_sequence[i] = (sequence[test_length*i:test_length*(i+1)])[:test_length]
-                train_sequence[i] = np.concatenate((sequence[0:test_length*i],sequence[test_length*(i+1):]),axis=0)[:train_length]
-        return train_sequence,test_sequence
+                fold_index.append(length//fold_num*i)
+            fold_index.append(length)
+        for i in range(len(fold_index)-1):
+            eval_sequence.append(sequence[fold_index[i]:fold_index[i+1]])
+            train_sequence.append(np.concatenate((sequence[0:fold_index[i]],sequence[fold_index[i+1]:]),axis=0))
+    if fold_num > 1:
+        print('fold_index:',fold_index)
+    return train_sequence,eval_sequence
+
 
 def batch_generator(data,target,sequence,shuffle = True):
     batchsize = len(sequence)
