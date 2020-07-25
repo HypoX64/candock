@@ -1,5 +1,5 @@
 from torch import nn
-from .net_1d import cnn_1d,lstm,resnet_1d,multi_scale_resnet_1d,micro_multi_scale_resnet_1d,autoencoder
+from .net_1d import cnn_1d,lstm,resnet_1d,multi_scale_resnet_1d,micro_multi_scale_resnet_1d,autoencoder,mlp
 from .net_2d import densenet,dfcnn,mobilenet,resnet,squeezenet,multi_scale_resnet
 
 
@@ -9,6 +9,9 @@ def creatnet(opt):
     #encoder
     if name =='autoencoder':
         net = autoencoder.Autoencoder(opt.input_nc, opt.feature, opt.label,opt.finesize)
+    #mlp
+    if name =='mlp':
+        net = mlp.mlp(opt.input_nc, opt.label, opt.finesize)
     #lstm
     elif name =='lstm':
         net =  lstm.lstm(opt.lstm_inputsize,opt.lstm_timestep,input_nc=opt.input_nc,num_classes=opt.label)

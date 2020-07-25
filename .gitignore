@@ -138,6 +138,7 @@ checkpoints/
 /train_backup.py
 /tools/client_data
 /tools/server_data
+/trainscript.py
 *.pth
 *.edf
 *log*

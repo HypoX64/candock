@@ -48,7 +48,7 @@ class Options():
         # ------------------------Network------------------------
         """Available Network
         1d: lstm, cnn_1d, resnet18_1d, resnet34_1d, multi_scale_resnet_1d,
-            micro_multi_scale_resnet_1d,autoencoder
+            micro_multi_scale_resnet_1d,autoencoder,mlp
         2d: mobilenet, dfcnn, multi_scale_resnet, resnet18, resnet50, resnet101,
             densenet121, densenet201, squeezenet
         """
@@ -100,7 +100,7 @@ class Options():
 
         if self.opt.model_type == 'auto':
             if self.opt.model_name in ['lstm', 'cnn_1d', 'resnet18_1d', 'resnet34_1d', 
-                'multi_scale_resnet_1d','micro_multi_scale_resnet_1d','autoencoder']:
+                'multi_scale_resnet_1d','micro_multi_scale_resnet_1d','autoencoder','mlp']:
                 self.opt.model_type = '1d'
             elif self.opt.model_name in ['dfcnn', 'multi_scale_resnet', 'resnet18', 'resnet50',
                 'resnet101','densenet121', 'densenet201', 'squeezenet', 'mobilenet']:

@@ -1,6 +1,7 @@
 import scipy.signal
 import scipy.fftpack as fftpack
 import numpy as np
+import pywt
 
 def sin(f,fs,time):
     x = np.linspace(0, 2*np.pi*f*time, fs*time)
@@ -23,10 +24,32 @@ def medfilt(signal,x):
 def cleanoffset(signal):
     return signal - np.mean(signal)
 
-def bpf_fir(signal,fs,fc1,fc2,numtaps=101):
-    b=scipy.signal.firwin(numtaps, [fc1, fc2], pass_zero=False,fs=fs)
-    result = scipy.signal.lfilter(b, 1, signal)
-    return result
+def showfreq(signal,fs,fc=0):
+    """
+    return f,fft
+    """
+    if fc==0:
+        kc = int(len(signal)/2)
+    else:   
+        kc = int(len(signal)/fs*fc)
+    signal_fft = np.abs(scipy.fftpack.fft(signal))
+    f = np.linspace(0,fs/2,num=int(len(signal_fft)/2))
+    return f[:kc],signal_fft[0:int(len(signal_fft)/2)][:kc]
+
+def bpf(signal, fs, fc1, fc2, numtaps=3, mode='iir'):
+    if mode == 'iir':
+        b,a = scipy.signal.iirfilter(numtaps, [fc1,fc2], fs=fs)
+    elif mode == 'fir':
+        b = scipy.signal.firwin(numtaps, [fc1, fc2], pass_zero=False,fs=fs)
+        a = 1       
+    return scipy.signal.lfilter(b, a, signal)
+
+def wave_filter(signal,wave,level,usedcoeffs):
+    coeffs = pywt.wavedec(signal, wave, level=level)
+    for i in range(len(usedcoeffs)):
+        if usedcoeffs[i] == 0:
+            coeffs[i] = np.zeros_like(coeffs[i])
+    return pywt.waverec(coeffs, wave, mode='symmetric', axis=-1)
 
 def fft_filter(signal,fs,fc=[],type = 'bandpass'):
     '''

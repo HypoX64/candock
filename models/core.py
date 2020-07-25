@@ -42,7 +42,7 @@ class Core(object):
         self.test_flag = True
 
         if printflag:
-            util.writelog('network:\n'+str(self.net),self.opt,True)
+            #util.writelog('network:\n'+str(self.net),self.opt,True)
             show_paramsnumber(self.net,self.opt)
 
         if self.opt.pretrained != '':
@@ -85,7 +85,8 @@ class Core(object):
         self.queue = Queue(self.opt.load_thread*2)
         process_batch_num = len(sequences)//self.opt.batchsize//self.opt.load_thread
         if process_batch_num == 0:
-            print('\033[1;33m'+'Warning: too much load thread'+'\033[0m') 
+            if self.epoch == 1:
+                print('\033[1;33m'+'Warning: too much load thread'+'\033[0m') 
             self.start_process(signals,labels,sequences)
         else:
             for i in range(self.opt.load_thread):
@@ -130,8 +131,8 @@ class Core(object):
             loss.backward()
             self.optimizer.step()
        
-        self.plot_result['train'].append(epoch_loss/i)
-        plot.draw_loss(self.plot_result,self.epoch+i/(sequences.shape[0]/self.opt.batchsize),self.opt)
+        self.plot_result['train'].append(epoch_loss/(i+1))
+        plot.draw_loss(self.plot_result,self.epoch+(i+1)/(sequences.shape[0]/self.opt.batchsize),self.opt)
         # if self.opt.model_name != 'autoencoder':
         #     plot.draw_heatmap(confusion_mat,self.opt,name = 'current_train')
 
@@ -142,6 +143,7 @@ class Core(object):
         epoch_loss = 0
         confusion_mat = np.zeros((self.opt.label,self.opt.label), dtype=int)
 
+        np.random.shuffle(sequences)
         self.process_pool_init(signals, labels, sequences)
         for i in range(len(sequences)//self.opt.batchsize):
             signal,label = self.queue.get()
@@ -160,7 +162,7 @@ class Core(object):
             print('epoch:'+str(self.epoch),' macro-prec,reca,F1,err,kappa: '+str(statistics.report(confusion_mat)))
             self.plot_result['F1'].append(statistics.report(confusion_mat)[2])
         
-        self.plot_result['eval'].append(epoch_loss/i) 
+        self.plot_result['eval'].append(epoch_loss/(i+1)) 
 
         self.epoch +=1
         self.confusion_mats.append(confusion_mat)

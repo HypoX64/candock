@@ -1,6 +1,7 @@
 import os
 import string
 import random
+import shutil
 
 def randomstr(num):
     return ''.join(random.sample(string.ascii_letters + string.digits, num))
@@ -39,3 +40,9 @@ def savefile(file,path):
     wf = open(path,'wb')
     wf.write(file)
     wf.close()
+
+def copyfile(src,dst):
+    try:
+        shutil.copyfile(src, dst)
+    except Exception as e:
+        print(e)

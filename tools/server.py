@@ -132,4 +132,4 @@ def handlepost():
 
     return {'return':'error'}
 
-app.run("0.0.0.0", port= 4000, debug=True)
+app.run("0.0.0.0", port= 4000, debug=False)
