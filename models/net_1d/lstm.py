@@ -12,7 +12,8 @@ class lstm_block(nn.Module):
             input_size=input_size,
             hidden_size=Hidden_size,        
             num_layers=Num_layers,          
-            batch_first=True,       
+            batch_first=True, 
+            # bidirectional = True      
         )
 
     def forward(self, x):
@@ -30,7 +31,7 @@ class lstm(nn.Module):
         self.point = input_size*time_step
        
         for i in range(input_nc):
-            exec('self.lstm'+str(i) + '=lstm_block(input_size, time_step)')
+            exec('self.lstm'+str(i) + '=lstm_block(input_size, time_step, '+str(Hidden_size)+')')
         self.fc = nn.Linear(Hidden_size*input_nc, num_classes)
 
     def forward(self, x):
@@ -39,5 +40,6 @@ class lstm(nn.Module):
         for i in range(self.input_nc):
             y.append(eval('self.lstm'+str(i)+'(x[:,i,:])'))
         x = torch.cat(tuple(y), 1)
+        # print(x.size())
         x = self.fc(x)
         return x

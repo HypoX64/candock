@@ -139,6 +139,7 @@ checkpoints/
 /tools/client_data
 /tools/server_data
 /trainscript.py
+*.out
 *.pth
 *.edf
 *log*

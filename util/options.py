@@ -2,7 +2,7 @@ import argparse
 import os
 import time
 import numpy as np
-from . import util,dsp,plot
+from . import util,dsp,plot,statistics
 
 class Options():
     def __init__(self):
@@ -19,12 +19,38 @@ class Options():
         self.parser.add_argument('--finesize', type=str, default='auto', help='crop your data into this size')
         self.parser.add_argument('--label_name', type=str, default='auto',help='name of labels,example:"a,b,c,d,e,f"')
         
-        # ------------------------Dataset------------------------
-        self.parser.add_argument('--dataset_dir', type=str, default='./datasets/simple_test',help='your dataset path')
-        self.parser.add_argument('--save_dir', type=str, default='./checkpoints/',help='save checkpoints')
-        self.parser.add_argument('--load_thread', type=int, default=8,help='how many threads when load data')  
+        # ------------------------Preprocessing------------------------
         self.parser.add_argument('--normliaze', type=str, default='5_95', help='mode of normliaze, 5_95 | maxmin | None')      
-        self.parser.add_argument('--k_fold', type=int, default=0,help='fold_num of k-fold.If 0 or 1, no k-fold and cut 0.8 to train and other to eval')
+        # filter
+        self.parser.add_argument('--filter', type=str, default='None', help='type of filter, fft | fir | iir |None')
+        self.parser.add_argument('--filter_mod', type=str, default='bandpass', help='mode of fft_filter, bandpass | bandstop')
+        self.parser.add_argument('--filter_fs', type=int, default=1000, help='fs of filter')
+        self.parser.add_argument('--filter_fc', type=str, default='[]', help='fc of filter, eg. [0.1,10]')
+
+        # filter by wavelet
+        self.parser.add_argument('--wave', type=str, default='None', help='wavelet name string, wavelet(eg. dbN symN haar gaus mexh) | None')
+        self.parser.add_argument('--wave_level', type=int, default=5, help='decomposition level')
+        self.parser.add_argument('--wave_usedcoeffs', type=str, default='[]', help='Coeff used for reconstruction, \
+            eg. when level = 6 usedcoeffs=[1,1,0,0,0,0,0] : reconstruct signal with cA6, cD6')
+        self.parser.add_argument('--wave_channel', action='store_true', help='if specified, input reconstruct each coeff as a channel.')
+        
+        
+        # ------------------------Data Augmentation------------------------
+        # base
+        self.parser.add_argument('--augment', type=str, default='all', help='all | scale,filp,amp,noise | scale,filp ....')
+        # fft channel --> use fft to improve frequency domain information.
+        self.parser.add_argument('--augment_fft', action='store_true', help='if specified, use fft to improve frequency domain informationa')
+
+        # for gan,it only support when fold_index = 1 or 0 now
+        # only support when k_fold =0 or 1
+        self.parser.add_argument('--gan', action='store_true', help='if specified, using gan to augmente dataset')
+        self.parser.add_argument('--gan_lr', type=float, default=0.0002,help='learning rate')
+        self.parser.add_argument('--gan_augment_times', type=float, default=2,help='how many times that will be augmented by dcgan')
+        self.parser.add_argument('--gan_latent_dim', type=int, default=100,help='dimensionality of the latent space')
+        self.parser.add_argument('--gan_labels', type=str, default='[]',help='which label that will be augmented by dcgan, eg: [0,1,2,3]')
+        self.parser.add_argument('--gan_epochs', type=int, default=100,help='number of epochs of gan training')
+
+        # ------------------------Dataset------------------------
         """--fold_index
         5-fold:
         Cut dataset into sub-set using index , and then run k-fold with sub-set
@@ -32,7 +58,7 @@ class Options():
         If input: [2,4,6,7]
         when len(dataset) == 10
         sub-set: dataset[0:2],dataset[2:4],dataset[4:6],dataset[6:7],dataset[7:]
-        ---------------------------------------------------------------
+        -------
         No-fold:
         If input 'auto', it will shuffle dataset and then cut 80% dataset to train and other to eval
         If input: [5]
@@ -41,6 +67,10 @@ class Options():
         """
         self.parser.add_argument('--fold_index', type=str, default='auto',
             help='where to fold, eg. when 5-fold and input: [2,4,6,7] -> sub-set: dataset[0:2],dataset[2:4],dataset[4:6],dataset[6:7],dataset[7:]')
+        self.parser.add_argument('--k_fold', type=int, default=0,help='fold_num of k-fold.If 0 or 1, no k-fold and cut 0.8 to train and other to eval')
+        self.parser.add_argument('--dataset_dir', type=str, default='./datasets/simple_test',help='your dataset path')
+        self.parser.add_argument('--save_dir', type=str, default='./checkpoints/',help='save checkpoints')
+        self.parser.add_argument('--load_thread', type=int, default=8,help='how many threads when load data')  
         self.parser.add_argument('--mergelabel', type=str, default='None',
             help='merge some labels to one label and give the result, example:"[[0,1,4],[2,3,5]]" -> label(0,1,4) regard as 0,label(2,3,5) regard as 1')
         self.parser.add_argument('--mergelabel_name', type=str, default='None',help='name of labels,example:"a,b,c,d,e,f"')
@@ -118,6 +148,15 @@ class Options():
         if os.path.isfile(os.path.join(self.opt.dataset_dir,'index.npy')):
             self.opt.fold_index = (np.load(os.path.join(self.opt.dataset_dir,'index.npy'))).tolist()
 
+        if self.opt.augment == 'all':
+            self.opt.augment = ["scale","filp","amp","noise"]
+        else:
+            self.opt.augment = str2list(self.opt.augment)
+
+        self.opt.filter_fc = eval(self.opt.filter_fc)
+        self.opt.wave_usedcoeffs = eval(self.opt.wave_usedcoeffs)
+        self.opt.gan_labels = eval(self.opt.gan_labels)
+
         self.opt.mergelabel = eval(self.opt.mergelabel)
         if self.opt.mergelabel_name != 'None':
             self.opt.mergelabel_name = self.opt.mergelabel_name.replace(" ", "").split(",")
@@ -141,9 +180,24 @@ class Options():
 
         return self.opt
 
-def get_auto_options(opt,label_cnt_per,label_num,signals):
+def str2list(string,out_type = 'string'):
+    out_list = []
+    string = string.replace(' ','').replace('[','').replace(']','')
+    strings = string.split(',')
+    for string in strings:
+        if out_type == 'string':
+            out_list.append(string)
+        elif out_type == 'int':
+            out_list.append(int(string))
+        elif out_type == 'float':
+            out_list.append(float(string))
+    return out_list
+
+
+def get_auto_options(opt,signals,labels):
     
     shape = signals.shape
+    label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels)
     if opt.label =='auto':
         opt.label = label_num
     if opt.input_nc =='auto':
@@ -174,7 +228,6 @@ def get_auto_options(opt,label_cnt_per,label_num,signals):
         opt.label_name = names
     elif not isinstance(opt.label_name,list):
         opt.label_name = opt.label_name.replace(" ", "").split(",")
-
 
     # check stft spectrum
     if opt.model_type =='2d':

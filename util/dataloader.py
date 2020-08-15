@@ -20,7 +20,7 @@ def del_labels(signals,labels,dels):
     return signals,labels
 
 
-def segment_dataset(signals,labels,a=0.8,random=True):
+def segment_traineval_dataset(signals,labels,a=0.8,random=True):
     length = len(labels)
     if random:
         transformer.shuffledata(signals, labels)
@@ -49,9 +49,6 @@ def segment_dataset(signals,labels,a=0.8,random=True):
                 labels_eval = np.concatenate((labels_eval, labels[cnt+int(label_cnt[i]*0.8):cnt+label_cnt[i]]))
             cnt += label_cnt[i]
     return signals_train,labels_train,signals_eval,labels_eval
-
-
-
 
 def balance_label(signals,labels):
 
@@ -86,17 +83,44 @@ def balance_label(signals,labels):
                 cnt +=1
     return new_signals,new_labels
 
-
 #load all data in datasets
 def loaddataset(opt): 
     print('Loading dataset...')
 
     signals = np.load(os.path.join(opt.dataset_dir,'signals.npy'))
     labels = np.load(os.path.join(opt.dataset_dir,'labels.npy'))
+    num,ch,size = signals.shape
+
+    # normliaze
     if opt.normliaze != 'None':
-        for i in range(signals.shape[0]):
-            for j in range(signals.shape[1]):
+        for i in range(num):
+            for j in range(ch):
                 signals[i][j] = arr.normliaze(signals[i][j], mode = opt.normliaze, truncated=5)
+    # filter
+    if opt.filter != 'None':
+        for i in range(num):
+            for j in range(ch): 
+                if opt.filter == 'fft':
+                    signals[i][j] = dsp.fft_filter(signals[i][j], opt.filter_fs, opt.filter_fc,type = opt.filter_mod) 
+                elif opt.filter == 'iir':         
+                    signals[i][j] = dsp.bpf(signals[i][j], opt.filter_fs, opt.filter_fc[0], opt.filter_fc[1], numtaps=3, mode='iir')
+                elif opt.filter == 'fir':
+                    signals[i][j] = dsp.bpf(signals[i][j], opt.filter_fs, opt.filter_fc[0], opt.filter_fc[1], numtaps=101, mode='fir')
+    
+    # wave filter
+    if opt.wave != 'None':
+        for i in range(num):
+            for j in range(ch):
+                signals[i][j] = dsp.wave_filter(signals[i][j],opt.wave,opt.wave_level,opt.wave_usedcoeffs)
+    
+    # use fft to improve frequency domain information
+    if opt.augment_fft:
+        new_signals = np.zeros((num,ch*2,size), dtype=np.float32)
+        new_signals[:,:ch,:] = signals
+        for i in range(num):
+            for j in range(ch):
+                new_signals[i,ch+j,:] = dsp.fft(signals[i,j,:],half=False)
+        signals = new_signals
 
     if opt.fold_index == 'auto':
         transformer.shuffledata(signals,labels)

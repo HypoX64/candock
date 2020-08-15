@@ -4,7 +4,6 @@ import numpy as np
 import torch
 from . import dsp
 from . import array_operation as arr
-# import dsp
 
 def shuffledata(data,target):
     state = np.random.get_state()
@@ -64,24 +63,40 @@ def ToTensor(data,target=None,gpu_id=0):
             data = data.cuda()
         return data
 
-def random_transform_1d(data,finesize,test_flag):
-    batch_size,ch,length = data.shape
+def random_transform_1d(data,opt,test_flag):
+    batchsize,ch,length = data.shape
 
     if test_flag:
-        move = int((length-finesize)*0.5)
-        result = data[:,:,move:move+finesize]
+        move = int((length-opt.finesize)*0.5)
+        result = data[:,:,move:move+opt.finesize]
     else:
+        #random scale
+        if 'scale' in opt.augment:
+            length = np.random.randint(opt.finesize, length*1.1, dtype=np.int64)
+            result = np.zeros((batchsize,ch,length))
+            for i in range(batchsize):
+                for j in range(ch):
+                    result[i][j] = arr.interp(data[i][j], length)
+            data = result
+
         #random crop    
-        move = int((length-finesize)*random.random())
-        result = data[:,:,move:move+finesize]
+        move = int((length-opt.finesize)*random.random())
+        result = data[:,:,move:move+opt.finesize]
+
         #random flip
-        if random.random()<0.5:
-            result = result[:,:,::-1]
+        if 'flip' in opt.augment:
+            if random.random()<0.5:
+                result = result[:,:,::-1]
+        
         #random amp
-        result = result*random.uniform(0.9,1.1)
+        if 'amp' in opt.augment:
+            result = result*random.uniform(0.9,1.1)
+
         #add noise
-        # noise = np.random.rand(ch,finesize)
-        # result = result + (noise-0.5)*0.01
+        if 'noise' in opt.augment:
+            noise = np.random.rand(ch,opt.finesize)
+            result = result + (noise-0.5)*0.01
+
     return result
 
 def random_transform_2d(img,finesize = (224,244),test_flag = True):
@@ -104,18 +119,19 @@ def random_transform_2d(img,finesize = (224,244),test_flag = True):
 
 def ToInputShape(data,opt,test_flag = False):
     #data = data.astype(np.float32)
+    _batchsize,_ch,_size = data.shape
 
     if opt.model_type == '1d':
-        result = random_transform_1d(data, opt.finesize, test_flag=test_flag)
+        result = random_transform_1d(data, opt, test_flag = test_flag)
 
     elif opt.model_type == '2d':
         result = []
         h,w = opt.stft_shape
-        for i in range(opt.batchsize):
+        for i in range(_batchsize):
             for j in range(opt.input_nc):
                 spectrum = dsp.signal2spectrum(data[i][j],opt.stft_size,opt.stft_stride, opt.stft_n_downsample, not opt.stft_no_log)
                 spectrum = random_transform_2d(spectrum,(h,int(w*0.9)),test_flag=test_flag)
                 result.append(spectrum)
-        result = (np.array(result)).reshape(opt.batchsize,opt.input_nc,h,int(w*0.9))
+        result = (np.array(result)).reshape(_batchsize,opt.input_nc,h,int(w*0.9))
 
     return result

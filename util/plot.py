@@ -248,6 +248,27 @@ def draw_autoencoder_result(true_signal,pred_signal,opt):
     plt.savefig(os.path.join(opt.save_dir,'autoencoder_result.png'))
     plt.close('all')
 
+def draw_gan_result(real_signal,gan_signal,opt):
+    if real_signal.shape[0]>4:
+        fig = plt.figure(figsize=(18,4))
+        for i in range(4):
+            plt.subplot(2,4,i+1)
+            plt.plot(real_signal[i][0])
+            plt.title('real')
+        for i in range(4):
+            plt.subplot(2,4,4+i+1)
+            plt.plot(gan_signal[i][0])
+            plt.title('gan')
+    else:       
+        plt.subplot(211)
+        plt.plot(real_signal[0][0])
+        plt.title('real')
+        plt.subplot(212)
+        plt.plot(gan_signal[0][0])
+        plt.title('gan')
+    plt.savefig(os.path.join(opt.save_dir,'gan_result.png'))
+    plt.close('all')
+
 def showscatter3d(data):
     label_cnt,_,label_num = label_statistics(data[:,3])
 

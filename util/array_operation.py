@@ -6,19 +6,22 @@ def interp(y, length):
     x = np.linspace(0, len(y)-1,num = length)
     return np.interp(x, xp, fp)
 
-def pad(data, padding, mode = 'zero'):
-    if mode == 'zero':
+def pad(data,padding,mod='zero'):
+    if mod == 'zero':
         pad_data = np.zeros(padding, dtype = data.dtype)
         return np.append(data, pad_data)
-    elif mode == 'repeat':
+    
+    elif mod == 'repeat':
         out_data = data.copy()
         repeat_num = int(padding/len(data))
-
         for i in range(repeat_num):
             out_data = np.append(out_data, data)
-
         pad_data = data[:padding-repeat_num*len(data)]
         return np.append(out_data, pad_data)
+
+    elif mod == 'reflect':
+        pad_data = data[::-1][:padding]
+        return np.append(data, pad_data)
 
 def normliaze(data, mode = 'norm', sigma = 0, dtype=np.float32, truncated = 2):
     '''

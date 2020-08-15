@@ -8,6 +8,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from util import util,transformer,dataloader,statistics,plot,options
+from data import augmenter
 from models import core
 
 opt = options.Options().getparse()
@@ -26,9 +27,11 @@ labels = np.array([0,0,0,0,0,1,1,1,1,1])      #0->class0    1->class1
 #----------------------------Load Data----------------------------
 t1 = time.time()
 signals,labels = dataloader.loaddataset(opt)
+if opt.gan:
+    signals,labels = augmenter.gan(opt,signals,labels)
 label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels)
 util.writelog('label statistics: '+str(label_cnt),opt,True)
-opt = options.get_auto_options(opt, label_cnt_per, label_num, signals)
+opt = options.get_auto_options(opt, signals, labels)
 train_sequences,eval_sequences = transformer.k_fold_generator(len(labels),opt.k_fold,opt.fold_index)
 t2 = time.time()
 print('Cost time: %.2f'% (t2-t1),'s')

@@ -26,7 +26,7 @@ class Core(object):
         self.epoch = 1
         if self.opt.gpu_id != -1:
             os.environ["CUDA_VISIBLE_DEVICES"] = str(self.opt.gpu_id)
-            #torch.cuda.set_device(self.opt.gpu_id)
+            # torch.cuda.set_device(self.opt.gpu_id)
             if not self.opt.no_cudnn:
                 torch.backends.cudnn.benchmark = True
 
@@ -71,8 +71,12 @@ class Core(object):
             self.net.cuda()
 
     def preprocessing(self,signals, labels, sequences):
-        for i in range(len(sequences)//self.opt.batchsize):
-            signal,label = transformer.batch_generator(signals, labels, sequences[i*self.opt.batchsize:(i+1)*self.opt.batchsize])
+        _times = np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)
+        for i in range(_times):
+            if i != _times-1:
+                signal,label = transformer.batch_generator(signals, labels, sequences[i*self.opt.batchsize:(i+1)*self.opt.batchsize])
+            else:
+                signal,label = transformer.batch_generator(signals, labels, sequences[i*self.opt.batchsize:])
             signal = transformer.ToInputShape(signal,self.opt,test_flag =self.test_flag)
             self.queue.put([signal,label])
 
@@ -121,13 +125,15 @@ class Core(object):
         
         np.random.shuffle(sequences)
         self.process_pool_init(signals, labels, sequences)
-        for i in range(len(sequences)//self.opt.batchsize):
+
+        for i in range(np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)):
+            self.optimizer.zero_grad()
+            
             signal,label = self.queue.get()
             signal,label = transformer.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
             output,loss,features,confusion_mat = self.forward(signal, label, features, confusion_mat)
 
             epoch_loss += loss.item()     
-            self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
        
@@ -145,7 +151,7 @@ class Core(object):
 
         np.random.shuffle(sequences)
         self.process_pool_init(signals, labels, sequences)
-        for i in range(len(sequences)//self.opt.batchsize):
+        for i in range(np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)):
             signal,label = self.queue.get()
             signal,label = transformer.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
             with torch.no_grad():
@@ -153,9 +159,10 @@ class Core(object):
                 epoch_loss += loss.item()
 
         if self.opt.model_name == 'autoencoder':
-            plot.draw_autoencoder_result(signal.data.cpu().numpy(), output.data.cpu().numpy(),self.opt)
-            print('epoch:'+str(self.epoch),' loss: '+str(round(epoch_loss/i,5)))
-            plot.draw_scatter(features, self.opt)
+            if self.epoch%10 == 0:
+                plot.draw_autoencoder_result(signal.data.cpu().numpy(), output.data.cpu().numpy(),self.opt)
+                print('epoch:'+str(self.epoch),' loss: '+str(round(epoch_loss/i,5)))
+                plot.draw_scatter(features, self.opt)
         else:
             recall,acc,sp,err,k  = statistics.report(confusion_mat)         
             #plot.draw_heatmap(confusion_mat,self.opt,name = 'current_eval')

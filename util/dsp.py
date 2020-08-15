@@ -2,6 +2,7 @@ import scipy.signal
 import scipy.fftpack as fftpack
 import numpy as np
 import pywt
+from . import array_operation as arr
 
 def sin(f,fs,time):
     x = np.linspace(0, 2*np.pi*f*time, fs*time)
@@ -24,7 +25,7 @@ def medfilt(signal,x):
 def cleanoffset(signal):
     return signal - np.mean(signal)
 
-def showfreq(signal,fs,fc=0):
+def showfreq(signal,fs,fc=0,db=False):
     """
     return f,fft
     """
@@ -34,7 +35,23 @@ def showfreq(signal,fs,fc=0):
         kc = int(len(signal)/fs*fc)
     signal_fft = np.abs(scipy.fftpack.fft(signal))
     f = np.linspace(0,fs/2,num=int(len(signal_fft)/2))
-    return f[:kc],signal_fft[0:int(len(signal_fft)/2)][:kc]
+    out_f = f[:kc]
+    out_fft = signal_fft[0:int(len(signal_fft)/2)][:kc]
+    if db:
+        out_fft = 20*np.log10(out_fft/np.max(out_fft))
+        out_fft = out_fft-np.max(out_fft)
+        np.clip(out_fft,-100,0)
+    return out_f,out_fft
+
+def fft(signal,half = True,db=True,normliaze=True):
+    signal_fft = np.abs(scipy.fftpack.fft(signal))
+    if half:
+        signal_fft = signal_fft[:len(signal_fft)//2]
+    if db:
+        signal_fft = 20*np.log10(signal_fft)
+    if normliaze:
+        signal_fft = arr.normliaze(signal_fft,mode = '5_95',truncated = 4)
+    return signal_fft
 
 def bpf(signal, fs, fc1, fc2, numtaps=3, mode='iir'):
     if mode == 'iir':
@@ -45,7 +62,13 @@ def bpf(signal, fs, fc1, fc2, numtaps=3, mode='iir'):
     return scipy.signal.lfilter(b, a, signal)
 
 def wave_filter(signal,wave,level,usedcoeffs):
+    '''
+    wave       : wavelet name string, wavelet(eg. dbN symN haar gaus mexh)
+    level      : decomposition level 
+    usedcoeffs : coeff used for reconstruction  eg. when level = 6 usedcoeffs=[1,1,0,0,0,0,0] : reconstruct signal with cA6, cD6
+    '''
     coeffs = pywt.wavedec(signal, wave, level=level)
+    #[cAn, cDn, cDn-1, …, cD2, cD1]
     for i in range(len(usedcoeffs)):
         if usedcoeffs[i] == 0:
             coeffs[i] = np.zeros_like(coeffs[i])

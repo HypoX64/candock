@@ -25,7 +25,7 @@ signals,labels = dataloader.loaddataset(opt)
 ori_signals_train,ori_labels_train,ori_signals_eval,ori_labels_eval = \
 signals[:opt.fold_index[0]].copy(),labels[:opt.fold_index[0]].copy(),signals[opt.fold_index[0]:].copy(),labels[opt.fold_index[0]:].copy()
 label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels)
-opt = options.get_auto_options(opt, label_cnt_per, label_num, ori_signals_train)
+opt = options.get_auto_options(opt, ori_signals_train, ori_labels_train)
 
 # -----------------------------def network-----------------------------
 core = core.Core(opt)
@@ -42,7 +42,7 @@ def train(opt):
 
     received_signals = [];received_labels = []
 
-    sample_num = 1000
+    sample_num = 5000
     for i in range(category_num):
         samples = os.listdir(os.path.join(opt.rec_tmp,categorys[i]))
         random.shuffle(samples)
@@ -55,7 +55,7 @@ def train(opt):
                 signal_ori[point] = float(txt_split[point])
 
             for x in range(sample_num//len(samples)):
-                ran = random.randint(1000, len(signal_ori)-2000-1)
+                ran = random.randint(0, len(signal_ori)-2000-1)
                 this_signal = signal_ori[ran:ran+2000]
                 this_signal = arr.normliaze(this_signal,'5_95',truncated=4)
                 
@@ -63,25 +63,28 @@ def train(opt):
                 received_labels.append(i)
 
     received_signals = np.array(received_signals).reshape(-1,opt.input_nc,opt.loadsize)
-    received_labels = np.array(received_labels).reshape(-1,1)
+    received_labels = np.array(received_labels).reshape(-1)
     received_signals_train,received_labels_train,received_signals_eval,received_labels_eval=\
-    dataloader.segment_dataset(received_signals, received_labels, 0.8,random=False)
-    print(received_signals_train.shape,received_signals_eval.shape)
+    dataloader.segment_traineval_dataset(received_signals, received_labels, 0.8,random=False)
+    #print(received_signals_train.shape,received_signals_eval.shape)
 
     '''merge data'''
     signals_train,labels_train = dataloader.del_labels(ori_signals_train,ori_labels_train, np.linspace(0, category_num-1,category_num,dtype=np.int64))
     signals_eval,labels_eval = dataloader.del_labels(ori_signals_eval,ori_labels_eval, np.linspace(0, category_num-1,category_num,dtype=np.int64))
 
     signals_train = np.concatenate((signals_train, received_signals_train))
+    #print(labels_train.shape, received_labels_train.shape)
     labels_train = np.concatenate((labels_train, received_labels_train))
     signals_eval = np.concatenate((signals_eval, received_signals_eval))
     labels_eval = np.concatenate((labels_eval, received_labels_eval))
 
     label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels_train)
-    opt = options.get_auto_options(opt, label_cnt_per, label_num, signals_train)
+    opt = options.get_auto_options(opt, signals_train, labels_train)
     train_sequences = np.linspace(0, len(labels_train)-1,len(labels_train),dtype=np.int64)
     eval_sequences = np.linspace(0, len(labels_eval)-1,len(labels_eval),dtype=np.int64)
 
+    print('train.shape:',signals_train.shape,'eval.shape:',signals_eval.shape)
+    print('train_label_cnt:',label_cnt,'eval_label_cnt:',statistics.label_statistics(labels_eval))
     for epoch in range(opt.epochs):
         t1 = time.time()
 
@@ -132,4 +135,4 @@ def handlepost():
 
     return {'return':'error'}
 
-app.run("0.0.0.0", port= 4000, debug=False)
+app.run("0.0.0.0", port= 4000, debug=True)
