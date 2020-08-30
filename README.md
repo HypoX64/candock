@@ -11,20 +11,14 @@ Some output examples: [heatmap](./image/heatmap_eg.png)  [running_loss](./image/
 
 ## Feature
 ### Data preprocessing
-General signal preprocessing method.
-* Normliaze
-5_95 | maxmin | None
-* filter
-fft | fir | iir | wavelet | None
+* Normliaze  :   5_95 | maxmin | None
+* Filter           :   fft | fir | iir | wavelet | None
 
 ### Data augmentation
 Various data augmentation method.<br>[[Time Series Data Augmentation for Deep Learning: A Survey]](https://arxiv.org/pdf/2002.12478.pdf)
-* Base
-scale, warp, app, aaft, iaaft, filp, crop
-* Noise
-spike, step, slope, white, pink, blue, brown, violet
-* Gan
-dcgan
+* Base     :  scale, warp, app, aaft, iaaft, filp, crop
+* Noise   :  spike, step, slope, white, pink, blue, brown, violet
+* Gan      :  dcgan
 
 ### Network
 Various networks for evaluation.

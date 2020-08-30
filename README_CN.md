@@ -12,19 +12,14 @@
 ## 支持的功能
 ### 数据预处理
 通用的数据预处理方法
-* Normliaze
-5_95 | maxmin | None
-* filter
-fft | fir | iir | wavelet | None
+* Normliaze  :   5_95 | maxmin | None
+* Filter           :   fft | fir | iir | wavelet | None
 
 ### 数据增强
 多种多样的数据增强方法.注意:使用时应该结合数据的物理特性进行选择.<br>[[Time Series Data Augmentation for Deep Learning: A Survey]](https://arxiv.org/pdf/2002.12478.pdf)
-* Base
-scale, warp, app, aaft, iaaft, filp, crop
-* Noise
-spike, step, slope, white, pink, blue, brown, violet
-* Gan
-dcgan
+* Base     :  scale, warp, app, aaft, iaaft, filp, crop
+* Noise   :  spike, step, slope, white, pink, blue, brown, violet
+* Gan      :  dcgan
 
 ### 网络
 提供多种用于评估的网络.
