@@ -11,7 +11,8 @@ warnings.filterwarnings("ignore")
 
 import sys
 sys.path.append("..")
-from util import util,transformer,dataloader,statistics,plot
+from util import util,plot,options
+from data import augmenter,transforms,dataloader,statistics
 from . import creatnet
 
 def show_paramsnumber(net,opt):
@@ -74,10 +75,10 @@ class Core(object):
         _times = np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)
         for i in range(_times):
             if i != _times-1:
-                signal,label = transformer.batch_generator(signals, labels, sequences[i*self.opt.batchsize:(i+1)*self.opt.batchsize])
+                signal,label = transforms.batch_generator(signals, labels, sequences[i*self.opt.batchsize:(i+1)*self.opt.batchsize])
             else:
-                signal,label = transformer.batch_generator(signals, labels, sequences[i*self.opt.batchsize:])
-            signal = transformer.ToInputShape(signal,self.opt,test_flag =self.test_flag)
+                signal,label = transforms.batch_generator(signals, labels, sequences[i*self.opt.batchsize:])
+            signal = transforms.ToInputShape(self.opt,signal,test_flag =self.test_flag)
             self.queue.put([signal,label])
 
     def start_process(self,signals,labels,sequences):
@@ -130,7 +131,7 @@ class Core(object):
             self.optimizer.zero_grad()
             
             signal,label = self.queue.get()
-            signal,label = transformer.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
+            signal,label = transforms.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
             output,loss,features,confusion_mat = self.forward(signal, label, features, confusion_mat)
 
             epoch_loss += loss.item()     
@@ -138,7 +139,8 @@ class Core(object):
             self.optimizer.step()
        
         self.plot_result['train'].append(epoch_loss/(i+1))
-        plot.draw_loss(self.plot_result,self.epoch+(i+1)/(sequences.shape[0]/self.opt.batchsize),self.opt)
+        if self.epoch%10 == 0:
+            plot.draw_loss(self.plot_result,self.epoch+(i+1)/(sequences.shape[0]/self.opt.batchsize),self.opt)
         # if self.opt.model_name != 'autoencoder':
         #     plot.draw_heatmap(confusion_mat,self.opt,name = 'current_train')
 
@@ -153,7 +155,7 @@ class Core(object):
         self.process_pool_init(signals, labels, sequences)
         for i in range(np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)):
             signal,label = self.queue.get()
-            signal,label = transformer.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
+            signal,label = transforms.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
             with torch.no_grad():
                 output,loss,features,confusion_mat = self.forward(signal, label, features, confusion_mat)
                 epoch_loss += loss.item()

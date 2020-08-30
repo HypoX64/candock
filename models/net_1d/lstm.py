@@ -23,7 +23,7 @@ class lstm_block(nn.Module):
         return x
 
 class lstm(nn.Module):
-    def __init__(self,input_size,time_step,input_nc,num_classes,Hidden_size=128,Num_layers=2):
+    def __init__(self,input_size,time_step,input_nc,num_classes,Hidden_size=256,Num_layers=3):
         super(lstm, self).__init__()
         self.input_size=input_size
         self.time_step=time_step
@@ -31,7 +31,7 @@ class lstm(nn.Module):
         self.point = input_size*time_step
        
         for i in range(input_nc):
-            exec('self.lstm'+str(i) + '=lstm_block(input_size, time_step, '+str(Hidden_size)+')')
+            exec('self.lstm'+str(i) + '=lstm_block(input_size, time_step, '+str(Hidden_size)+','+str(Num_layers)+')')
         self.fc = nn.Linear(Hidden_size*input_nc, num_classes)
 
     def forward(self, x):

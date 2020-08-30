@@ -2,7 +2,11 @@ import argparse
 import os
 import time
 import numpy as np
-from . import util,dsp,plot,statistics
+from . import util,dsp,plot
+
+import sys
+sys.path.append("..")
+from data import statistics
 
 class Options():
     def __init__(self):
@@ -37,9 +41,13 @@ class Options():
         
         # ------------------------Data Augmentation------------------------
         # base
-        self.parser.add_argument('--augment', type=str, default='all', help='all | scale,filp,amp,noise | scale,filp ....')
+        self.parser.add_argument('--augment', type=str, default='scale', 
+            help='all | scale,warp,app,aaft,iaaft,filp,spike,step,slope,white,pink,blue,brown,violet , enter some of them')
+        self.parser.add_argument('--augment_noise_lambda', type=float, default = 0.1, help='noise level(spike,step,slope,white,pink,blue,brown,violet)')
         # fft channel --> use fft to improve frequency domain information.
         self.parser.add_argument('--augment_fft', action='store_true', help='if specified, use fft to improve frequency domain informationa')
+        
+        # self.parser.add_argument('--augment_times', type=float, default=10, help='how many times that will be augmented')
 
         # for gan,it only support when fold_index = 1 or 0 now
         # only support when k_fold =0 or 1
@@ -52,22 +60,22 @@ class Options():
 
         # ------------------------Dataset------------------------
         """--fold_index
-        5-fold:
+        When --k_fold != 0 or 1:
         Cut dataset into sub-set using index , and then run k-fold with sub-set
         If input 'auto', it will shuffle dataset and then cut dataset equally
         If input: [2,4,6,7]
         when len(dataset) == 10
         sub-set: dataset[0:2],dataset[2:4],dataset[4:6],dataset[6:7],dataset[7:]
         -------
-        No-fold:
+        When --k_fold == 0 or 1:
         If input 'auto', it will shuffle dataset and then cut 80% dataset to train and other to eval
         If input: [5]
         when len(dataset) == 10
         train-set : dataset[0:5]  eval-set : dataset[5:]
         """
+        self.parser.add_argument('--k_fold', type=int, default=0,help='fold_num of k-fold.If 0 or 1, no k-fold and cut 80% to train and other to eval')
         self.parser.add_argument('--fold_index', type=str, default='auto',
             help='where to fold, eg. when 5-fold and input: [2,4,6,7] -> sub-set: dataset[0:2],dataset[2:4],dataset[4:6],dataset[6:7],dataset[7:]')
-        self.parser.add_argument('--k_fold', type=int, default=0,help='fold_num of k-fold.If 0 or 1, no k-fold and cut 0.8 to train and other to eval')
         self.parser.add_argument('--dataset_dir', type=str, default='./datasets/simple_test',help='your dataset path')
         self.parser.add_argument('--save_dir', type=str, default='./checkpoints/',help='save checkpoints')
         self.parser.add_argument('--load_thread', type=int, default=8,help='how many threads when load data')  
@@ -149,7 +157,7 @@ class Options():
             self.opt.fold_index = (np.load(os.path.join(self.opt.dataset_dir,'index.npy'))).tolist()
 
         if self.opt.augment == 'all':
-            self.opt.augment = ["scale","filp","amp","noise"]
+            self.opt.augment = ['scale','warp','spike','step','slope','white','pink','blue','brown','violet','app','aaft','iaaft','filp']
         else:
             self.opt.augment = str2list(self.opt.augment)
 

@@ -1,7 +1,9 @@
 import numpy as np
 import os
-from . import plot
-from . import util
+import sys
+sys.path.append("..")
+
+from util import plot,util
 
 def label_statistics(labels):
     labels = (np.array(labels)).astype(np.int64)

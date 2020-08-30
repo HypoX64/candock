@@ -3,7 +3,8 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
-from util import util,transformer,dataloader,statistics,options
+from util import util,options
+from data import augmenter,transforms,dataloader,statistics
 from models import creatnet
 
 '''
@@ -24,9 +25,9 @@ if not opt.gpu_id:
     net.cuda()
 
 for signal,true_label in zip(signals, labels):
-    signal = signal.reshape(1,1,-1) #batchsize,ch,length
-    true_label = true_label.reshape(1) #batchsize
-    signal,true_label = transformer.ToTensor(signal,true_label,gpu_id =opt.gpu_id)
+    signal = signal.reshape(1,1,-1).astype(np.float32) #batchsize,ch,length
+    true_label = true_label.reshape(1).astype(np.int64) #batchsize
+    signal,true_label = transforms.ToTensor(signal,true_label,gpu_id =opt.gpu_id)
     out = net(signal)
     pred_label = torch.max(out, 1)[1]
     pred_label=pred_label.data.cpu().numpy()

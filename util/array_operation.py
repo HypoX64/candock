@@ -17,11 +17,18 @@ def pad(data,padding,mod='zero'):
         for i in range(repeat_num):
             out_data = np.append(out_data, data)
         pad_data = data[:padding-repeat_num*len(data)]
-        return np.append(out_data, pad_data)
+        out_data = np.append(out_data, pad_data)
+        return out_data
 
     elif mod == 'reflect':
+        length = data.shape[0]
         pad_data = data[::-1][:padding]
-        return np.append(data, pad_data)
+        out_data =  np.append(data, pad_data)
+        if padding < length:
+            return out_data
+        else:
+            return pad(out_data,padding-length,mod='reflect')
+
 
 def normliaze(data, mode = 'norm', sigma = 0, dtype=np.float32, truncated = 2):
     '''

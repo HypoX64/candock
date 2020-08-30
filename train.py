@@ -7,15 +7,15 @@ from torch import nn, optim
 import warnings
 warnings.filterwarnings("ignore")
 
-from util import util,transformer,dataloader,statistics,plot,options
-from data import augmenter
+from util import util,plot,options
+from data import augmenter,transforms,dataloader,statistics
 from models import core
 
 opt = options.Options().getparse()
 
 """Use your own data to train
 * step1: Generate signals.npy and labels.npy in the following format.
-# 1.type:numpydata   signals:np.float64   labels:np.int64
+# 1.type:numpydata   signals:np.float32   labels:np.int64
 # 2.shape  signals:[num,ch,length]    labels:[num]
 # num:samples_num, ch :channel_num,  length:length of each sample
 # for example:
@@ -28,11 +28,11 @@ labels = np.array([0,0,0,0,0,1,1,1,1,1])      #0->class0    1->class1
 t1 = time.time()
 signals,labels = dataloader.loaddataset(opt)
 if opt.gan:
-    signals,labels = augmenter.gan(opt,signals,labels)
+    signals,labels = augmenter.dcgan(opt,signals,labels)
 label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels)
 util.writelog('label statistics: '+str(label_cnt),opt,True)
 opt = options.get_auto_options(opt, signals, labels)
-train_sequences,eval_sequences = transformer.k_fold_generator(len(labels),opt.k_fold,opt.fold_index)
+train_sequences,eval_sequences = transforms.k_fold_generator(len(labels),opt.k_fold,opt.fold_index)
 t2 = time.time()
 print('Cost time: %.2f'% (t2-t1),'s')
 

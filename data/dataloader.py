@@ -5,8 +5,11 @@ import random
 import scipy.io as sio
 import numpy as np
 
-from . import dsp,transformer,statistics
-from . import array_operation as arr
+import sys
+sys.path.append("..")
+from . import transforms,statistics
+from util import dsp
+from util import array_operation as arr
 
 
 def del_labels(signals,labels,dels):
@@ -23,7 +26,7 @@ def del_labels(signals,labels,dels):
 def segment_traineval_dataset(signals,labels,a=0.8,random=True):
     length = len(labels)
     if random:
-        transformer.shuffledata(signals, labels)
+        transforms.shuffledata(signals, labels)
         signals_train = signals[:int(a*length)]
         labels_train = labels[:int(a*length)]
         signals_eval = signals[int(a*length):]
@@ -123,6 +126,6 @@ def loaddataset(opt):
         signals = new_signals
 
     if opt.fold_index == 'auto':
-        transformer.shuffledata(signals,labels)
+        transforms.shuffledata(signals,labels)
 
-    return signals,labels
+    return signals.astype(np.float32),labels.astype(np.int64)
