@@ -129,8 +129,8 @@ class Core(object):
 
         for i in range(np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)):
             self.optimizer.zero_grad()
-            
-            signal,label = self.queue.get()
+
+            signal,label = self.queue.get()   
             signal,label = transforms.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
             output,loss,features,confusion_mat = self.forward(signal, label, features, confusion_mat)
 

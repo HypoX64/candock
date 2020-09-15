@@ -70,7 +70,7 @@ pip install mne==0.18.0
 - Python 3
 - Pytroch 1.0+
 ### Dependencies
-This code depends on torchvision, numpy, scipy, pywt, matplotlib, available via pip install.<br>
+This code depends on torchvision, numpy, scipy, PyWavelets, matplotlib, available via pip install.<br>
 For example:<br>
 
 ```bash

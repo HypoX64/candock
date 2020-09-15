@@ -6,7 +6,7 @@ from . import util,dsp,plot
 
 import sys
 sys.path.append("..")
-from data import statistics
+from data import statistics,augmenter
 
 class Options():
     def __init__(self):
@@ -43,7 +43,7 @@ class Options():
         # base
         self.parser.add_argument('--augment', type=str, default='scale', 
             help='all | scale,warp,app,aaft,iaaft,filp,spike,step,slope,white,pink,blue,brown,violet , enter some of them')
-        self.parser.add_argument('--augment_noise_lambda', type=float, default = 0.1, help='noise level(spike,step,slope,white,pink,blue,brown,violet)')
+        self.parser.add_argument('--augment_noise_lambda', type=float, default = 1.0, help='noise level(spike,step,slope,white,pink,blue,brown,violet)')
         # fft channel --> use fft to improve frequency domain information.
         self.parser.add_argument('--augment_fft', action='store_true', help='if specified, use fft to improve frequency domain informationa')
         
@@ -99,9 +99,12 @@ class Options():
         self.parser.add_argument('--feature', type=int, default=3, help='number of encoder features')
         # For 2d network(stft spectrum)
         # Please cheek ./save_dir/spectrum_eg.jpg to change the following parameters
+        self.parser.add_argument('--spectrum', type=str, default='stft', help='stft | cwt')
+        self.parser.add_argument('--spectrum_n_downsample', type=int, default=1, help='downsample befor convert to spectrum')
+        self.parser.add_argument('--cwt_wavename', type=str, default='cgau8', help='')
+        self.parser.add_argument('--cwt_scale_num', type=int, default=64, help='')
         self.parser.add_argument('--stft_size', type=int, default=512, help='length of each fft segment')
         self.parser.add_argument('--stft_stride', type=int, default=128, help='stride of each fft segment')
-        self.parser.add_argument('--stft_n_downsample', type=int, default=1, help='downsample befor stft')
         self.parser.add_argument('--stft_no_log', action='store_true', help='if specified, do not log1p spectrum')
         self.parser.add_argument('--stft_shape', type=str, default='auto', help='shape of stft. It depend on \
             stft_size,stft_stride,stft_n_downsample. Do not input this parameter.')
@@ -240,9 +243,11 @@ def get_auto_options(opt,signals,labels):
     # check stft spectrum
     if opt.model_type =='2d':
         spectrums = []
-        data = signals[np.random.randint(0,shape[0]-1)]
+        data = signals[np.random.randint(0,shape[0]-1)].reshape(1,shape[1],shape[2])
+        data = augmenter.base1d(opt, data, test_flag=False)[0]
         for i in range(shape[1]):
-            spectrums.append(dsp.signal2spectrum(data[i],opt.stft_size, opt.stft_stride, opt.stft_n_downsample, not opt.stft_no_log))
+            spectrums.append(dsp.signal2spectrum(data[i],opt.stft_size,opt.stft_stride,
+                opt.cwt_wavename,opt.cwt_scale_num,opt.spectrum_n_downsample,not opt.stft_no_log, mod = opt.spectrum))
         plot.draw_spectrums(spectrums,opt)
         opt.stft_shape = spectrums[0].shape
         h,w = opt.stft_shape

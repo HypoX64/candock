@@ -67,19 +67,17 @@ def ToTensor(data,target=None,gpu_id=0):
 
 def ToInputShape(opt,data,test_flag = False):
 
-    
     if opt.model_type == '1d':
-        result = augmenter.base1d(opt, data, test_flag = test_flag)
+        result = augmenter.base1d(opt, data, test_flag = test_flag).astype(np.float32)
 
     elif opt.model_type == '2d':
         _batchsize,_ch,_size = data.shape
-        result = []
         h,w = opt.stft_shape
+        data = augmenter.base1d(opt, data, test_flag = test_flag)
+        result = np.zeros((_batchsize,_ch,h,w), dtype=np.float32)
         for i in range(_batchsize):
             for j in range(opt.input_nc):
-                spectrum = dsp.signal2spectrum(data[i][j],opt.stft_size,opt.stft_stride, opt.stft_n_downsample, not opt.stft_no_log)
-                spectrum = augmenter.base2d(spectrum,(h,int(w*0.9)),test_flag=test_flag)
-                result.append(spectrum)
-        result = (np.array(result)).reshape(_batchsize,opt.input_nc,h,int(w*0.9))
+                result[i][j] = dsp.signal2spectrum(data[i][j],opt.stft_size,opt.stft_stride,
+                    opt.cwt_wavename,opt.cwt_scale_num,opt.spectrum_n_downsample,not opt.stft_no_log, mod=opt.spectrum)
 
-    return result.astype(np.float32)
+    return result

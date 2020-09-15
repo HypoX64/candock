@@ -23,7 +23,7 @@ class lstm_block(nn.Module):
         return x
 
 class lstm(nn.Module):
-    def __init__(self,input_size,time_step,input_nc,num_classes,Hidden_size=256,Num_layers=3):
+    def __init__(self,input_size,time_step,input_nc,num_classes,Hidden_size=128,Num_layers=2):
         super(lstm, self).__init__()
         self.input_size=input_size
         self.time_step=time_step

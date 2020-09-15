@@ -1,6 +1,7 @@
 from torch import nn
+import torchvision
 from .net_1d import cnn_1d,lstm,resnet_1d,multi_scale_resnet_1d,micro_multi_scale_resnet_1d,autoencoder,mlp
-from .net_2d import densenet,dfcnn,mobilenet,resnet,squeezenet,multi_scale_resnet
+from .net_2d import densenet,dfcnn,resnet,squeezenet,multi_scale_resnet,mobilenet
 
 
 def creatnet(opt):
@@ -60,5 +61,7 @@ def creatnet(opt):
         net = squeezenet.squeezenet1_1(pretrained=False,num_classes = opt.label,inchannel = opt.input_nc)
 
     elif name == 'mobilenet':
-        net = mobilenet.mobilenet_v2(pretrained=False, num_classes = opt.label, input_nc = opt.input_nc)
+        net = mobilenet.mobilenet_v2(pretrained=True)
+        net.features[0][0] = nn.Conv2d(opt.input_nc, 32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+        net.classifier[1] = nn.Linear(in_features=1280, out_features=opt.label, bias=True)
     return net

@@ -2,6 +2,7 @@ import scipy.signal
 import scipy.fftpack as fftpack
 import numpy as np
 import pywt
+import cv2
 from . import array_operation as arr
 
 def sin(f,fs,time):
@@ -120,27 +121,43 @@ def energy(signal,kernel_size,stride,padding = 0):
         energy[i] = rms(signal[i*stride:i*stride+kernel_size]) 
     return energy
 
-def signal2spectrum(data,window_size, stride, n_downsample=1, log = True, log_alpha = 0.1):
+wavename = 'cgau8'
+totalscal = 64
+fc = pywt.central_frequency(wavename)
+cparam = 2 * fc * totalscal
+scales = cparam / np.arange(totalscal, 1, -1)
+
+def signal2spectrum(data,stft_window_size,stft_stride,cwt_wavename,cwt_scale_num,n_downsample=1, log = True, log_alpha = 0.1, mod = 'stft'):
     # window : ('tukey',0.5) hann
     if n_downsample != 1:
         data = downsample(data,alpha=n_downsample)
 
-    zxx = scipy.signal.stft(data, window='hann', nperseg=window_size,noverlap=window_size-stride)[2]
-    spectrum = np.abs(zxx)
+    if mod == 'stft':
+        zxx = scipy.signal.stft(data, window='hann', nperseg=stft_window_size,noverlap=stft_window_size-stft_stride)[2]
+        spectrum = np.abs(zxx)
 
-    if log:
-        spectrum = np.log1p(spectrum)
-        h = window_size//2+1
-        x = np.linspace(h*log_alpha, h-1,num=h+1,dtype=np.int64)
-        index = (np.log1p(x)-np.log1p(h*log_alpha))/(np.log1p(h)-np.log1p(h*log_alpha))*h
+        if log:
+            spectrum = np.log1p(spectrum)
+            h = spectrum.shape[0]
+            x = np.linspace(h*log_alpha, h-1,num=h+1,dtype=np.int64)
+            index = (np.log1p(x)-np.log1p(h*log_alpha))/(np.log1p(h)-np.log1p(h*log_alpha))*h
 
-        spectrum_new = np.zeros_like(spectrum)
-        for i in range(h):
-            spectrum_new[int(index[i]):int(index[i+1])] = spectrum[i]
-        spectrum = spectrum_new
-        spectrum = (spectrum-0.05)/0.25
+            spectrum_new = np.zeros_like(spectrum)
+            for i in range(h):
+                spectrum_new[int(index[i]):int(index[i+1])] = spectrum[i]
+            spectrum = spectrum_new
+            spectrum = (spectrum-0.05)/0.25
 
-    else:
-        spectrum = (spectrum-0.02)/0.05
+        else:
+            spectrum = (spectrum-0.02)/0.05
+
+    if mod == 'cwt':
+
+        fc = pywt.central_frequency(cwt_wavename)
+        cparam = 2 * fc * cwt_scale_num
+        scales = cparam / np.arange(cwt_scale_num, 1, -1)  
+        cwtmatr, frequencies = pywt.cwt(data, scales, cwt_wavename,method='fft')
+        spectrum = np.abs(cwtmatr)
+        spectrum = cv2.resize(spectrum,(cwt_scale_num-1,cwt_scale_num-1),interpolation=cv2.INTER_AREA)
 
     return spectrum

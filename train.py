@@ -53,7 +53,7 @@ for fold in range(opt.k_fold):
         core.save()
 
         t2=time.time()
-        if epoch+1==1:
+        if epoch+1==2:
             util.writelog('>>> per epoch cost time:'+str(round((t2-t1),2))+'s',opt,True)
     
     #save result

@@ -130,7 +130,7 @@ def base1d(opt,data,test_flag):
     batchsize,ch,length = data.shape
     random_list = np.random.rand(15)
     threshold = 1/(len(opt.augment)+1)
-
+    noise_lambda = opt.augment_noise_lambda
     if test_flag:
         move = int((length-opt.finesize)*0.5)
         result = data[:,:,move:move+opt.finesize]
@@ -160,32 +160,32 @@ def base1d(opt,data,test_flag):
                     std = np.std(signal)
                     spike_indexs = np.random.randint(0, _length, int(_length*np.clip(np.random.uniform(0,0.05),0,1)))
                     for index in spike_indexs:
-                        signal[index] = signal[index] + std*np.random.randn()*opt.augment_noise_lambda
+                        signal[index] = signal[index] + std*np.random.randn()*noise_lambda
                 
                 if 'step' in opt.augment and random_list[3]>threshold:
                     std = np.std(signal)
                     step_indexs = np.random.randint(0, _length, int(_length*np.clip(np.random.uniform(0,0.01),0,1)))
                     for index in step_indexs:
-                        signal[index:] = signal[index:] + std*np.random.randn()*opt.augment_noise_lambda
+                        signal[index:] = signal[index:] + std*np.random.randn()*noise_lambda
                 
                 if 'slope' in opt.augment and random_list[4]>threshold: 
                     slope = np.linspace(-1, 1, _length)*np.random.randn()
-                    signal = signal+slope*opt.augment_noise_lambda
+                    signal = signal+slope*noise_lambda
 
                 if 'white' in opt.augment and random_list[5]>threshold:
-                    signal = signal+noise.noise(_length,'white')*(np.std(signal)*np.random.randn()*opt.augment_noise_lambda)
+                    signal = signal+noise.noise(_length,'white')*(np.std(signal)*np.random.randn()*noise_lambda)
 
                 if 'pink' in opt.augment and random_list[6]>threshold:
-                    signal = signal+noise.noise(_length,'pink')*(np.std(signal)*np.random.randn()*opt.augment_noise_lambda)
+                    signal = signal+noise.noise(_length,'pink')*(np.std(signal)*np.random.randn()*noise_lambda)
 
                 if 'blue' in opt.augment and random_list[7]>threshold:
-                    signal = signal+noise.noise(_length,'blue')*(np.std(signal)*np.random.randn()*opt.augment_noise_lambda)
+                    signal = signal+noise.noise(_length,'blue')*(np.std(signal)*np.random.randn()*noise_lambda)
 
                 if 'brown' in opt.augment and random_list[8]>threshold:
-                    signal = signal+noise.noise(_length,'brown')*(np.std(signal)*np.random.randn()*opt.augment_noise_lambda)
+                    signal = signal+noise.noise(_length,'brown')*(np.std(signal)*np.random.randn()*noise_lambda)
 
                 if 'violet' in opt.augment and random_list[9]>threshold:
-                    signal = signal+noise.noise(_length,'violet')*(np.std(signal)*np.random.randn()*opt.augment_noise_lambda)
+                    signal = signal+noise.noise(_length,'violet')*(np.std(signal)*np.random.randn()*noise_lambda)
 
                 # Frequency Domain
                 if 'app' in opt.augment and random_list[10]>threshold:
