@@ -48,7 +48,10 @@ for fold in range(opt.k_fold):
     for epoch in range(opt.epochs): 
 
         t1 = time.time()
-        core.train(signals,labels,train_sequences[fold])
+        if opt.mode == 'domain':
+            core.domain_train(signals,labels,train_sequences[fold],eval_sequences[fold])
+        else:
+            core.train(signals,labels,train_sequences[fold])
         core.eval(signals,labels,eval_sequences[fold])
         core.save()
 
@@ -57,7 +60,7 @@ for fold in range(opt.k_fold):
             util.writelog('>>> per epoch cost time:'+str(round((t2-t1),2))+'s',opt,True)
     
     #save result
-    if opt.model_name != 'autoencoder':
+    if opt.mode != 'autoencoder':
         pos = core.plot_result['F1'].index(max(core.plot_result['F1']))
         final_confusion_mat = core.confusion_mats[pos]
         if opt.k_fold==1:
@@ -69,7 +72,7 @@ for fold in range(opt.k_fold):
             util.writelog('confusion_mat:\n'+str(final_confusion_mat)+'\n',opt,True)
             plot.draw_heatmap(final_confusion_mat,opt,name = 'fold'+str(fold+1)+'_eval')
 
-if opt.model_name != 'autoencoder':
+if opt.mode != 'autoencoder':
     if opt.k_fold != 1:
         statistics.statistics(fold_final_confusion_mat, opt, 'final', 'k-fold-final_eval')
         np.save(os.path.join(opt.save_dir,'confusion_mat.npy'), fold_final_confusion_mat)

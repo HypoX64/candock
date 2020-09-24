@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from .micro_multi_scale_resnet_1d import Multi_Scale_ResNet
 import torch.nn.functional as F
 
 

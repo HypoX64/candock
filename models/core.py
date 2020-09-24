@@ -35,8 +35,10 @@ class Core(object):
 
         self.net = creatnet.creatnet(self.opt)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.opt.lr)
-        self.criterion_classifier = nn.CrossEntropyLoss(self.opt.weight)
-        self.criterion_autoencoder = nn.MSELoss()
+        self.loss_classifier = nn.CrossEntropyLoss(self.opt.weight)
+        self.loss_autoencoder = nn.MSELoss()
+        self.loss_domain_c = torch.nn.NLLLoss(self.opt.weight)
+        self.loss_domain_d = torch.nn.NLLLoss()
         self.epoch = 1
         self.plot_result = {'train':[],'eval':[],'F1':[]}
         self.confusion_mats = []
@@ -101,20 +103,31 @@ class Core(object):
                     self.start_process(signals,labels,sequences[i*self.opt.load_thread*self.opt.batchsize:])
 
     def forward(self,signal,label,features,confusion_mat):
-        if self.opt.model_name == 'autoencoder':
+        if self.opt.mode == 'autoencoder':
             out,feature = self.net(signal)
-            loss = self.criterion_autoencoder(out, signal)
+            loss = self.loss_autoencoder(out, signal)
             label = label.data.cpu().numpy()
             feature = (feature.data.cpu().numpy()).reshape(self.opt.batchsize,-1)
             for i in range(self.opt.batchsize):
                 features.append(np.concatenate((feature[i], [label[i]])))
-        else:
+
+        elif self.opt.mode in ['classify_1d','classify_2d']:
             out = self.net(signal)
-            loss = self.criterion_classifier(out, label)
+            # print(out.size(), label.size())
+            loss = self.loss_classifier(out, label)
             pred = (torch.max(out, 1)[1]).data.cpu().numpy()
             label = label.data.cpu().numpy()
             for x in range(len(pred)):
                 confusion_mat[label[x]][pred[x]] += 1
+
+        elif self.opt.mode == 'domain':
+            out,_ = self.net(signal,0)
+            loss = self.loss_domain_c(out, label)
+            pred = (torch.max(out, 1)[1]).data.cpu().numpy()
+            label = label.data.cpu().numpy()
+            for x in range(len(pred)):
+                confusion_mat[label[x]][pred[x]] += 1
+
         return out,loss,features,confusion_mat
 
     def train(self,signals,labels,sequences):
@@ -160,7 +173,7 @@ class Core(object):
                 output,loss,features,confusion_mat = self.forward(signal, label, features, confusion_mat)
                 epoch_loss += loss.item()
 
-        if self.opt.model_name == 'autoencoder':
+        if self.opt.mode == 'autoencoder':
             if self.epoch%10 == 0:
                 plot.draw_autoencoder_result(signal.data.cpu().numpy(), output.data.cpu().numpy(),self.opt)
                 print('epoch:'+str(self.epoch),' loss: '+str(round(epoch_loss/i,5)))
@@ -172,8 +185,59 @@ class Core(object):
             self.plot_result['F1'].append(statistics.report(confusion_mat)[2])
         
         self.plot_result['eval'].append(epoch_loss/(i+1)) 
-
         self.epoch +=1
         self.confusion_mats.append(confusion_mat)
-        # return confusion_mat
+
+
+    def domain_train(self,signals,labels,src_sequences,dst_sequences):
+        self.net.train()
+        self.test_flag = False
+        epoch_closs = 0;epoch_dloss = 0
+        epoch_iter_length = np.ceil(len(src_sequences)/self.opt.batchsize).astype(np.int)
+        dst_signals_len = len(dst_sequences)
+
+        confusion_mat = np.zeros((self.opt.label,self.opt.label), dtype=int)
+        
+        np.random.shuffle(src_sequences)
+        self.process_pool_init(signals, labels, src_sequences)
+
+        for i in range(epoch_iter_length):
+
+            p = float(i + self.epoch * epoch_iter_length) / self.opt.epochs / epoch_iter_length
+            alpha = 2. / (1. + np.exp(-10 * p)) - 1
+            # print(alpha)
+
+            self.optimizer.zero_grad()
+
+            s_signal,s_label = self.queue.get()
+            this_batch_len = s_signal.shape[0]
+            s_signal,s_label = transforms.ToTensor(s_signal,s_label,gpu_id =self.opt.gpu_id)
+            s_domain = transforms.ToTensor(None,np.zeros(this_batch_len, dtype=np.int64),gpu_id =self.opt.gpu_id)
+
+            d_signal = signals[np.random.choice(np.arange(0, dst_signals_len),this_batch_len,replace=False)]
+            d_signal = transforms.ToInputShape(self.opt,d_signal,test_flag =self.test_flag)
+            d_signal = transforms.ToTensor(d_signal,None,gpu_id =self.opt.gpu_id)
+            d_domain = transforms.ToTensor(None,np.ones(this_batch_len, dtype=np.int64),gpu_id =self.opt.gpu_id)
+            
+            class_output, domain_output = self.net(s_signal, alpha=alpha)
+            # print(class_output.dtype, s_label.dtype,)
+            loss_s_label = self.loss_domain_c(class_output, s_label)
+
+            #print(domain_output, s_domain)
+            loss_s_domain = self.loss_domain_d(domain_output, s_domain)
+
+            _, domain_output = self.net(d_signal, alpha=alpha)
+            #print(domain_output.size(), d_domain.size())
+            loss_d_domain = self.loss_domain_d(domain_output, d_domain)
+
+            loss = loss_s_label+loss_s_domain+loss_d_domain
+
+            epoch_closs += loss_s_label.item()
+
+            loss.backward()
+            self.optimizer.step()
+       
+        self.plot_result['train'].append(epoch_closs/(i+1))
+        if self.epoch%10 == 0:
+            plot.draw_loss(self.plot_result,self.epoch+(i+1)/(src_sequences.shape[0]/self.opt.batchsize),self.opt)
 

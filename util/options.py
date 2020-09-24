@@ -22,9 +22,10 @@ class Options():
         self.parser.add_argument('--loadsize', type=str, default='auto', help='load data in this size')
         self.parser.add_argument('--finesize', type=str, default='auto', help='crop your data into this size')
         self.parser.add_argument('--label_name', type=str, default='auto',help='name of labels,example:"a,b,c,d,e,f"')
+        self.parser.add_argument('--mode', type=str, default='auto',help='classify_1d | classify_2d | autoencoder | domain')
         
         # ------------------------Preprocessing------------------------
-        self.parser.add_argument('--normliaze', type=str, default='5_95', help='mode of normliaze, 5_95 | maxmin | None')      
+        self.parser.add_argument('--normliaze', type=str, default='z-score', help='mode of normliaze, z-score | 5_95 | maxmin | None')      
         # filter
         self.parser.add_argument('--filter', type=str, default='None', help='type of filter, fft | fir | iir |None')
         self.parser.add_argument('--filter_mod', type=str, default='bandpass', help='mode of fft_filter, bandpass | bandstop')
@@ -41,8 +42,8 @@ class Options():
         
         # ------------------------Data Augmentation------------------------
         # base
-        self.parser.add_argument('--augment', type=str, default='scale', 
-            help='all | scale,warp,app,aaft,iaaft,filp,spike,step,slope,white,pink,blue,brown,violet , enter some of them')
+        self.parser.add_argument('--augment', type=str, default='None', 
+            help='all | scale,warp,app,aaft,iaaft,filp,spike,step,slope,white,pink,blue,brown,violet ,enter some of them')
         self.parser.add_argument('--augment_noise_lambda', type=float, default = 1.0, help='noise level(spike,step,slope,white,pink,blue,brown,violet)')
         # fft channel --> use fft to improve frequency domain information.
         self.parser.add_argument('--augment_fft', action='store_true', help='if specified, use fft to improve frequency domain informationa')
@@ -91,8 +92,6 @@ class Options():
             densenet121, densenet201, squeezenet
         """
         self.parser.add_argument('--model_name', type=str, default='micro_multi_scale_resnet_1d',help='Choose model  lstm...')
-        self.parser.add_argument('--model_type', type=str, default='auto',help='1d | 2d')
-        # For lstm 
         self.parser.add_argument('--lstm_inputsize', type=str, default='auto',help='lstm_inputsize of LSTM')
         self.parser.add_argument('--lstm_timestep', type=int, default=100,help='time_step of LSTM')
         # For autoecoder
@@ -139,25 +138,28 @@ class Options():
         if self.opt.lstm_inputsize != 'auto':
             self.opt.lstm_inputsize = int(self.opt.lstm_inputsize)
 
-        if self.opt.model_type == 'auto':
+        if self.opt.mode == 'auto':
             if self.opt.model_name in ['lstm', 'cnn_1d', 'resnet18_1d', 'resnet34_1d', 
-                'multi_scale_resnet_1d','micro_multi_scale_resnet_1d','autoencoder','mlp']:
-                self.opt.model_type = '1d'
+                'multi_scale_resnet_1d','micro_multi_scale_resnet_1d','mlp']:
+                self.opt.mode = 'classify_1d'
             elif self.opt.model_name in ['dfcnn', 'multi_scale_resnet', 'resnet18', 'resnet50',
                 'resnet101','densenet121', 'densenet201', 'squeezenet', 'mobilenet']:
-                self.opt.model_type = '2d'
+                self.opt.mode = 'classify_2d'
+            elif self.opt.model_name == 'autoencoder':
+                self.opt.mode = 'autoencoder'
+            elif self.opt.model_name in ['dann','dann_mobilenet']:
+                self.opt.mode = 'domain'
             else:
                 print('\033[1;31m'+'Error: do not support this network '+self.opt.model_name+'\033[0m')
-                exit(0)
+                sys.exit(0)
 
         if self.opt.k_fold == 0 :
             self.opt.k_fold = 1
 
         if self.opt.fold_index != 'auto':
             self.opt.fold_index = eval(self.opt.fold_index)
-
-        if os.path.isfile(os.path.join(self.opt.dataset_dir,'index.npy')):
-            self.opt.fold_index = (np.load(os.path.join(self.opt.dataset_dir,'index.npy'))).tolist()
+            if os.path.isfile(os.path.join(self.opt.dataset_dir,'index.npy')):
+                self.opt.fold_index = (np.load(os.path.join(self.opt.dataset_dir,'index.npy'))).tolist()
 
         if self.opt.augment == 'all':
             self.opt.augment = ['scale','warp','spike','step','slope','white','pink','blue','brown','violet','app','aaft','iaaft','filp']
@@ -241,7 +243,7 @@ def get_auto_options(opt,signals,labels):
         opt.label_name = opt.label_name.replace(" ", "").split(",")
 
     # check stft spectrum
-    if opt.model_type =='2d':
+    if opt.mode in ['classify_2d','domain']:
         spectrums = []
         data = signals[np.random.randint(0,shape[0]-1)].reshape(1,shape[1],shape[2])
         data = augmenter.base1d(opt, data, test_flag=False)[0]

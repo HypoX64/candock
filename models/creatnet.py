@@ -1,17 +1,25 @@
+import sys
 from torch import nn
 import torchvision
-from .net_1d import cnn_1d,lstm,resnet_1d,multi_scale_resnet_1d,micro_multi_scale_resnet_1d,autoencoder,mlp
+from .net_1d import cnn_1d,lstm,resnet_1d,multi_scale_resnet_1d,micro_multi_scale_resnet_1d,mlp
 from .net_2d import densenet,dfcnn,resnet,squeezenet,multi_scale_resnet,mobilenet
+from .autoencoder import autoencoder
+from .domain import dann_mobilenet
 
 
 def creatnet(opt):
     name = opt.model_name
-    #---------------------------------1d---------------------------------
-    #encoder
+    #---------------------------------autoencoder---------------------------------
     if name =='autoencoder':
-        net = autoencoder.Autoencoder(opt.input_nc, opt.feature, opt.label,opt.finesize)
+        net = autoencoder.Autoencoder(opt.input_nc, opt.feature, opt.label, opt.finesize)
+
+    #---------------------------------domain---------------------------------
+    elif name == 'dann_mobilenet':
+        net = dann_mobilenet.Net(opt.input_nc,opt.label,feature_num = 100)
+
+    #---------------------------------classify_1d---------------------------------
     #mlp
-    if name =='mlp':
+    elif name =='mlp':
         net = mlp.mlp(opt.input_nc, opt.label, opt.finesize)
     #lstm
     elif name =='lstm':
@@ -32,7 +40,7 @@ def creatnet(opt):
     elif name == 'micro_multi_scale_resnet_1d':
         net = micro_multi_scale_resnet_1d.Multi_Scale_ResNet(inchannel=opt.input_nc, num_classes=opt.label)
 
-    #---------------------------------2d---------------------------------
+    #---------------------------------classify_2d---------------------------------
     elif name == 'dfcnn':
         net = dfcnn.dfcnn(num_classes = opt.label, input_nc = opt.input_nc)
     elif name == 'multi_scale_resnet':
@@ -64,4 +72,5 @@ def creatnet(opt):
         net = mobilenet.mobilenet_v2(pretrained=True)
         net.features[0][0] = nn.Conv2d(opt.input_nc, 32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
         net.classifier[1] = nn.Linear(in_features=1280, out_features=opt.label, bias=True)
+
     return net

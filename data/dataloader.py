@@ -92,6 +92,8 @@ def loaddataset(opt):
 
     signals = np.load(os.path.join(opt.dataset_dir,'signals.npy'))
     labels = np.load(os.path.join(opt.dataset_dir,'labels.npy'))
+    if os.path.isfile(os.path.join(opt.dataset_dir,'domain.npy')):
+        domain = np.load(os.path.join(opt.dataset_dir,'domain.npy'))
     num,ch,size = signals.shape
 
     # normliaze

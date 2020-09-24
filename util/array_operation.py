@@ -30,7 +30,7 @@ def pad(data,padding,mod='zero'):
             return pad(out_data,padding-length,mod='reflect')
 
 
-def normliaze(data, mode = 'norm', sigma = 0, dtype=np.float32, truncated = 2):
+def normliaze(data, mode = 'z-score', sigma = 0, dtype=np.float32, truncated = 2):
     '''
     mode: norm | std | maxmin | 5_95
     dtype : np.float64,np.float16...
@@ -39,7 +39,7 @@ def normliaze(data, mode = 'norm', sigma = 0, dtype=np.float32, truncated = 2):
     data_calculate = data.copy()
     if mode == 'norm':
         result = (data-np.mean(data_calculate))/sigma
-    elif mode == 'std':
+    elif mode == 'z-score':
         mu = np.mean(data_calculate)
         sigma = np.std(data_calculate)
         result = (data - mu) / sigma
