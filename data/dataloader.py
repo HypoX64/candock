@@ -86,21 +86,36 @@ def balance_label(signals,labels):
                 cnt +=1
     return new_signals,new_labels
 
+def rebuild_domain(domain):
+    domain = domain.tolist()
+    new_domain = np.zeros(len(domain),dtype = np.int64)
+    domain_map = {}
+    i = 0
+    for key in list(set(domain)):
+        domain_map[key] = i
+        i += 1
+    for i in range(len(domain)):
+        new_domain[i] = domain_map[domain[i]]
+    return np.array(new_domain)  
+
 #load all data in datasets
 def loaddataset(opt): 
     print('Loading dataset...')
 
     signals = np.load(os.path.join(opt.dataset_dir,'signals.npy'))
     labels = np.load(os.path.join(opt.dataset_dir,'labels.npy'))
-    if os.path.isfile(os.path.join(opt.dataset_dir,'domain.npy')):
-        domain = np.load(os.path.join(opt.dataset_dir,'domain.npy'))
+    # if os.path.isfile(os.path.join(opt.dataset_dir,'domain.npy')) and opt.mode == 'domain':
+    #     domain = np.load(os.path.join(opt.dataset_dir,'domain.npy'))
+    #     labels = np.concatenate((labels.reshape(-1,1),rebuild_domain(domain).reshape(-1,1)),axis=1)
+        
+    #     sys.exit(0)
     num,ch,size = signals.shape
 
     # normliaze
     if opt.normliaze != 'None':
         for i in range(num):
             for j in range(ch):
-                signals[i][j] = arr.normliaze(signals[i][j], mode = opt.normliaze, truncated=5)
+                signals[i][j] = arr.normliaze(signals[i][j], mode = opt.normliaze, truncated=0)
     # filter
     if opt.filter != 'None':
         for i in range(num):

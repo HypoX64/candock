@@ -116,6 +116,8 @@ class Options():
         self.parser.add_argument('--weight_mod', type=str, default='auto',help='Choose weight mode: auto | normal')
         self.parser.add_argument('--epochs', type=int, default=20,help='end epoch')
         self.parser.add_argument('--network_save_freq', type=int, default=5,help='the freq to save network')
+        self.parser.add_argument('--eval_detail', action='store_true', 
+            help='if specified, save detailed eval result information to pre_labels.npy and sequences.npy')
 
         self.initialized = True
 
@@ -147,7 +149,7 @@ class Options():
                 self.opt.mode = 'classify_2d'
             elif self.opt.model_name == 'autoencoder':
                 self.opt.mode = 'autoencoder'
-            elif self.opt.model_name in ['dann','dann_mobilenet']:
+            elif self.opt.model_name in ['dann','dann_mobilenet','rd_mobilenet']:
                 self.opt.mode = 'domain'
             else:
                 print('\033[1;31m'+'Error: do not support this network '+self.opt.model_name+'\033[0m')
@@ -247,10 +249,11 @@ def get_auto_options(opt,signals,labels):
         spectrums = []
         data = signals[np.random.randint(0,shape[0]-1)].reshape(1,shape[1],shape[2])
         data = augmenter.base1d(opt, data, test_flag=False)[0]
+        plot.draw_eg_signals(data,opt)
         for i in range(shape[1]):
             spectrums.append(dsp.signal2spectrum(data[i],opt.stft_size,opt.stft_stride,
                 opt.cwt_wavename,opt.cwt_scale_num,opt.spectrum_n_downsample,not opt.stft_no_log, mod = opt.spectrum))
-        plot.draw_spectrums(spectrums,opt)
+        plot.draw_eg_spectrums(spectrums,opt)
         opt.stft_shape = spectrums[0].shape
         h,w = opt.stft_shape
         print('Shape of stft spectrum h,w:',opt.stft_shape)

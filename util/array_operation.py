@@ -32,7 +32,7 @@ def pad(data,padding,mod='zero'):
 
 def normliaze(data, mode = 'z-score', sigma = 0, dtype=np.float32, truncated = 2):
     '''
-    mode: norm | std | maxmin | 5_95
+    mode: norm | z-score | maxmin | 5_95
     dtype : np.float64,np.float16...
     '''
     data = data.astype(dtype)

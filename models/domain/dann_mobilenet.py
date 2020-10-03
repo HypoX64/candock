@@ -59,6 +59,11 @@ class DomainClassifier(nn.Module):
             nn.ReLU(inplace=True),
             )
         self.fc2 = nn.Sequential(
+            nn.Linear(100, 100),
+            nn.BatchNorm1d(100),
+            nn.ReLU(inplace=True),
+            )
+        self.fc3 = nn.Sequential(
             nn.Linear(100, 2),
             nn.LogSoftmax(dim=1),
             )
@@ -66,6 +71,7 @@ class DomainClassifier(nn.Module):
     def forward(self, x):
         x = self.fc1(x)
         x = self.fc2(x) 
+        x = self.fc3(x)
         return x
 
 class Net(nn.Module):

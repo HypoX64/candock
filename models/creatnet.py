@@ -4,7 +4,7 @@ import torchvision
 from .net_1d import cnn_1d,lstm,resnet_1d,multi_scale_resnet_1d,micro_multi_scale_resnet_1d,mlp
 from .net_2d import densenet,dfcnn,resnet,squeezenet,multi_scale_resnet,mobilenet
 from .autoencoder import autoencoder
-from .domain import dann_mobilenet
+from .domain import dann_mobilenet,rd_mobilenet
 
 
 def creatnet(opt):
@@ -16,6 +16,8 @@ def creatnet(opt):
     #---------------------------------domain---------------------------------
     elif name == 'dann_mobilenet':
         net = dann_mobilenet.Net(opt.input_nc,opt.label,feature_num = 100)
+    elif name == 'rd_mobilenet':
+        net = rd_mobilenet.Net(opt.input_nc,opt.label,feature_num = 100,domain_num = 100)
 
     #---------------------------------classify_1d---------------------------------
     #mlp

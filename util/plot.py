@@ -284,7 +284,7 @@ def showscatter3d(data):
 
     plt.show()
 
-def draw_spectrums(spectrums,opt):
+def draw_eg_spectrums(spectrums,opt):
     if len(spectrums) > 1:
         plt.subplots(figsize=(6.4*2,4.8*2))
         for i in range(len(spectrums)):
@@ -293,6 +293,17 @@ def draw_spectrums(spectrums,opt):
     else:
         plt.imshow(spectrums[0])
     plt.savefig(os.path.join(opt.save_dir,'spectrum_eg.jpg'))
+    plt.close('all')
+
+def draw_eg_signals(signals,opt):
+    if len(signals) > 1:
+        plt.subplots(figsize=(6.4*2,4.8*2))
+        for i in range(len(signals)):
+            plt.subplot(len(signals)//2+1,2,i+1)
+            plt.plot(signals[i])
+    else:
+        plt.plot(signals[0])
+    plt.savefig(os.path.join(opt.save_dir,'signal_eg.jpg'))
     plt.close('all')
 
 

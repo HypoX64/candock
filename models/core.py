@@ -43,6 +43,8 @@ class Core(object):
         self.plot_result = {'train':[],'eval':[],'F1':[]}
         self.confusion_mats = []
         self.test_flag = True
+        self.pre_labels = []
+        self.save_sequences = []
 
         if printflag:
             #util.writelog('network:\n'+str(self.net),self.opt,True)
@@ -119,6 +121,7 @@ class Core(object):
             label = label.data.cpu().numpy()
             for x in range(len(pred)):
                 confusion_mat[label[x]][pred[x]] += 1
+                self.pre_labels.append(pred[x])
 
         elif self.opt.mode == 'domain':
             out,_ = self.net(signal,0)
@@ -127,7 +130,7 @@ class Core(object):
             label = label.data.cpu().numpy()
             for x in range(len(pred)):
                 confusion_mat[label[x]][pred[x]] += 1
-
+                self.pre_labels.append(pred[x])
         return out,loss,features,confusion_mat
 
     def train(self,signals,labels,sequences):
@@ -160,11 +163,13 @@ class Core(object):
 
     def eval(self,signals,labels,sequences):
         self.test_flag = True
+        self.pre_labels = []
         features = []
         epoch_loss = 0
         confusion_mat = np.zeros((self.opt.label,self.opt.label), dtype=int)
 
         np.random.shuffle(sequences)
+        self.save_sequences = sequences
         self.process_pool_init(signals, labels, sequences)
         for i in range(np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)):
             signal,label = self.queue.get()
@@ -189,17 +194,16 @@ class Core(object):
         self.confusion_mats.append(confusion_mat)
 
 
-    def domain_train(self,signals,labels,src_sequences,dst_sequences):
+    def dann_train(self,signals,labels,src_sequences,dst_sequences):
         self.net.train()
         self.test_flag = False
+        confusion_mat = np.zeros((self.opt.label,self.opt.label), dtype=int)
+        np.random.shuffle(src_sequences)
+        self.process_pool_init(signals, labels, src_sequences)
+
         epoch_closs = 0;epoch_dloss = 0
         epoch_iter_length = np.ceil(len(src_sequences)/self.opt.batchsize).astype(np.int)
         dst_signals_len = len(dst_sequences)
-
-        confusion_mat = np.zeros((self.opt.label,self.opt.label), dtype=int)
-        
-        np.random.shuffle(src_sequences)
-        self.process_pool_init(signals, labels, src_sequences)
 
         for i in range(epoch_iter_length):
 
@@ -222,18 +226,13 @@ class Core(object):
             class_output, domain_output = self.net(s_signal, alpha=alpha)
             # print(class_output.dtype, s_label.dtype,)
             loss_s_label = self.loss_domain_c(class_output, s_label)
-
             #print(domain_output, s_domain)
             loss_s_domain = self.loss_domain_d(domain_output, s_domain)
-
             _, domain_output = self.net(d_signal, alpha=alpha)
             #print(domain_output.size(), d_domain.size())
             loss_d_domain = self.loss_domain_d(domain_output, d_domain)
-
             loss = loss_s_label+loss_s_domain+loss_d_domain
-
             epoch_closs += loss_s_label.item()
-
             loss.backward()
             self.optimizer.step()
        
