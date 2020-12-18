@@ -30,7 +30,7 @@ for i in range(len(labels)):
         txt_data = util.loadtxt(os.path.join(send_data_dir,labels[i],samples[j]))
         data = {'token': opt.token,
                 'mode' : 'send',
-                'label': str(i),
+                'label': labels[i],
                 'data' : txt_data
                 }
         r = requests.post(opt.url, data)
@@ -38,16 +38,18 @@ print(r.json())
 
 
 """Train and get network weight
-return: {'return' : 'done',
-        'report'  : 'macro-prec,reca,F1,err,kappa:'+str(statistics.report(core.confusion_mats[-1])),
-        'heatmap' : heatmap, # encode by base64
-        'network' : file     # encode by base64
+return: {'return' : 'done',  # txt
+        'report'  : 'macro-prec,reca,F1,err,kappa:'+str(statistics.report(core.confusion_mats[-1])), # txt
+        'label_map': {'user_nameA':0,'user_nameB':1,'user_nameC':2} # json
+        'heatmap' : heatmap, # .png file, encode by base64
+        'network' : file     # .pth file, encode by base64
         }
 """
 data = {'token':opt.token,'mode': 'train'}
 r = requests.post(opt.url, data ,timeout=60)
 rec_data = r.json()
-print(rec_data['report'])
+print('report:',rec_data['report'])
+print('label_map:',rec_data['label_map'])
 
 # save model.pt
 util.makedirs('./client_data')

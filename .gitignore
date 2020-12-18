@@ -143,3 +143,4 @@ checkpoints/
 *.pth
 *.edf
 *log*
+*.7z

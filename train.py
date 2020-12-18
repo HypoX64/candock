@@ -74,6 +74,7 @@ for fold in range(opt.k_fold):
     #save result
     if opt.mode != 'autoencoder':
         pos = core.plot_result['F1'].index(max(core.plot_result['F1']))
+        # pos = core.plot_result['err'].index(min(core.plot_result['err']))
         final_confusion_mat = core.confusion_mats[pos]
         if opt.k_fold==1:
             statistics.statistics(final_confusion_mat, opt, 'final', 'final_eval')

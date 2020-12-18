@@ -63,20 +63,22 @@ class Options():
         """--fold_index
         When --k_fold != 0 or 1:
         Cut dataset into sub-set using index , and then run k-fold with sub-set
-        If input 'auto', it will shuffle dataset and then cut dataset equally
+        If input 'auto', it will shuffle dataset and then cut dataset to sub-dataset equally
+        If input 'load', load indexs.npy as fold_index
         If input: [2,4,6,7]
         when len(dataset) == 10
         sub-set: dataset[0:2],dataset[2:4],dataset[4:6],dataset[6:7],dataset[7:]
         -------
         When --k_fold == 0 or 1:
         If input 'auto', it will shuffle dataset and then cut 80% dataset to train and other to eval
+        If input 'load', load indexs.npy as fold_index
         If input: [5]
         when len(dataset) == 10
         train-set : dataset[0:5]  eval-set : dataset[5:]
         """
         self.parser.add_argument('--k_fold', type=int, default=0,help='fold_num of k-fold.If 0 or 1, no k-fold and cut 80% to train and other to eval')
         self.parser.add_argument('--fold_index', type=str, default='auto',
-            help='where to fold, eg. when 5-fold and input: [2,4,6,7] -> sub-set: dataset[0:2],dataset[2:4],dataset[4:6],dataset[6:7],dataset[7:]')
+            help='auto | load | "input_your_index"-where to fold, eg. when 5-fold and input: [2,4,6,7] -> sub-set: dataset[0:2],dataset[2:4],dataset[4:6],dataset[6:7],dataset[7:]')
         self.parser.add_argument('--dataset_dir', type=str, default='./datasets/simple_test',help='your dataset path')
         self.parser.add_argument('--save_dir', type=str, default='./checkpoints/',help='save checkpoints')
         self.parser.add_argument('--load_thread', type=int, default=8,help='how many threads when load data')  
@@ -145,7 +147,7 @@ class Options():
                 'multi_scale_resnet_1d','micro_multi_scale_resnet_1d','mlp']:
                 self.opt.mode = 'classify_1d'
             elif self.opt.model_name in ['dfcnn', 'multi_scale_resnet', 'resnet18', 'resnet50',
-                'resnet101','densenet121', 'densenet201', 'squeezenet', 'mobilenet']:
+                'resnet101','densenet121', 'densenet201', 'squeezenet', 'mobilenet','EarID','MV_Emotion']:
                 self.opt.mode = 'classify_2d'
             elif self.opt.model_name == 'autoencoder':
                 self.opt.mode = 'autoencoder'
@@ -158,10 +160,19 @@ class Options():
         if self.opt.k_fold == 0 :
             self.opt.k_fold = 1
 
-        if self.opt.fold_index != 'auto':
-            self.opt.fold_index = eval(self.opt.fold_index)
+
+        if self.opt.fold_index == 'auto':
+            if os.path.isfile(os.path.join(self.opt.dataset_dir,'index.npy')):
+                print('Warning: index.npy exists but does not load it')
+        elif self.opt.fold_index == 'load':
             if os.path.isfile(os.path.join(self.opt.dataset_dir,'index.npy')):
                 self.opt.fold_index = (np.load(os.path.join(self.opt.dataset_dir,'index.npy'))).tolist()
+            else:
+                print('Warning: index.npy does not exist')
+                sys.exit(0)
+        else:
+            self.opt.fold_index = eval(self.opt.fold_index)
+
 
         if self.opt.augment == 'all':
             self.opt.augment = ['scale','warp','spike','step','slope','white','pink','blue','brown','violet','app','aaft','iaaft','filp']

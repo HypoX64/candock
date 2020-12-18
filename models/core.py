@@ -40,7 +40,7 @@ class Core(object):
         self.loss_domain_c = torch.nn.NLLLoss(self.opt.weight)
         self.loss_domain_d = torch.nn.NLLLoss()
         self.epoch = 1
-        self.plot_result = {'train':[],'eval':[],'F1':[]}
+        self.plot_result = {'train':[],'eval':[],'F1':[],'err':[]}
         self.confusion_mats = []
         self.test_flag = True
         self.pre_labels = []
@@ -188,6 +188,7 @@ class Core(object):
             #plot.draw_heatmap(confusion_mat,self.opt,name = 'current_eval')
             print('epoch:'+str(self.epoch),' macro-prec,reca,F1,err,kappa: '+str(statistics.report(confusion_mat)))
             self.plot_result['F1'].append(statistics.report(confusion_mat)[2])
+            self.plot_result['err'].append(statistics.report(confusion_mat)[3])
         
         self.plot_result['eval'].append(epoch_loss/(i+1)) 
         self.epoch +=1

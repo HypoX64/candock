@@ -3,6 +3,7 @@ from torch import nn
 import torchvision
 from .net_1d import cnn_1d,lstm,resnet_1d,multi_scale_resnet_1d,micro_multi_scale_resnet_1d,mlp
 from .net_2d import densenet,dfcnn,resnet,squeezenet,multi_scale_resnet,mobilenet
+from .ipmc import EarID,MV_Emotion
 from .autoencoder import autoencoder
 from .domain import dann_mobilenet,rd_mobilenet
 
@@ -18,6 +19,16 @@ def creatnet(opt):
         net = dann_mobilenet.Net(opt.input_nc,opt.label,feature_num = 100)
     elif name == 'rd_mobilenet':
         net = rd_mobilenet.Net(opt.input_nc,opt.label,feature_num = 100,domain_num = 100)
+
+    #---------------------------------IPMC Custom---------------------------------
+    elif name == 'EarID':
+        net = EarID.EarID(opt.label)
+    elif name == 'MV_Emotion':
+        net = MV_Emotion.MV_Emotion(opt.label)
+        # net = MV_Emotion.BaseEncoder(opt.label)
+        # print(list(net.children()))
+
+        # print(net)
 
     #---------------------------------classify_1d---------------------------------
     #mlp

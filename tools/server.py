@@ -3,11 +3,12 @@ import time
 import shutil
 import random
 import torch
+import json
 import numpy as np
 
 import sys
 sys.path.append("..")
-from util import util,plot,options
+from util import util,plot,options,dsp
 from data import augmenter,transforms,dataloader,statistics
 
 from util import array_operation as arr
@@ -28,7 +29,7 @@ ori_signals_train,ori_labels_train,ori_signals_eval,ori_labels_eval = \
 signals[:opt.fold_index[0]].copy(),labels[:opt.fold_index[0]].copy(),signals[opt.fold_index[0]:].copy(),labels[opt.fold_index[0]:].copy()
 label_cnt,label_cnt_per,label_num = statistics.label_statistics(labels)
 opt = options.get_auto_options(opt, ori_signals_train, ori_labels_train)
-
+categorys = []
 # -----------------------------def network-----------------------------
 core = core.Core(opt)
 core.network_init(printflag=True)
@@ -36,7 +37,7 @@ core.network_init(printflag=True)
 # -----------------------------train-----------------------------
 def train(opt):
     core.network_init(printflag=True)
-
+    global categorys
     categorys = os.listdir(opt.rec_tmp)
     categorys.sort()
     print('categorys:',categorys)
@@ -64,6 +65,15 @@ def train(opt):
                 received_signals.append(this_signal)
                 received_labels.append(i)
 
+    # Adapt to fewer tags
+    if category_num < 3:
+        for i in range(category_num,3):
+            for j in range(sample_num):
+                # print(np.random.random()*np.pi*2)
+                random_signal = dsp.sin(int(i*10), 1000, 2, theta=np.random.random()*np.pi*2)
+                received_signals.append(random_signal)
+                received_labels.append(i)
+
     received_signals = np.array(received_signals).reshape(-1,opt.input_nc,opt.loadsize)
     received_labels = np.array(received_labels).reshape(-1)
     received_signals_train,received_labels_train,received_signals_eval,received_labels_eval=\
@@ -71,8 +81,10 @@ def train(opt):
     #print(received_signals_train.shape,received_signals_eval.shape)
 
     '''merge data'''
-    signals_train,labels_train = dataloader.del_labels(ori_signals_train,ori_labels_train, np.linspace(0, category_num-1,category_num,dtype=np.int64))
-    signals_eval,labels_eval = dataloader.del_labels(ori_signals_eval,ori_labels_eval, np.linspace(0, category_num-1,category_num,dtype=np.int64))
+    # signals_train,labels_train = dataloader.del_labels(ori_signals_train,ori_labels_train, np.linspace(0, category_num-1,category_num,dtype=np.int64))
+    # signals_eval,labels_eval = dataloader.del_labels(ori_signals_eval,ori_labels_eval, np.linspace(0, category_num-1,category_num,dtype=np.int64))
+    signals_train,labels_train = dataloader.del_labels(ori_signals_train,ori_labels_train, [0,1,2])
+    signals_eval,labels_eval = dataloader.del_labels(ori_signals_eval,ori_labels_eval,[0,1,2])
 
     signals_train = np.concatenate((signals_train, received_signals_train))
     #print(labels_train.shape, received_labels_train.shape)
@@ -125,12 +137,17 @@ def handlepost():
     
     if request.form['mode'] == 'train':
         train(opt)
+        label_map = {}
+        for i in range(len(categorys)):
+            label_map[categorys[i]] = i
+
         file = util.loadfile(os.path.join(opt.save_dir,'model.pt'))
         file = base64.b64encode(file).decode('utf-8')
         heatmap = util.loadfile(os.path.join(opt.save_dir,'final_heatmap.png'))
         heatmap = base64.b64encode(heatmap).decode('utf-8')
         return {'return' : 'done',
                 'report' : 'macro-prec,reca,F1,err,kappa:'+str(statistics.report(core.confusion_mats[-1])),
+                'label_map': json.dumps(label_map),
                 'heatmap': heatmap,
                 'network': file
                 }

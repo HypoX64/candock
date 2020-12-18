@@ -5,9 +5,9 @@ import pywt
 import cv2
 from . import array_operation as arr
 
-def sin(f,fs,time):
-    x = np.linspace(0, 2*np.pi*f*time, fs*time)
-    return np.sin(x)
+def sin(f,fs,time,theta=0):
+    x = np.linspace(0, 2*np.pi*f*time, int(fs*time))
+    return np.sin(x+theta)
 
 def downsample(signal,fs1=0,fs2=0,alpha=0,mod = 'just_down'):
     if alpha == 0:
