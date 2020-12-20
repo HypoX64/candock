@@ -106,18 +106,18 @@ class Core(object):
     def process_pool_init(self,signals,labels,sequences):
         self.queue = Queue(self.opt.load_thread*2)
         load_thread = self.opt.load_thread
-        process_batch_num = len(sequences)//self.opt.batchsize//load_thread
-        if process_batch_num == 0:
+        process_batch_num = len(sequences)/self.opt.batchsize/load_thread
+        if process_batch_num < 1:
             if self.epoch == 1:
                 load_thread = len(sequences)//self.opt.batchsize
-                process_batch_num = len(sequences)//self.opt.batchsize//load_thread
+                process_batch_num = len(sequences)/self.opt.batchsize/load_thread
                 print('\033[1;33m'+'Warning: too much load thread, try : '+str(load_thread)+'\033[0m') 
 
         for i in range(load_thread):
             if i != load_thread-1:
-                self.start_process(signals,labels,sequences[i*process_batch_num*self.opt.batchsize:(i+1)*process_batch_num*self.opt.batchsize])
+                self.start_process(signals,labels,sequences[int(i*process_batch_num)*self.opt.batchsize:int((i+1)*process_batch_num)*self.opt.batchsize])
             else:
-                self.start_process(signals,labels,sequences[i*process_batch_num*self.opt.batchsize:])
+                self.start_process(signals,labels,sequences[int(i*process_batch_num)*self.opt.batchsize:])
 
     def forward(self,signal,label,features,confusion_mat):
         if self.opt.mode == 'autoencoder':
@@ -160,7 +160,7 @@ class Core(object):
         for i in range(np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)):
             self.optimizer.zero_grad()
 
-            signal,label = self.queue.get()   
+            signal,label = self.queue.get()  
             signal,label = transforms.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
             output,loss,features,confusion_mat = self.forward(signal, label, features, confusion_mat)
 
