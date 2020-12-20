@@ -25,10 +25,6 @@ def creatnet(opt):
         net = EarID.EarID(opt.label)
     elif name == 'MV_Emotion':
         net = MV_Emotion.MV_Emotion(opt.label)
-        # net = MV_Emotion.BaseEncoder(opt.label)
-        # print(list(net.children()))
-
-        # print(net)
 
     #---------------------------------classify_1d---------------------------------
     #mlp

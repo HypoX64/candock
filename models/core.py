@@ -25,9 +25,8 @@ class Core(object):
         super(Core, self).__init__()
         self.opt = opt
         self.epoch = 1
-        if self.opt.gpu_id != -1:
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(self.opt.gpu_id)
-            # torch.cuda.set_device(self.opt.gpu_id)
+        if self.opt.gpu_id != '-1':
+            os.environ["CUDA_VISIBLE_DEVICES"] = self.opt.gpu_id
             if not self.opt.no_cudnn:
                 torch.backends.cudnn.benchmark = True
 
@@ -54,25 +53,39 @@ class Core(object):
             self.net.load_state_dict(torch.load(self.opt.pretrained))
         if self.opt.continue_train:
             self.net.load_state_dict(torch.load(os.path.join(self.opt.save_dir,'last.pth')))
-        if self.opt.gpu_id != -1:
+        if self.opt.gpu_id != '-1' and len(self.opt.gpu_id) == 1:
+            self.net.cuda()
+        elif self.opt.gpu_id != '-1' and len(self.opt.gpu_id) > 1:
+            self.net = nn.DataParallel(self.net)
             self.net.cuda()
     
     def save(self):
-        torch.save(self.net.cpu().state_dict(),os.path.join(self.opt.save_dir,'last.pth'))
+        if self.opt.gpu_id == '-1' or len(self.opt.gpu_id) == 1:
+            torch.save(self.net.cpu().state_dict(),os.path.join(self.opt.save_dir,'last.pth'))
+        else:
+            torch.save(self.net.module.cpu().state_dict(),os.path.join(self.opt.save_dir,'last.pth'))
+
         if (self.epoch-1)%self.opt.network_save_freq == 0:
-            torch.save(self.net.cpu().state_dict(),os.path.join(self.opt.save_dir,self.opt.model_name+'_epoch'+str(self.epoch-1)+'.pth'))
+            if self.opt.gpu_id == '-1' or len(self.opt.gpu_id) == 1:
+                torch.save(self.net.cpu().state_dict(),os.path.join(self.opt.save_dir,self.opt.model_name+'_epoch'+str(self.epoch-1)+'.pth'))
+            else:
+                torch.save(self.net.module.cpu().state_dict(),os.path.join(self.opt.save_dir,self.opt.model_name+'_epoch'+str(self.epoch-1)+'.pth'))
             print('network saved.')
-        if self.opt.gpu_id != -1:
+
+        if self.opt.gpu_id != '-1':
             self.net.cuda()
 
     def save_traced_net(self):
         self.net.cpu()
         self.net.eval()
         example = torch.rand(1,self.opt.input_nc, self.opt.finesize)
-        traced_script_module = torch.jit.trace(self.net, example)
+        if self.opt.gpu_id == '-1' or len(self.opt.gpu_id) == 1:
+            traced_script_module = torch.jit.trace(self.net, example)
+        else:
+            traced_script_module = torch.jit.trace(self.net.module, example)
         traced_script_module.save(os.path.join(self.opt.save_dir,'model.pt'))
         print('Save traced network, example shape:',(1,self.opt.input_nc, self.opt.finesize))
-        if self.opt.gpu_id != -1:
+        if self.opt.gpu_id != '-1':
             self.net.cuda()
 
     def preprocessing(self,signals, labels, sequences):
@@ -92,17 +105,19 @@ class Core(object):
     
     def process_pool_init(self,signals,labels,sequences):
         self.queue = Queue(self.opt.load_thread*2)
-        process_batch_num = len(sequences)//self.opt.batchsize//self.opt.load_thread
+        load_thread = self.opt.load_thread
+        process_batch_num = len(sequences)//self.opt.batchsize//load_thread
         if process_batch_num == 0:
             if self.epoch == 1:
-                print('\033[1;33m'+'Warning: too much load thread'+'\033[0m') 
-            self.start_process(signals,labels,sequences)
-        else:
-            for i in range(self.opt.load_thread):
-                if i != self.opt.load_thread-1:
-                    self.start_process(signals,labels,sequences[i*self.opt.load_thread*self.opt.batchsize:(i+1)*self.opt.load_thread*self.opt.batchsize])
-                else:
-                    self.start_process(signals,labels,sequences[i*self.opt.load_thread*self.opt.batchsize:])
+                load_thread = len(sequences)//self.opt.batchsize
+                process_batch_num = len(sequences)//self.opt.batchsize//load_thread
+                print('\033[1;33m'+'Warning: too much load thread, try : '+str(load_thread)+'\033[0m') 
+
+        for i in range(load_thread):
+            if i != load_thread-1:
+                self.start_process(signals,labels,sequences[i*process_batch_num*self.opt.batchsize:(i+1)*process_batch_num*self.opt.batchsize])
+            else:
+                self.start_process(signals,labels,sequences[i*process_batch_num*self.opt.batchsize:])
 
     def forward(self,signal,label,features,confusion_mat):
         if self.opt.mode == 'autoencoder':
@@ -115,7 +130,6 @@ class Core(object):
 
         elif self.opt.mode in ['classify_1d','classify_2d']:
             out = self.net(signal)
-            # print(out.size(), label.size())
             loss = self.loss_classifier(out, label)
             pred = (torch.max(out, 1)[1]).data.cpu().numpy()
             label = label.data.cpu().numpy()

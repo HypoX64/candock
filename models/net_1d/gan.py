@@ -71,7 +71,7 @@ class Discriminator(nn.Module):
 class GANloss(nn.Module):
     def __init__(self,gpu_id,batchsize):
         super(GANloss,self).__init__()
-        self.Tensor = torch.cuda.FloatTensor if gpu_id != -1 else torch.FloatTensor
+        self.Tensor = torch.cuda.FloatTensor if gpu_id != '-1' else torch.FloatTensor
         self.valid = Variable(self.Tensor(batchsize, 1).fill_(1.0), requires_grad=False)
         self.fake = Variable(self.Tensor(batchsize, 1).fill_(0.0), requires_grad=False)
         self.loss_function = torch.nn.BCELoss()

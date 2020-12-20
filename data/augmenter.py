@@ -26,7 +26,7 @@ from models.core import show_paramsnumber
 
 def dcgan(opt,signals,labels):
     print('Augment dataset using gan...')
-    if opt.gpu_id != -1:
+    if opt.gpu_id != '-1':
         os.environ["CUDA_VISIBLE_DEVICES"] = str(opt.gpu_id)
     if not opt.no_cudnn:
         torch.backends.cudnn.benchmark = True
@@ -52,7 +52,7 @@ def dcgan(opt,signals,labels):
 
     ganloss = GANloss(opt.gpu_id,opt.batchsize)
 
-    if opt.gpu_id != -1:
+    if opt.gpu_id != '-1':
         generator.cuda()
         discriminator.cuda()
         ganloss.cuda()

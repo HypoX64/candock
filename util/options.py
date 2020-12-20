@@ -15,7 +15,7 @@ class Options():
 
     def initialize(self):
         # ------------------------Base------------------------
-        self.parser.add_argument('--gpu_id', type=int, default=0,help='choose which gpu want to use, 0 | 1 | 2 ...')        
+        self.parser.add_argument('--gpu_id', type=str, default='0',help='choose which gpu want to use, Single GPU: 0 | 1 | 2 ; Multi-GPU: 0,1,2,3 ; No GPU: -1')        
         self.parser.add_argument('--no_cudnn', action='store_true', help='if specified, do not use cudnn')
         self.parser.add_argument('--label', type=str, default='auto',help='number of labels')
         self.parser.add_argument('--input_nc', type=str, default='auto', help='of input channels')
@@ -50,8 +50,7 @@ class Options():
         
         # self.parser.add_argument('--augment_times', type=float, default=10, help='how many times that will be augmented')
 
-        # for gan,it only support when fold_index = 1 or 0 now
-        # only support when k_fold =0 or 1
+        # for gan,it only support when fold_index = 1 or 0
         self.parser.add_argument('--gan', action='store_true', help='if specified, using gan to augmente dataset')
         self.parser.add_argument('--gan_lr', type=float, default=0.0002,help='learning rate')
         self.parser.add_argument('--gan_augment_times', type=float, default=2,help='how many times that will be augmented by dcgan')
@@ -128,8 +127,9 @@ class Options():
             self.initialize()
         self.opt = self.parser.parse_args()
 
-        if self.opt.gpu_id != -1:
+        if self.opt.gpu_id != '-1':
             os.environ["CUDA_VISIBLE_DEVICES"] = str(self.opt.gpu_id)
+        # os.environ['CUDA_VISIBLE_DEVICES'] = '0,3'
 
         if self.opt.label != 'auto':
             self.opt.label = int(self.opt.label)
@@ -243,7 +243,7 @@ def get_auto_options(opt,signals,labels):
     util.writelog('Loss_weight:'+str(opt.weight),opt,True)
     import torch
     opt.weight = torch.from_numpy(opt.weight).float()
-    if opt.gpu_id != -1:      
+    if opt.gpu_id != '-1':      
         opt.weight = opt.weight.cuda()
 
     # label name

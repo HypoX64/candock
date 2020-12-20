@@ -51,21 +51,21 @@ def batch_generator(data,target,sequence,shuffle = True):
     return out_data,out_target
 
 
-def ToTensor(data=None,target=None,gpu_id=0):
+def ToTensor(data=None,target=None,gpu_id='0'):
     if data is None:
         target = torch.from_numpy(target)
-        if gpu_id != -1:
+        if gpu_id != '-1':
             target = target.cuda()
         return target
     elif target is None:
         data = torch.from_numpy(data)
-        if gpu_id != -1:
+        if gpu_id != '-1':
             data = data.cuda()
         return data
     else:
         data = torch.from_numpy(data)
         target = torch.from_numpy(target)
-        if gpu_id != -1:
+        if gpu_id != '-1':
             data = data.cuda()
             target = target.cuda()
         return data,target

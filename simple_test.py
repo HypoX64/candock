@@ -21,8 +21,11 @@ labels = np.load('./datasets/simple_test/labels.npy')
 #load prtrained_model
 net.load_state_dict(torch.load('./checkpoints/pretrained/micro_multi_scale_resnet_1d_50class.pth'))
 net.eval()
-if not opt.gpu_id:
-    net.cuda()
+if self.opt.gpu_id != '-1' and len(self.opt.gpu_id) == 1:
+    self.net.cuda()
+elif self.opt.gpu_id != '-1' and len(self.opt.gpu_id) > 1:
+    self.net = nn.DataParallel(self.net)
+    self.net.cuda()
 
 for signal,true_label in zip(signals, labels):
     signal = signal.reshape(1,1,-1).astype(np.float32) #batchsize,ch,length
