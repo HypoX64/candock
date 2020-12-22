@@ -8,7 +8,7 @@ from torch import nn
 import torchvision
 
 import sys
-from . import mobilenet
+from ..net_2d import mobilenet
 
 class BaseEncoder(nn.Module):
     def __init__(self, input_nc):
@@ -53,7 +53,7 @@ class MV_Emotion(nn.Module):
             nn.Dropout(0.2),
             nn.Linear(1280*3, num_classes),
         )
-        
+
     def forward(self, x):
 
         x_part1 = self.MicHeart((x[:,0,:,:].view(x.size(0),1,x.size(2),x.size(3))))

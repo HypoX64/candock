@@ -41,8 +41,7 @@ core.network_init(printflag=True)
 
 print('Begin to train ...')
 fold_final_confusion_mat = np.zeros((opt.label,opt.label), dtype=int)
-save_pre_labels = np.array([])
-save_sequences = np.array([])
+eval_detail = [[],[],[]]
 for fold in range(opt.k_fold):
     if opt.k_fold != 1:util.writelog('------------------------------ k-fold:'+str(fold+1)+' ------------------------------',opt,True)
     core.network_init()
@@ -64,13 +63,10 @@ for fold in range(opt.k_fold):
         t2=time.time()
         if epoch+1==2:
             util.writelog('>>> per epoch cost time:'+str(round((t2-t1),2))+'s',opt,True)
-
         if opt.eval_detail:
-            if epoch+1 == opt.epochs:
-                save_pre_labels = np.concatenate((save_pre_labels,np.array(core.pre_labels)))
-                save_sequences = np.concatenate((save_sequences,np.array(core.save_sequences)))
-
-
+            for i in range(3):
+                eval_detail[i] += core.eval_detail[i]
+                
     #save result
     if opt.mode != 'autoencoder':
         pos = core.plot_result['F1'].index(max(core.plot_result['F1']))
@@ -86,8 +82,7 @@ for fold in range(opt.k_fold):
             plot.draw_heatmap(final_confusion_mat,opt,name = 'fold'+str(fold+1)+'_eval')
 
 if opt.eval_detail:
-    np.save(os.path.join(opt.save_dir,'pre_labels.npy'),save_pre_labels)
-    np.save(os.path.join(opt.save_dir,'sequences.npy'),save_sequences)
+    statistics.eval_detail(opt,eval_detail)
 
 if opt.mode != 'autoencoder':
     if opt.k_fold != 1:

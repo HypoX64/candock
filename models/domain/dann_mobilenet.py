@@ -10,16 +10,14 @@
 '''
 import torch
 from torch import nn
-from . import mobilenet
 from .functions import ReverseLayerF
-
+from ..net_2d import mobilenet
+from ..ipmc import MV_Emotion
 
 class Encoder(nn.Module):
     def __init__(self,input_nc,feature_num):
         super(Encoder, self).__init__()
-        self.trunk = mobilenet.mobilenet_v2(pretrained=True)
-        self.trunk.features[0][0] = nn.Conv2d(input_nc, 32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
-        self.trunk.classifier[1] = nn.Linear(in_features=1280, out_features=feature_num, bias=True)
+        self.trunk = MV_Emotion.MV_Emotion(feature_num)
 
     def forward(self, x):
         # print(x.size())

@@ -42,8 +42,7 @@ class Core(object):
         self.plot_result = {'train':[],'eval':[],'F1':[],'err':[]}
         self.confusion_mats = []
         self.test_flag = True
-        self.pre_labels = []
-        self.save_sequences = []
+        self.eval_detail = [[],[],[]] # sequences, ture_labels, pre_labels
 
         if printflag:
             #util.writelog('network:\n'+str(self.net),self.opt,True)
@@ -96,7 +95,8 @@ class Core(object):
             else:
                 signal,label = transforms.batch_generator(signals, labels, sequences[i*self.opt.batchsize:])
             signal = transforms.ToInputShape(self.opt,signal,test_flag =self.test_flag)
-            self.queue.put([signal,label])
+            self.queue.put([signal,label,sequences[i*self.opt.batchsize:(i+1)*self.opt.batchsize]])
+
 
     def start_process(self,signals,labels,sequences):
         p = Process(target=self.preprocessing,args=(signals,labels,sequences))         
@@ -135,7 +135,7 @@ class Core(object):
             label = label.data.cpu().numpy()
             for x in range(len(pred)):
                 confusion_mat[label[x]][pred[x]] += 1
-                self.pre_labels.append(pred[x])
+                self.eval_detail[2].append(pred[x])
 
         elif self.opt.mode == 'domain':
             out,_ = self.net(signal,0)
@@ -144,7 +144,7 @@ class Core(object):
             label = label.data.cpu().numpy()
             for x in range(len(pred)):
                 confusion_mat[label[x]][pred[x]] += 1
-                self.pre_labels.append(pred[x])
+                self.eval_detail[2].append(pred[x])
         return out,loss,features,confusion_mat
 
     def train(self,signals,labels,sequences):
@@ -160,7 +160,7 @@ class Core(object):
         for i in range(np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)):
             self.optimizer.zero_grad()
 
-            signal,label = self.queue.get()  
+            signal,label,_ = self.queue.get()  
             signal,label = transforms.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
             output,loss,features,confusion_mat = self.forward(signal, label, features, confusion_mat)
 
@@ -177,7 +177,7 @@ class Core(object):
 
     def eval(self,signals,labels,sequences):
         self.test_flag = True
-        self.pre_labels = []
+        self.eval_detail = [[],[],[]]
         features = []
         epoch_loss = 0
         confusion_mat = np.zeros((self.opt.label,self.opt.label), dtype=int)
@@ -186,7 +186,9 @@ class Core(object):
         self.save_sequences = sequences
         self.process_pool_init(signals, labels, sequences)
         for i in range(np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)):
-            signal,label = self.queue.get()
+            signal,label,sequence = self.queue.get()
+            self.eval_detail[0].append(list(sequence))
+            self.eval_detail[1].append(list(label))
             signal,label = transforms.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
             with torch.no_grad():
                 output,loss,features,confusion_mat = self.forward(signal, label, features, confusion_mat)

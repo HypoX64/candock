@@ -10,7 +10,7 @@
 '''
 import torch
 from torch import nn
-from . import mobilenet
+from ..net_2d import mobilenet
 
 class Encoder(nn.Module):
     def __init__(self,input_nc,feature_num):

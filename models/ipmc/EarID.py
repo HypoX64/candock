@@ -7,7 +7,7 @@ import torch
 from torch import nn
 import torchvision
 
-from . import mobilenet
+from ..net_2d import mobilenet
 
 
 class WearEncoder(nn.Module):

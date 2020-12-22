@@ -23,8 +23,9 @@ def mat2predtrue(mat):
                 y_pred.append(j)
     return y_true,y_pred
 
-def predtrue2mat(y_true,y_pred):
-    label_num = label_statistics(y_true)[2]
+def predtrue2mat(y_true,y_pred,label_num=0):
+    if label_num == 0:
+        label_num = label_statistics(y_true)[2]
     mat = np.zeros((label_num,label_num), dtype=np.int64)
     for i in range(len(y_true)):
         mat[y_true[i]][y_pred[i]] +=1
@@ -87,6 +88,53 @@ def report(mat,print_sub=False):
 
     k = Kappa(mat)
     return round(Macro_precision,4),round(Macro_recall,4),round(Macro_F1,4),round(err,4),round(k, 4)
+
+def flatten_list(inputlist):
+    result = []
+    while inputlist:
+        head = inputlist.pop(0)
+        if isinstance(head, list):
+            inputlist = head + inputlist
+        else:
+            result.append(head)
+    return result
+
+def eval_detail(opt,detail):
+    #detail : [sequences, ture_labels, pre_labels]
+    sequences = np.array(flatten_list(detail[0]))
+    ture_labels = np.array(flatten_list(detail[1]))
+    pre_labels = np.array(detail[2])
+
+    # save detail
+    util.makedirs(os.path.join(opt.save_dir,'eval_detail'))
+    np.save(os.path.join(opt.save_dir,'eval_detail','sequences.npy'),sequences)
+    np.save(os.path.join(opt.save_dir,'eval_detail','ture_labels.npy'),ture_labels)
+    np.save(os.path.join(opt.save_dir,'eval_detail','pre_labels.npy'),pre_labels)
+
+    # statistic by domain
+    if os.path.isfile(os.path.join(opt.dataset_dir,'domainUids.npy')):
+        domainUids = np.load(os.path.join(opt.dataset_dir,'domainUids.npy'))
+        domain_dict = {}
+        for i in range(len(sequences)):
+            Uid = str(domainUids[sequences[i]])
+            if Uid not in domain_dict:
+                domain_dict[Uid] = {}
+                domain_dict[Uid]['ture'] = []
+                domain_dict[Uid]['pred'] = []
+
+            domain_dict[Uid]['ture'].append(ture_labels[i])
+            domain_dict[Uid]['pred'].append(pre_labels[i])
+        
+        domain_stat = []
+        for Uid in domain_dict:
+            domain_dict[Uid]['F1'] = report(predtrue2mat(domain_dict[Uid]['ture'],domain_dict[Uid]['pred'],opt.label))[2]
+            domain_stat.append([int(Uid),domain_dict[Uid]['F1']])
+        domain_stat = np.array(domain_stat)
+        domain_stat = domain_stat[np.argsort(domain_stat[:,1])][::-1]
+        domain_stat_txt = 'Domain,F1(%)\n'
+        for i in range(len(domain_stat)):
+            domain_stat_txt += ('%03d' % domain_stat[i,0] + ',' +'%.2f' % (100*domain_stat[i,1]) + '\n')
+        util.savetxt(domain_stat_txt, os.path.join(opt.save_dir,'eval_detail','domain_statistic.csv'))
 
 
 def statistics(mat,opt,logname,heatmapname):
