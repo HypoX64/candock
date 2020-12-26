@@ -104,13 +104,8 @@ def loaddataset(opt):
 
     signals = np.load(os.path.join(opt.dataset_dir,'signals.npy'))
     labels = np.load(os.path.join(opt.dataset_dir,'labels.npy'))
-    # if os.path.isfile(os.path.join(opt.dataset_dir,'domain.npy')) and opt.mode == 'domain':
-    #     domain = np.load(os.path.join(opt.dataset_dir,'domain.npy'))
-    #     labels = np.concatenate((labels.reshape(-1,1),rebuild_domain(domain).reshape(-1,1)),axis=1)
-        
-    #     sys.exit(0)
-    num,ch,size = signals.shape
 
+    num,ch,size = signals.shape
     # normliaze
     if opt.normliaze != 'None':
         for i in range(num):

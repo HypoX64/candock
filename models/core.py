@@ -31,13 +31,19 @@ class Core(object):
                 torch.backends.cudnn.benchmark = True
 
     def network_init(self,printflag=False):
-
+        # Network & Optimizer & loss
         self.net = creatnet.creatnet(self.opt)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.opt.lr)
         self.loss_classifier = nn.CrossEntropyLoss(self.opt.weight)
-        self.loss_autoencoder = nn.MSELoss()
-        self.loss_domain_c = torch.nn.NLLLoss(self.opt.weight)
-        self.loss_domain_d = torch.nn.NLLLoss()
+        if self.opt.mode == 'autoencoder':
+            self.loss_autoencoder = nn.MSELoss()
+        elif self.opt.mode == 'domain':
+            self.loss_dann_c = torch.nn.NLLLoss(self.opt.weight)
+            self.loss_dann_d = torch.nn.NLLLoss()
+            self.loss_rd_true_domain = nn.CrossEntropyLoss()
+            self.loss_rd_conf_domain = nn.CrossEntropyLoss()
+
+        # save stack
         self.epoch = 1
         self.plot_result = {'train':[],'eval':[],'F1':[],'err':[]}
         self.confusion_mats = []
@@ -88,15 +94,10 @@ class Core(object):
             self.net.cuda()
 
     def preprocessing(self,signals, labels, sequences):
-        _times = np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)
-        for i in range(_times):
-            if i != _times-1:
-                signal,label = transforms.batch_generator(signals, labels, sequences[i*self.opt.batchsize:(i+1)*self.opt.batchsize])
-            else:
-                signal,label = transforms.batch_generator(signals, labels, sequences[i*self.opt.batchsize:])
+        for i in range(np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)):
+            signal,label = transforms.batch_generator(signals, labels, sequences[i*self.opt.batchsize:(i+1)*self.opt.batchsize])
             signal = transforms.ToInputShape(self.opt,signal,test_flag =self.test_flag)
             self.queue.put([signal,label,sequences[i*self.opt.batchsize:(i+1)*self.opt.batchsize]])
-
 
     def start_process(self,signals,labels,sequences):
         p = Process(target=self.preprocessing,args=(signals,labels,sequences))         
@@ -128,24 +129,26 @@ class Core(object):
             for i in range(self.opt.batchsize):
                 features.append(np.concatenate((feature[i], [label[i]])))
 
-        elif self.opt.mode in ['classify_1d','classify_2d']:
-            out = self.net(signal)
-            loss = self.loss_classifier(out, label)
-            pred = (torch.max(out, 1)[1]).data.cpu().numpy()
-            label = label.data.cpu().numpy()
-            for x in range(len(pred)):
-                confusion_mat[label[x]][pred[x]] += 1
-                self.eval_detail[2].append(pred[x])
-
-        elif self.opt.mode == 'domain':
-            out,_ = self.net(signal,0)
-            loss = self.loss_domain_c(out, label)
-            pred = (torch.max(out, 1)[1]).data.cpu().numpy()
-            label = label.data.cpu().numpy()
-            for x in range(len(pred)):
-                confusion_mat[label[x]][pred[x]] += 1
-                self.eval_detail[2].append(pred[x])
+        elif self.opt.mode in ['classify_1d','classify_2d','domain']:
+            if self.opt.model_name in ['dann','dann_mobilenet']:
+                out, _ = self.net(signal,0)
+                loss = self.loss_dann_c(out, label)
+            elif self.opt.model_name in ['rd_mobilenet']:
+                out, _ = self.net(signal)
+                loss = self.loss_classifier(out, label)
+            else:
+                out = self.net(signal)
+                loss = self.loss_classifier(out, label)
+            self.add_to_confusion_mat(label,out,confusion_mat,True)
         return out,loss,features,confusion_mat
+
+    def add_to_confusion_mat(self,true_labels, pre_labels, confusion_mat, save_to_detail=False):
+        pre_labels = (torch.max(pre_labels, 1)[1]).data.cpu().numpy()
+        true_labels = true_labels.data.cpu().numpy()
+        for x in range(len(pre_labels)):
+            confusion_mat[true_labels[x]][pre_labels[x]] += 1
+            if save_to_detail and self.test_flag:
+                self.eval_detail[2].append(pre_labels[x])
 
     def train(self,signals,labels,sequences):
         self.net.train()
@@ -176,6 +179,7 @@ class Core(object):
 
 
     def eval(self,signals,labels,sequences):
+        self.net.eval()
         self.test_flag = True
         self.eval_detail = [[],[],[]]
         features = []
@@ -190,9 +194,9 @@ class Core(object):
             self.eval_detail[0].append(list(sequence))
             self.eval_detail[1].append(list(label))
             signal,label = transforms.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
-            with torch.no_grad():
-                output,loss,features,confusion_mat = self.forward(signal, label, features, confusion_mat)
-                epoch_loss += loss.item()
+            # with torch.no_grad():
+            output,loss,features,confusion_mat = self.forward(signal, label, features, confusion_mat)
+            epoch_loss += loss.item()
 
         if self.opt.mode == 'autoencoder':
             if self.epoch%10 == 0:
@@ -210,8 +214,7 @@ class Core(object):
         self.epoch +=1
         self.confusion_mats.append(confusion_mat)
 
-
-    def dann_train(self,signals,labels,src_sequences,dst_sequences):
+    def dann_train(self,signals,labels,src_sequences,dst_sequences,beta=1.0):
         self.net.train()
         self.test_flag = False
         confusion_mat = np.zeros((self.opt.label,self.opt.label), dtype=int)
@@ -223,14 +226,10 @@ class Core(object):
         dst_signals_len = len(dst_sequences)
 
         for i in range(epoch_iter_length):
-
             p = float(i + self.epoch * epoch_iter_length) / self.opt.epochs / epoch_iter_length
-            alpha = 2. / (1. + np.exp(-10 * p)) - 1
-            # print(alpha)
-
+            alpha = beta*(2. / (1. + np.exp(-10 * p)) - 1)
             self.optimizer.zero_grad()
-
-            s_signal,s_label = self.queue.get()
+            s_signal,s_label,sequence = self.queue.get()
             this_batch_len = s_signal.shape[0]
             s_signal,s_label = transforms.ToTensor(s_signal,s_label,gpu_id =self.opt.gpu_id)
             s_domain = transforms.ToTensor(None,np.zeros(this_batch_len, dtype=np.int64),gpu_id =self.opt.gpu_id)
@@ -241,13 +240,10 @@ class Core(object):
             d_domain = transforms.ToTensor(None,np.ones(this_batch_len, dtype=np.int64),gpu_id =self.opt.gpu_id)
             
             class_output, domain_output = self.net(s_signal, alpha=alpha)
-            # print(class_output.dtype, s_label.dtype,)
-            loss_s_label = self.loss_domain_c(class_output, s_label)
-            #print(domain_output, s_domain)
-            loss_s_domain = self.loss_domain_d(domain_output, s_domain)
+            loss_s_label = self.loss_dann_c(class_output, s_label)
+            loss_s_domain = self.loss_dann_d(domain_output, s_domain)
             _, domain_output = self.net(d_signal, alpha=alpha)
-            #print(domain_output.size(), d_domain.size())
-            loss_d_domain = self.loss_domain_d(domain_output, d_domain)
+            loss_d_domain = self.loss_dann_d(domain_output, d_domain)
             loss = loss_s_label+loss_s_domain+loss_d_domain
             epoch_closs += loss_s_label.item()
             loss.backward()
@@ -257,3 +253,42 @@ class Core(object):
         if self.epoch%10 == 0:
             plot.draw_loss(self.plot_result,self.epoch+(i+1)/(src_sequences.shape[0]/self.opt.batchsize),self.opt)
 
+    def rd_train(self,signals,labels,sequences,alpha=1.0,beta=1.0):
+        self.net.train()
+        self.test_flag = False
+        features = []
+        epoch_loss = 0
+        confusion_mat = np.zeros((self.opt.label,self.opt.label), dtype=int)
+        
+        np.random.shuffle(sequences)
+        self.process_pool_init(signals, labels, sequences)
+
+        # load domain
+        domains = np.load(os.path.join(self.opt.dataset_dir,'domains.npy'))
+        domains = dataloader.rebuild_domain(domains)
+
+        for i in range(np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)):
+            self.optimizer.zero_grad()
+
+            signal,label,sequence = self.queue.get()
+            domain = transforms.batch_generator(None, domains, sequence)
+            np.random.shuffle(sequence)
+            conf_domain = transforms.batch_generator(None, domains, sequence)
+
+            signal,label = transforms.ToTensor(signal,label,gpu_id=self.opt.gpu_id)
+            domain = transforms.ToTensor(None,domain,gpu_id=self.opt.gpu_id)
+            conf_domain = transforms.ToTensor(None,conf_domain,gpu_id=self.opt.gpu_id)
+
+            class_output, domain_output = self.net(signal)
+            loss_c = self.loss_classifier(class_output,label)
+            loss_td = self.loss_rd_true_domain(domain_output,domain)
+            loss_cd = self.loss_rd_conf_domain(domain_output,conf_domain)
+            loss = alpha*loss_c + beta*(loss_cd+loss_td)
+
+            epoch_loss += loss.item()     
+            loss.backward()
+            self.optimizer.step()
+       
+        self.plot_result['train'].append(epoch_loss/(i+1))
+        if self.epoch%10 == 0:
+            plot.draw_loss(self.plot_result,self.epoch+(i+1)/(sequences.shape[0]/self.opt.batchsize),self.opt)

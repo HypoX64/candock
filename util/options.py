@@ -6,7 +6,7 @@ from . import util,dsp,plot
 
 import sys
 sys.path.append("..")
-from data import statistics,augmenter
+from data import statistics,augmenter,dataloader
 
 class Options():
     def __init__(self):
@@ -18,6 +18,7 @@ class Options():
         self.parser.add_argument('--gpu_id', type=str, default='0',help='choose which gpu want to use, Single GPU: 0 | 1 | 2 ; Multi-GPU: 0,1,2,3 ; No GPU: -1')        
         self.parser.add_argument('--no_cudnn', action='store_true', help='if specified, do not use cudnn')
         self.parser.add_argument('--label', type=str, default='auto',help='number of labels')
+        self.parser.add_argument('--domain_num', type=str, default='auto',help='number of domain')
         self.parser.add_argument('--input_nc', type=str, default='auto', help='of input channels')
         self.parser.add_argument('--loadsize', type=str, default='auto', help='load data in this size')
         self.parser.add_argument('--finesize', type=str, default='auto', help='crop your data into this size')
@@ -254,6 +255,17 @@ def get_auto_options(opt,signals,labels):
         opt.label_name = names
     elif not isinstance(opt.label_name,list):
         opt.label_name = opt.label_name.replace(" ", "").split(",")
+
+    # domain_num
+    if opt.mode == 'domain':
+        if os.path.isfile(os.path.join(opt.dataset_dir,'domains.npy')):
+            if opt.domain_num == 'auto':
+                domains = np.load(os.path.join(opt.dataset_dir,'domains.npy'))
+                domains = dataloader.rebuild_domain(domains)
+                opt.domain_num = statistics.label_statistics(domains)[2]
+        else:
+            print('Please generate domains.npy(np.int64, shape like labels.npy)')
+            sys.exit(0)
 
     # check stft spectrum
     if opt.mode in ['classify_2d','domain']:

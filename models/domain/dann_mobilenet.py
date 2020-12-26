@@ -15,30 +15,38 @@ from ..net_2d import mobilenet
 from ..ipmc import MV_Emotion
 
 class Encoder(nn.Module):
-    def __init__(self,input_nc,feature_num):
+    def __init__(self, input_nc):
         super(Encoder, self).__init__()
-        self.trunk = MV_Emotion.MV_Emotion(feature_num)
+
+        self.net = mobilenet.mobilenet_v2(pretrained=True)
+        self.net.features[0][0] = nn.Conv2d(input_nc, 32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+        self.net = torch.nn.Sequential(*(list(self.net.children())[:-1]))
+        # self.net = densenet.densenet121(pretrained=False,num_classes = 1000)
+        # self.net.features.conv0 = nn.Conv2d(input_nc, 64, kernel_size=7, stride=2, padding=3, bias=False) 
+        # self.net = torch.nn.Sequential(*(list(self.net.children())[:-1]))
 
     def forward(self, x):
+        x = self.net(x)
+        x = nn.functional.adaptive_avg_pool2d(x, 1).reshape(x.shape[0], -1)
         # print(x.size())
-        x = self.trunk(x)
         return x
 
 class ClassClassifier(nn.Module):
-    def __init__(self,feature_num,output_nc):
+    def __init__(self,output_nc):
         super(ClassClassifier, self).__init__()
         self.fc1 = nn.Sequential(
-            nn.Linear(feature_num, 100),
-            nn.BatchNorm1d(100),
+            nn.Linear(1280, 1024),
+            nn.BatchNorm1d(1024),
             nn.ReLU(inplace=True),
             )
         self.fc2 = nn.Sequential(
-            nn.Linear(100, 100),
-            nn.BatchNorm1d(100),
+            nn.Linear(1024, 1024),
+            nn.BatchNorm1d(1024),
             nn.ReLU(inplace=True),
             )
         self.fc3 = nn.Sequential(
-            nn.Linear(100, output_nc),
+            nn.Dropout(0.2),
+            nn.Linear(1024, output_nc),
             nn.LogSoftmax(),
             )
 
@@ -49,20 +57,20 @@ class ClassClassifier(nn.Module):
         return x
 
 class DomainClassifier(nn.Module):
-    def __init__(self,feature_num):
+    def __init__(self):
         super(DomainClassifier, self).__init__()
         self.fc1 = nn.Sequential(
-            nn.Linear(feature_num, 100),
-            nn.BatchNorm1d(100),
+            nn.Linear(1280, 1024),
+            nn.BatchNorm1d(1024),
             nn.ReLU(inplace=True),
             )
         self.fc2 = nn.Sequential(
-            nn.Linear(100, 100),
-            nn.BatchNorm1d(100),
+            nn.Linear(1024, 1024),
+            nn.BatchNorm1d(1024),
             nn.ReLU(inplace=True),
             )
         self.fc3 = nn.Sequential(
-            nn.Linear(100, 2),
+            nn.Linear(1024, 2),
             nn.LogSoftmax(dim=1),
             )
 
@@ -73,11 +81,11 @@ class DomainClassifier(nn.Module):
         return x
 
 class Net(nn.Module):
-    def __init__(self,input_nc,output_nc,feature_num):
+    def __init__(self,input_nc,output_nc):
         super(Net, self).__init__()
-        self.encoder = Encoder(input_nc, feature_num)
-        self.class_classifier = ClassClassifier(feature_num, output_nc)
-        self.domain_classifier = DomainClassifier(feature_num)
+        self.encoder = Encoder(input_nc)
+        self.class_classifier = ClassClassifier(output_nc)
+        self.domain_classifier = DomainClassifier()
 
     def forward(self, x, alpha):
         
@@ -88,4 +96,3 @@ class Net(nn.Module):
         domain_output = self.domain_classifier(feature_reverse)
 
         return class_output, domain_output
-        

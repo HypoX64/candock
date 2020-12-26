@@ -43,12 +43,18 @@ def k_fold_generator(length,fold_num,fold_index = 'auto'):
 
 def batch_generator(data,target,sequence,shuffle = True):
     batchsize = len(sequence)
-    out_data = np.zeros((batchsize,data.shape[1],data.shape[2]), data.dtype)
-    out_target = np.zeros((batchsize), target.dtype)
-    for i in range(batchsize):
-        out_data[i] = data[sequence[i]]
-        out_target[i] = target[sequence[i]]
-    return out_data,out_target
+    if data is None:
+        out_target = np.zeros((batchsize), target.dtype)
+        for i in range(batchsize):
+            out_target[i] = target[sequence[i]]
+        return out_target
+    else:
+        out_data = np.zeros((batchsize,data.shape[1],data.shape[2]), data.dtype)
+        out_target = np.zeros((batchsize), target.dtype)
+        for i in range(batchsize):
+            out_data[i] = data[sequence[i]]
+            out_target[i] = target[sequence[i]]
+        return out_data,out_target
 
 
 def ToTensor(data=None,target=None,gpu_id='0'):

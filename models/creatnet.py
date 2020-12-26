@@ -16,9 +16,9 @@ def creatnet(opt):
 
     #---------------------------------domain---------------------------------
     elif name == 'dann_mobilenet':
-        net = dann_mobilenet.Net(opt.input_nc,opt.label,feature_num = 100)
+        net = dann_mobilenet.Net(opt.input_nc,opt.label)
     elif name == 'rd_mobilenet':
-        net = rd_mobilenet.Net(opt.input_nc,opt.label,feature_num = 100,domain_num = 100)
+        net = rd_mobilenet.RDNet(opt.input_nc, opt.label, opt.domain_num)
 
     #---------------------------------IPMC Custom---------------------------------
     elif name == 'EarID':

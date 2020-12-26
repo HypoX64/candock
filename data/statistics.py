@@ -112,8 +112,8 @@ def eval_detail(opt,detail):
     np.save(os.path.join(opt.save_dir,'eval_detail','pre_labels.npy'),pre_labels)
 
     # statistic by domain
-    if os.path.isfile(os.path.join(opt.dataset_dir,'domainUids.npy')):
-        domainUids = np.load(os.path.join(opt.dataset_dir,'domainUids.npy'))
+    if os.path.isfile(os.path.join(opt.dataset_dir,'domains.npy')):
+        domainUids = np.load(os.path.join(opt.dataset_dir,'domains.npy'))
         domain_dict = {}
         for i in range(len(sequences)):
             Uid = str(domainUids[sequences[i]])
@@ -127,11 +127,11 @@ def eval_detail(opt,detail):
         
         domain_stat = []
         for Uid in domain_dict:
-            domain_dict[Uid]['F1'] = report(predtrue2mat(domain_dict[Uid]['ture'],domain_dict[Uid]['pred'],opt.label))[2]
-            domain_stat.append([int(Uid),domain_dict[Uid]['F1']])
+            domain_dict[Uid]['Acc'] = 1-report(predtrue2mat(domain_dict[Uid]['ture'],domain_dict[Uid]['pred'],opt.label))[3]
+            domain_stat.append([int(Uid),domain_dict[Uid]['Acc']])
         domain_stat = np.array(domain_stat)
         domain_stat = domain_stat[np.argsort(domain_stat[:,1])][::-1]
-        domain_stat_txt = 'Domain,F1(%)\n'
+        domain_stat_txt = 'Domain,Acc(%)\n'
         for i in range(len(domain_stat)):
             domain_stat_txt += ('%03d' % domain_stat[i,0] + ',' +'%.2f' % (100*domain_stat[i,1]) + '\n')
         util.savetxt(domain_stat_txt, os.path.join(opt.save_dir,'eval_detail','domain_statistic.csv'))
