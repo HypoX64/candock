@@ -70,11 +70,9 @@ pip install mne==0.18.0
 - Python 3
 - Pytroch 1.0+
 ### Dependencies
-This code depends on torchvision, numpy, scipy, PyWavelets, matplotlib, available via pip install.<br>
-For example:<br>
-
+This code depends on torchvision, numpy, scipy, PyWavelets, matplotlib, tensorboardX， available via pip install.<br>
 ```bash
-pip install matplotlib
+pip install -r requirements.txt
 ```
 ### Clone this repo:
 ```bash
@@ -88,10 +86,16 @@ cd candock
 * samples:18207,  channel:1,  length of each sample:2000,  class:50
 * Top1 err: 2.09%
 ### Train
+* Begin training
 ```bash
 python3 train.py --label 50 --input_nc 1 --dataset_dir ./datasets/simple_test --save_dir ./checkpoints/simple_test --model_name micro_multi_scale_resnet_1d --gpu_id 0 --batchsize 64 --k_fold 5
 # if you want to use cpu to train, please input --gpu_id -1
 ```
+* Run "tensorboardx" to see outputs.
+```bash
+tensorboard --logdir checkpoints/tensorboardX --host=[your server's IP]
+```
+* Open "http://[your server's IP]:6006" on browser
 * More [options](./util/options.py).
 ### Test
 ```bash

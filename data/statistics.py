@@ -139,8 +139,8 @@ def eval_detail(opt,detail):
 
 def statistics(mat,opt,logname,heatmapname):
     util.writelog('------------------------------ '+logname+' result ------------------------------',opt,True)
-    util.writelog(logname+' -> macro-prec,reca,F1,err,kappa: '+str(report(mat)),opt,True)
-    util.writelog('confusion_mat:\n'+str(mat)+'\n',opt,True)
+    util.writelog(logname+' -> macro-prec,reca,F1,err,kappa: '+str(report(mat)),opt,True,True)
+    util.writelog('confusion_mat:\n'+str(mat)+'\n',opt,True,True)
     plot.draw_heatmap(mat,opt,name = heatmapname)
 
 

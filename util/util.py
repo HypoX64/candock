@@ -6,11 +6,13 @@ import shutil
 def randomstr(num):
     return ''.join(random.sample(string.ascii_letters + string.digits, num))
 
-def writelog(log,opt,printflag = False):
+def writelog(log,opt,printflag = False, tensorboard = False):
     f = open(os.path.join(opt.save_dir,"log.txt"),'a+')
     f.write(log+'\n')
     if printflag:
         print(log)
+    if tensorboard:
+        opt.tensorboard_writer.add_text('Log', log)
 
 def makedirs(path):
     if os.path.isdir(path):
@@ -43,6 +45,11 @@ def savefile(file,path):
 
 def copyfile(src,dst):
     try:
-        shutil.copyfile(src, dst)
+        if os.path.isfile(src):
+            shutil.copyfile(src, dst)
+        elif os.path.isdir(src):
+            shutil.copytree(src, dst)
+        else:
+            print('Do not exist',src)
     except Exception as e:
         print(e)

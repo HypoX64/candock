@@ -1,5 +1,7 @@
 import sys
+import torch
 from torch import nn
+from torch.autograd import Variable
 import torchvision
 from .net_1d import cnn_1d,lstm,resnet_1d,multi_scale_resnet_1d,micro_multi_scale_resnet_1d,mlp
 from .net_2d import densenet,dfcnn,resnet,squeezenet,multi_scale_resnet,mobilenet
@@ -82,4 +84,8 @@ def creatnet(opt):
         net.features[0][0] = nn.Conv2d(opt.input_nc, 32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
         net.classifier[1] = nn.Linear(in_features=1280, out_features=opt.label, bias=True)
 
-    return net
+    if opt.mode in ['classify_2d','domain']:
+        exp = Variable(torch.rand(opt.batchsize, opt.input_nc, opt.stft_shape[0], opt.stft_shape[1]))
+    else:
+        exp = Variable(torch.rand(opt.batchsize,opt.input_nc,opt.finesize))
+    return net,exp

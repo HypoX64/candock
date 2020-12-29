@@ -4,6 +4,7 @@ import time
 import numpy as np
 import torch
 from torch import nn, optim
+from tensorboardX import SummaryWriter
 from multiprocessing import Process, Queue
 # import torch.multiprocessing as mp
 import warnings
@@ -24,7 +25,7 @@ class Core(object):
     def __init__(self, opt):
         super(Core, self).__init__()
         self.opt = opt
-        self.epoch = 1
+        self.fold = 0
         if self.opt.gpu_id != '-1':
             os.environ["CUDA_VISIBLE_DEVICES"] = self.opt.gpu_id
             if not self.opt.no_cudnn:
@@ -32,7 +33,7 @@ class Core(object):
 
     def network_init(self,printflag=False):
         # Network & Optimizer & loss
-        self.net = creatnet.creatnet(self.opt)
+        self.net,self.exp = creatnet.creatnet(self.opt)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.opt.lr)
         self.loss_classifier = nn.CrossEntropyLoss(self.opt.weight)
         if self.opt.mode == 'autoencoder':
@@ -43,12 +44,12 @@ class Core(object):
             self.loss_rd_true_domain = nn.CrossEntropyLoss()
             self.loss_rd_conf_domain = nn.CrossEntropyLoss()
 
-        # save stack
-        self.epoch = 1
-        self.plot_result = {'train':[],'eval':[],'F1':[],'err':[]}
+        # save stack init
+        self.step = 0
+        self.epoch = 0
+        self.features = []
+        self.results = {'F1':[],'err':[]}
         self.confusion_mats = []
-        self.test_flag = True
-        self.eval_detail = [[],[],[]] # sequences, ture_labels, pre_labels
 
         if printflag:
             #util.writelog('network:\n'+str(self.net),self.opt,True)
@@ -63,6 +64,9 @@ class Core(object):
         elif self.opt.gpu_id != '-1' and len(self.opt.gpu_id) > 1:
             self.net = nn.DataParallel(self.net)
             self.net.cuda()
+
+        if self.fold == 0:
+            self.start_time = time.time()
     
     def save(self):
         if self.opt.gpu_id == '-1' or len(self.opt.gpu_id) == 1:
@@ -70,11 +74,11 @@ class Core(object):
         else:
             torch.save(self.net.module.cpu().state_dict(),os.path.join(self.opt.save_dir,'last.pth'))
 
-        if (self.epoch-1)%self.opt.network_save_freq == 0:
+        if (self.epoch)%self.opt.network_save_freq == 0:
             if self.opt.gpu_id == '-1' or len(self.opt.gpu_id) == 1:
-                torch.save(self.net.cpu().state_dict(),os.path.join(self.opt.save_dir,self.opt.model_name+'_epoch'+str(self.epoch-1)+'.pth'))
+                torch.save(self.net.cpu().state_dict(),os.path.join(self.opt.save_dir,self.opt.model_name+'_epoch'+str(self.epoch)+'.pth'))
             else:
-                torch.save(self.net.module.cpu().state_dict(),os.path.join(self.opt.save_dir,self.opt.model_name+'_epoch'+str(self.epoch-1)+'.pth'))
+                torch.save(self.net.module.cpu().state_dict(),os.path.join(self.opt.save_dir,self.opt.model_name+'_epoch'+str(self.epoch)+'.pth'))
             print('network saved.')
 
         if self.opt.gpu_id != '-1':
@@ -83,15 +87,19 @@ class Core(object):
     def save_traced_net(self):
         self.net.cpu()
         self.net.eval()
-        example = torch.rand(1,self.opt.input_nc, self.opt.finesize)
         if self.opt.gpu_id == '-1' or len(self.opt.gpu_id) == 1:
-            traced_script_module = torch.jit.trace(self.net, example)
+            traced_script_module = torch.jit.trace(self.net, self.exp)
         else:
-            traced_script_module = torch.jit.trace(self.net.module, example)
+            traced_script_module = torch.jit.trace(self.net.module, self.exp)
         traced_script_module.save(os.path.join(self.opt.save_dir,'model.pt'))
-        print('Save traced network, example shape:',(1,self.opt.input_nc, self.opt.finesize))
+        print('Save traced network, example shape:',self.exp.size())
         if self.opt.gpu_id != '-1':
             self.net.cuda()
+
+    def check_remain_time(self):
+        v = (self.fold*self.opt.epochs+self.epoch)/(time.time()-self.start_time)
+        remain = (self.opt.k_fold*self.opt.epochs-(self.fold*self.opt.epochs+self.epoch))/v
+        self.opt.tensorboard_writer.add_scalar('RemainTime',remain/3600,self.fold*self.opt.epochs+self.epoch)
 
     def preprocessing(self,signals, labels, sequences):
         for i in range(np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)):
@@ -104,30 +112,56 @@ class Core(object):
         p.daemon = True
         p.start()
     
-    def process_pool_init(self,signals,labels,sequences):
+    def load_pool_init(self,signals,labels,sequences):
         self.queue = Queue(self.opt.load_thread*2)
         load_thread = self.opt.load_thread
         process_batch_num = len(sequences)/self.opt.batchsize/load_thread
         if process_batch_num < 1:
-            if self.epoch == 1:
+            if self.epoch == 0:
                 load_thread = len(sequences)//self.opt.batchsize
                 process_batch_num = len(sequences)/self.opt.batchsize/load_thread
                 print('\033[1;33m'+'Warning: too much load thread, try : '+str(load_thread)+'\033[0m') 
-
         for i in range(load_thread):
             if i != load_thread-1:
                 self.start_process(signals,labels,sequences[int(i*process_batch_num)*self.opt.batchsize:int((i+1)*process_batch_num)*self.opt.batchsize])
             else:
                 self.start_process(signals,labels,sequences[int(i*process_batch_num)*self.opt.batchsize:])
 
-    def forward(self,signal,label,features,confusion_mat):
+    def add_label_to_confusion_mat(self,true_labels, pre_labels, save_to_detail=False):
+        pre_labels = (torch.max(pre_labels, 1)[1]).data.cpu().numpy()
+        true_labels = true_labels.data.cpu().numpy()
+        for x in range(len(pre_labels)):
+            self.confusion_mat[true_labels[x]][pre_labels[x]] += 1
+            if save_to_detail and self.test_flag:
+                self.eval_detail[2].append(pre_labels[x])
+    
+    def add_class_acc_to_tensorboard(self,tag):
+        self.opt.tensorboard_writer.add_scalars('fold'+str(self.fold+1)+'/F1', {tag:statistics.report(self.confusion_mat)[2]}, self.step)
+        self.opt.tensorboard_writer.add_scalars('fold'+str(self.fold+1)+'/Top1.err', {tag:statistics.report(self.confusion_mat)[3]}, self.step)
+        
+    def epoch_forward_init(self,signals,labels,sequences,istrain=True):
+        if istrain:
+            self.net.train()
+            self.test_flag = False
+        else:
+            self.net.eval()
+            self.test_flag = True
+        self.eval_detail = [[],[],[]] # sequences, ture_labels, pre_labels
+        self.features = []
+        self.epoch_loss = 0
+        self.confusion_mat = np.zeros((self.opt.label,self.opt.label), dtype=int)
+        np.random.shuffle(sequences)
+        self.load_pool_init(signals, labels, sequences)
+        self.epoch_iter_length = np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)
+    
+    def forward(self,signal,label):
         if self.opt.mode == 'autoencoder':
             out,feature = self.net(signal)
             loss = self.loss_autoencoder(out, signal)
             label = label.data.cpu().numpy()
             feature = (feature.data.cpu().numpy()).reshape(self.opt.batchsize,-1)
             for i in range(self.opt.batchsize):
-                features.append(np.concatenate((feature[i], [label[i]])))
+                self.features.append(np.concatenate((feature[i], [label[i]])))
 
         elif self.opt.mode in ['classify_1d','classify_2d','domain']:
             if self.opt.model_name in ['dann','dann_mobilenet']:
@@ -139,95 +173,55 @@ class Core(object):
             else:
                 out = self.net(signal)
                 loss = self.loss_classifier(out, label)
-            self.add_to_confusion_mat(label,out,confusion_mat,True)
-        return out,loss,features,confusion_mat
-
-    def add_to_confusion_mat(self,true_labels, pre_labels, confusion_mat, save_to_detail=False):
-        pre_labels = (torch.max(pre_labels, 1)[1]).data.cpu().numpy()
-        true_labels = true_labels.data.cpu().numpy()
-        for x in range(len(pre_labels)):
-            confusion_mat[true_labels[x]][pre_labels[x]] += 1
-            if save_to_detail and self.test_flag:
-                self.eval_detail[2].append(pre_labels[x])
-
-    def train(self,signals,labels,sequences):
-        self.net.train()
-        self.test_flag = False
-        features = []
-        epoch_loss = 0
-        confusion_mat = np.zeros((self.opt.label,self.opt.label), dtype=int)
-        
-        np.random.shuffle(sequences)
-        self.process_pool_init(signals, labels, sequences)
-
-        for i in range(np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)):
-            self.optimizer.zero_grad()
-
-            signal,label,_ = self.queue.get()  
-            signal,label = transforms.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
-            output,loss,features,confusion_mat = self.forward(signal, label, features, confusion_mat)
-
-            epoch_loss += loss.item()     
-            loss.backward()
-            self.optimizer.step()
-       
-        self.plot_result['train'].append(epoch_loss/(i+1))
-        if self.epoch%10 == 0:
-            plot.draw_loss(self.plot_result,self.epoch+(i+1)/(sequences.shape[0]/self.opt.batchsize),self.opt)
-        # if self.opt.model_name != 'autoencoder':
-        #     plot.draw_heatmap(confusion_mat,self.opt,name = 'current_train')
-
+            self.add_label_to_confusion_mat(label,out,True)
+        return out,loss
 
     def eval(self,signals,labels,sequences):
-        self.net.eval()
-        self.test_flag = True
-        self.eval_detail = [[],[],[]]
-        features = []
-        epoch_loss = 0
-        confusion_mat = np.zeros((self.opt.label,self.opt.label), dtype=int)
-
-        np.random.shuffle(sequences)
-        self.save_sequences = sequences
-        self.process_pool_init(signals, labels, sequences)
-        for i in range(np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)):
+        self.epoch_forward_init(signals,labels,sequences,False)
+        for i in range(self.epoch_iter_length):
             signal,label,sequence = self.queue.get()
             self.eval_detail[0].append(list(sequence))
             self.eval_detail[1].append(list(label))
             signal,label = transforms.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
             # with torch.no_grad():
-            output,loss,features,confusion_mat = self.forward(signal, label, features, confusion_mat)
-            epoch_loss += loss.item()
+            output,loss = self.forward(signal, label)
+            self.epoch_loss += loss.item()
 
         if self.opt.mode == 'autoencoder':
-            if self.epoch%10 == 0:
+            if (self.epoch+1)%10 == 0:
                 plot.draw_autoencoder_result(signal.data.cpu().numpy(), output.data.cpu().numpy(),self.opt)
-                print('epoch:'+str(self.epoch),' loss: '+str(round(epoch_loss/i,5)))
-                plot.draw_scatter(features, self.opt)
-        else:
-            recall,acc,sp,err,k  = statistics.report(confusion_mat)         
-            #plot.draw_heatmap(confusion_mat,self.opt,name = 'current_eval')
-            print('epoch:'+str(self.epoch),' macro-prec,reca,F1,err,kappa: '+str(statistics.report(confusion_mat)))
-            self.plot_result['F1'].append(statistics.report(confusion_mat)[2])
-            self.plot_result['err'].append(statistics.report(confusion_mat)[3])
+                plot.draw_scatter(self.features, self.opt)
+        else:     
+            print('epoch:'+str(self.epoch+1),' macro-prec,reca,F1,err,kappa: '+str(statistics.report(self.confusion_mat)))
+            self.add_class_acc_to_tensorboard('eval')
+            self.results['F1'].append(statistics.report(self.confusion_mat)[2])
+            self.results['err'].append(statistics.report(self.confusion_mat)[3])
         
-        self.plot_result['eval'].append(epoch_loss/(i+1)) 
+        self.opt.tensorboard_writer.add_scalars('fold'+str(self.fold+1)+'/loss', {'eval_loss':self.epoch_loss/(i+1)}, self.step)
         self.epoch +=1
-        self.confusion_mats.append(confusion_mat)
+        self.confusion_mats.append(self.confusion_mat)
 
-    def dann_train(self,signals,labels,src_sequences,dst_sequences,beta=1.0):
-        self.net.train()
-        self.test_flag = False
-        confusion_mat = np.zeros((self.opt.label,self.opt.label), dtype=int)
-        np.random.shuffle(src_sequences)
-        self.process_pool_init(signals, labels, src_sequences)
+    def train(self,signals,labels,sequences):
+        self.epoch_forward_init(signals,labels,sequences,True)
+        for i in range(self.epoch_iter_length):
+            signal,label,_ = self.queue.get()
+            self.step = float(i/self.epoch_iter_length + self.epoch)
+            self.optimizer.zero_grad()
+            signal,label = transforms.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
+            output,loss = self.forward(signal, label)
+            loss.backward()
+            self.optimizer.step()
+            self.opt.tensorboard_writer.add_scalars('fold'+str(self.fold+1)+'/loss', {'train_loss':loss.item()}, self.step)
+        self.add_class_acc_to_tensorboard('train')
 
-        epoch_closs = 0;epoch_dloss = 0
-        epoch_iter_length = np.ceil(len(src_sequences)/self.opt.batchsize).astype(np.int)
+    def dann_train(self,signals,labels,src_sequences,dst_sequences,beta=10,stable=False):
+        self.epoch_forward_init(signals,labels,src_sequences,True)
         dst_signals_len = len(dst_sequences)
-
-        for i in range(epoch_iter_length):
-            p = float(i + self.epoch * epoch_iter_length) / self.opt.epochs / epoch_iter_length
-            alpha = beta*(2. / (1. + np.exp(-10 * p)) - 1)
+        for i in range(self.epoch_iter_length):
+            self.step = float(i/self.epoch_iter_length + self.epoch)
+            p = self.step / self.opt.epochs
+            if stable:alpha = 1
+            else:alpha = 2. / (1. + np.exp(-10 * p)) - 1
             self.optimizer.zero_grad()
             s_signal,s_label,sequence = self.queue.get()
             this_batch_len = s_signal.shape[0]
@@ -240,37 +234,30 @@ class Core(object):
             d_domain = transforms.ToTensor(None,np.ones(this_batch_len, dtype=np.int64),gpu_id =self.opt.gpu_id)
             
             class_output, domain_output = self.net(s_signal, alpha=alpha)
+            self.add_label_to_confusion_mat(s_label,class_output,False)
             loss_s_label = self.loss_dann_c(class_output, s_label)
             loss_s_domain = self.loss_dann_d(domain_output, s_domain)
             _, domain_output = self.net(d_signal, alpha=alpha)
             loss_d_domain = self.loss_dann_d(domain_output, d_domain)
-            loss = loss_s_label+loss_s_domain+loss_d_domain
-            epoch_closs += loss_s_label.item()
+            loss = loss_s_label+beta*(loss_s_domain+loss_d_domain)
             loss.backward()
             self.optimizer.step()
-       
-        self.plot_result['train'].append(epoch_closs/(i+1))
-        if self.epoch%10 == 0:
-            plot.draw_loss(self.plot_result,self.epoch+(i+1)/(src_sequences.shape[0]/self.opt.batchsize),self.opt)
+
+            self.opt.tensorboard_writer.add_scalars('fold'+str(self.fold+1)+'/loss', {'src_label':loss_s_label.item(),
+                                                                            'src_domain':loss_s_domain.item(),
+                                                                            'dst_domain':loss_d_domain.item()}, self.step)
+        self.add_class_acc_to_tensorboard('train')
 
     def rd_train(self,signals,labels,sequences,alpha=1.0,beta=1.0):
-        self.net.train()
-        self.test_flag = False
-        features = []
-        epoch_loss = 0
-        confusion_mat = np.zeros((self.opt.label,self.opt.label), dtype=int)
-        
-        np.random.shuffle(sequences)
-        self.process_pool_init(signals, labels, sequences)
-
+        self.epoch_forward_init(signals,labels,sequences,True)
         # load domain
         domains = np.load(os.path.join(self.opt.dataset_dir,'domains.npy'))
         domains = dataloader.rebuild_domain(domains)
 
         for i in range(np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)):
-            self.optimizer.zero_grad()
-
             signal,label,sequence = self.queue.get()
+            self.step = float(i/self.epoch_iter_length + self.epoch)
+            self.optimizer.zero_grad()
             domain = transforms.batch_generator(None, domains, sequence)
             np.random.shuffle(sequence)
             conf_domain = transforms.batch_generator(None, domains, sequence)
@@ -280,15 +267,15 @@ class Core(object):
             conf_domain = transforms.ToTensor(None,conf_domain,gpu_id=self.opt.gpu_id)
 
             class_output, domain_output = self.net(signal)
+            self.add_label_to_confusion_mat(label,class_output,False)
             loss_c = self.loss_classifier(class_output,label)
             loss_td = self.loss_rd_true_domain(domain_output,domain)
             loss_cd = self.loss_rd_conf_domain(domain_output,conf_domain)
             loss = alpha*loss_c + beta*(loss_cd+loss_td)
-
-            epoch_loss += loss.item()     
             loss.backward()
             self.optimizer.step()
-       
-        self.plot_result['train'].append(epoch_loss/(i+1))
-        if self.epoch%10 == 0:
-            plot.draw_loss(self.plot_result,self.epoch+(i+1)/(sequences.shape[0]/self.opt.batchsize),self.opt)
+
+            self.opt.tensorboard_writer.add_scalars('fold'+str(self.fold+1)+'/loss', {'train':loss_c.item(),
+                                                                                    'confusion_domain':loss_cd.item(),
+                                                                                    'true_domain':loss_td.item()}, self.step)
+        self.add_class_acc_to_tensorboard('train')

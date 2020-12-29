@@ -2,6 +2,7 @@ import argparse
 import os
 import time
 import numpy as np
+from tensorboardX import SummaryWriter
 from . import util,dsp,plot
 
 import sys
@@ -24,6 +25,11 @@ class Options():
         self.parser.add_argument('--finesize', type=str, default='auto', help='crop your data into this size')
         self.parser.add_argument('--label_name', type=str, default='auto',help='name of labels,example:"a,b,c,d,e,f"')
         self.parser.add_argument('--mode', type=str, default='auto',help='classify_1d | classify_2d | autoencoder | domain')
+        self.parser.add_argument('--dataset_dir', type=str, default='./datasets/simple_test',help='your dataset path')
+        self.parser.add_argument('--save_dir', type=str, default='./checkpoints/',help='save checkpoints')
+        self.parser.add_argument('--tensorboard', type=str, default='./checkpoints/tensorboardX',help='tensorboardX log dir')
+        self.parser.add_argument('--tensorboard_writer', type=str, default='',help='Do not input anything')
+        self.parser.add_argument('--load_thread', type=int, default=8,help='how many threads when load data')  
         
         # ------------------------Preprocessing------------------------
         self.parser.add_argument('--normliaze', type=str, default='z-score', help='mode of normliaze, z-score | 5_95 | maxmin | None')      
@@ -79,9 +85,6 @@ class Options():
         self.parser.add_argument('--k_fold', type=int, default=0,help='fold_num of k-fold.If 0 or 1, no k-fold and cut 80% to train and other to eval')
         self.parser.add_argument('--fold_index', type=str, default='auto',
             help='auto | load | "input_your_index"-where to fold, eg. when 5-fold and input: [2,4,6,7] -> sub-set: dataset[0:2],dataset[2:4],dataset[4:6],dataset[6:7],dataset[7:]')
-        self.parser.add_argument('--dataset_dir', type=str, default='./datasets/simple_test',help='your dataset path')
-        self.parser.add_argument('--save_dir', type=str, default='./checkpoints/',help='save checkpoints')
-        self.parser.add_argument('--load_thread', type=int, default=8,help='how many threads when load data')  
         self.parser.add_argument('--mergelabel', type=str, default='None',
             help='merge some labels to one label and give the result, example:"[[0,1,4],[2,3,5]]" -> label(0,1,4) regard as 0,label(2,3,5) regard as 1')
         self.parser.add_argument('--mergelabel_name', type=str, default='None',help='name of labels,example:"a,b,c,d,e,f"')
@@ -201,10 +204,15 @@ class Options():
                 comment = '\t[default: %s]' % str(default)
             message += '{:>20}: {:<30}{}\n'.format(str(k), str(v), comment)
         message += '----------------- End -------------------'
-        localtime = time.asctime(time.localtime(time.time()))
+        localtime = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
         util.makedirs(self.opt.save_dir)
-        util.writelog(str(localtime)+'\n'+message, self.opt,True)
+        util.writelog(str(localtime)+'\n'+message+'\n', self.opt,True)
 
+        # start tensorboard
+        self.opt.tensorboard = os.path.join(self.opt.tensorboard,localtime+'_'+os.path.split(self.opt.save_dir)[1])
+        self.opt.tensorboard_writer = SummaryWriter(self.opt.tensorboard)
+        util.writelog('Please run "tensorboardx" and input "'+localtime+'" to filter outputs',self.opt,True)
+        self.opt.tensorboard_writer.add_text('Opt', message)
         return self.opt
 
 def str2list(string,out_type = 'string'):

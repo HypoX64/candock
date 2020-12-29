@@ -156,8 +156,9 @@ def draw_heatmap(mat,opt,name = 'train'):
     texts = annotate_heatmap(im,valfmt="{x:.1f}%")
 
     fig.tight_layout()
+    opt.tensorboard_writer.add_figure('confusion matrix',figure=fig)
     # plt.show()
-    plt.savefig(os.path.join(opt.save_dir,name+'_heatmap.png'))
+    # plt.savefig(os.path.join(opt.save_dir,name+'_heatmap.png'))
     plt.close('all')
 
 
@@ -286,47 +287,27 @@ def showscatter3d(data):
 
 def draw_eg_spectrums(spectrums,opt):
     if len(spectrums) > 1:
-        plt.subplots(figsize=(6.4*2,4.8*2))
+        fig, ax = plt.subplots(figsize=(6.4*2,4.8*2))
         for i in range(len(spectrums)):
             plt.subplot(len(spectrums)//2+1,2,i+1)
             plt.imshow(spectrums[i])
     else:
+        fig = plt.figure()
         plt.imshow(spectrums[0])
-    plt.savefig(os.path.join(opt.save_dir,'spectrum_eg.jpg'))
+    opt.tensorboard_writer.add_figure('spectrum_eg',figure=fig)
+    # plt.savefig(os.path.join(opt.save_dir,'spectrum_eg.jpg'))
     plt.close('all')
 
 def draw_eg_signals(signals,opt):
+    fig = plt.figure()
     if len(signals) > 1:
-        plt.subplots(figsize=(6.4*2,4.8*2))
+        fig, ax = plt.subplots(figsize=(6.4*2,4.8*2))
         for i in range(len(signals)):
             plt.subplot(len(signals)//2+1,2,i+1)
             plt.plot(signals[i])
     else:
+        fig = plt.figure()
         plt.plot(signals[0])
-    plt.savefig(os.path.join(opt.save_dir,'signal_eg.jpg'))
+    opt.tensorboard_writer.add_figure('signal_eg',figure=fig)
+    # plt.savefig(os.path.join(opt.save_dir,'signal_eg.jpg'))
     plt.close('all')
-
-
-def main():
-    data = np.load('../checkpoints/au/feature_scatter.npy')
-    show(data)
-
-    #heatmap test
-    '''
-    vegetables = ["cucumber", "tomato", "lettuce", "asparagus",
-              "potato", "wheat", "barley"]
-    farmers = ["Farmer Joe", "Upland Bros.", "Smith Gardening",
-           "Agrifun", "Organiculture", "BioGoods Ltd.", "Cornylee Corp."]
-
-    harvest = np.array([[0.8, 2.4, 2.5, 3.9, 0.0, 4.0, 0.0],
-                    [2.4, 0.0, 4.0, 1.0, 2.7, 0.0, 0.0],
-                    [1.1, 2.4, 0.8, 4.3, 1.9, 4.4, 0.0],
-                    [0.6, 0.0, 0.3, 0.0, 3.1, 0.0, 0.0],
-                    [0.7, 1.7, 0.6, 2.6, 2.2, 6.2, 0.0],
-                    [1.3, 1.2, 0.0, 0.0, 0.0, 3.2, 5.1],
-                    [0.1, 2.0, 0.0, 1.4, 0.0, 1.9, 6.3]])
-
-    draw(harvest,vegetables,farmers,name = 'train')
-    '''
-if __name__ == '__main__':
-    main()
