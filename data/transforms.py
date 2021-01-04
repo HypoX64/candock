@@ -90,5 +90,4 @@ def ToInputShape(opt,data,test_flag = False):
             for j in range(opt.input_nc):
                 result[i][j] = dsp.signal2spectrum(data[i][j],opt.stft_size,opt.stft_stride,
                     opt.cwt_wavename,opt.cwt_scale_num,opt.spectrum_n_downsample,not opt.stft_no_log, mod=opt.spectrum)
-
     return result

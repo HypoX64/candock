@@ -72,7 +72,7 @@ for fold in range(opt.k_fold):
             np.save(os.path.join(opt.save_dir,'confusion_mat.npy'), final_confusion_mat)
         else:
             fold_final_confusion_mat += final_confusion_mat
-            util.writelog('fold  -> macro-prec,reca,F1,err,kappa: '+str(statistics.report(final_confusion_mat)),opt,True,True)
+            util.writelog('fold  -> macro-prec,reca,F1,err,kappa: '+str(statistics.report(final_confusion_mat)),opt,True,False)
             util.writelog('confusion_mat:\n'+str(final_confusion_mat)+'\n',opt,True)
             plot.draw_heatmap(final_confusion_mat,opt,name = 'fold'+str(fold+1)+'_eval')
 

@@ -110,7 +110,7 @@ def loaddataset(opt):
     if opt.normliaze != 'None':
         for i in range(num):
             for j in range(ch):
-                signals[i][j] = arr.normliaze(signals[i][j], mode = opt.normliaze, truncated=0)
+                signals[i][j] = arr.normliaze(signals[i][j], mode = opt.normliaze, truncated=1e2)
     # filter
     if opt.filter != 'None':
         for i in range(num):

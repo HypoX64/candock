@@ -30,7 +30,7 @@ def pad(data,padding,mod='zero'):
             return pad(out_data,padding-length,mod='reflect')
 
 
-def normliaze(data, mode = 'z-score', sigma = 0, dtype=np.float32, truncated = 2):
+def normliaze(data, mode = 'z-score', sigma = 0, dtype=np.float32, truncated = 1e2):
     '''
     mode: norm | z-score | maxmin | 5_95
     dtype : np.float64,np.float16...
