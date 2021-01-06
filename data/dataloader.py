@@ -1,11 +1,12 @@
 import os
+import sys
 import time
 import random
+from multiprocessing import Process, Queue
 
 import scipy.io as sio
 import numpy as np
 
-import sys
 sys.path.append("..")
 from . import transforms,statistics
 from util import dsp
@@ -98,6 +99,32 @@ def rebuild_domain(domain):
         new_domain[i] = domain_map[domain[i]]
     return np.array(new_domain)  
 
+def preprocess(opt, signals, indexs, queue):
+    num,ch = signals.shape[:2]
+
+    for index in indexs:
+        signal = signals[index].copy()
+        # normliaze
+        if opt.normliaze != 'None':
+            for i in range(ch):
+                signal[i] = arr.normliaze(signal[i], mode = opt.normliaze, truncated=1e2)
+        # filter
+        if opt.filter != 'None':
+            for i in range(ch): 
+                if opt.filter == 'fft':
+                    signal[i] = dsp.fft_filter(signal[i], opt.filter_fs, opt.filter_fc,type = opt.filter_mod) 
+                elif opt.filter == 'iir':         
+                    signal[i] = dsp.bpf(signal[i], opt.filter_fs, opt.filter_fc[0], opt.filter_fc[1], numtaps=3, mode='iir')
+                elif opt.filter == 'fir':
+                    signal[i] = dsp.bpf(signal[i], opt.filter_fs, opt.filter_fc[0], opt.filter_fc[1], numtaps=101, mode='fir')
+        
+        # wave filter
+        if opt.wave != 'None':
+            for i in range(ch):
+                signal[i] = dsp.wave_filter(signal[i],opt.wave,opt.wave_level,opt.wave_usedcoeffs)
+        
+        queue.put([signal,index])
+
 #load all data in datasets
 def loaddataset(opt): 
     print('Loading dataset...')
@@ -105,37 +132,16 @@ def loaddataset(opt):
     signals = np.load(os.path.join(opt.dataset_dir,'signals.npy'))
     labels = np.load(os.path.join(opt.dataset_dir,'labels.npy'))
 
-    num,ch,size = signals.shape
-    # normliaze
-    if opt.normliaze != 'None':
-        for i in range(num):
-            for j in range(ch):
-                signals[i][j] = arr.normliaze(signals[i][j], mode = opt.normliaze, truncated=1e2)
-    # filter
-    if opt.filter != 'None':
-        for i in range(num):
-            for j in range(ch): 
-                if opt.filter == 'fft':
-                    signals[i][j] = dsp.fft_filter(signals[i][j], opt.filter_fs, opt.filter_fc,type = opt.filter_mod) 
-                elif opt.filter == 'iir':         
-                    signals[i][j] = dsp.bpf(signals[i][j], opt.filter_fs, opt.filter_fc[0], opt.filter_fc[1], numtaps=3, mode='iir')
-                elif opt.filter == 'fir':
-                    signals[i][j] = dsp.bpf(signals[i][j], opt.filter_fs, opt.filter_fc[0], opt.filter_fc[1], numtaps=101, mode='fir')
-    
-    # wave filter
-    if opt.wave != 'None':
-        for i in range(num):
-            for j in range(ch):
-                signals[i][j] = dsp.wave_filter(signals[i][j],opt.wave,opt.wave_level,opt.wave_usedcoeffs)
-    
-    # use fft to improve frequency domain information
-    if opt.augment_fft:
-        new_signals = np.zeros((num,ch*2,size), dtype=np.float32)
-        new_signals[:,:ch,:] = signals
-        for i in range(num):
-            for j in range(ch):
-                new_signals[i,ch+j,:] = dsp.fft(signals[i,j,:],half=False)
-        signals = new_signals
+    queue = Queue(opt.load_thread)
+    pre_thread_num = np.ceil(signals.shape[0]/opt.load_thread).astype(np.int)
+    indexs = np.linspace(0,signals.shape[0]-1,num=signals.shape[0],dtype=np.int64)
+    for i in range(opt.load_thread):
+        p = Process(target=preprocess,args=(opt,signals,indexs[i*pre_thread_num:(i+1)*pre_thread_num],queue))         
+        p.daemon = True
+        p.start()
+    for i in range(signals.shape[0]):
+        signal,index = queue.get()
+        signals[index] = signal
 
     if opt.fold_index == 'auto':
         transforms.shuffledata(signals,labels)

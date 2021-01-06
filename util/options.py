@@ -52,10 +52,6 @@ class Options():
         self.parser.add_argument('--augment', type=str, default='None', 
             help='all | scale,warp,app,aaft,iaaft,filp,spike,step,slope,white,pink,blue,brown,violet ,enter some of them')
         self.parser.add_argument('--augment_noise_lambda', type=float, default = 1.0, help='noise level(spike,step,slope,white,pink,blue,brown,violet)')
-        # fft channel --> use fft to improve frequency domain information.
-        self.parser.add_argument('--augment_fft', action='store_true', help='if specified, use fft to improve frequency domain informationa')
-        
-        # self.parser.add_argument('--augment_times', type=float, default=10, help='how many times that will be augmented')
 
         # for gan,it only support when fold_index = 1 or 0
         self.parser.add_argument('--gan', action='store_true', help='if specified, using gan to augmente dataset')
@@ -110,7 +106,7 @@ class Options():
         self.parser.add_argument('--stft_size', type=int, default=512, help='length of each fft segment')
         self.parser.add_argument('--stft_stride', type=int, default=128, help='stride of each fft segment')
         self.parser.add_argument('--stft_no_log', action='store_true', help='if specified, do not log1p spectrum')
-        self.parser.add_argument('--stft_shape', type=str, default='auto', help='shape of stft. It depend on \
+        self.parser.add_argument('--img_shape', type=str, default='auto', help='output shape of stft. It depend on \
             stft_size,stft_stride,stft_n_downsample. Do not input this parameter.')
 
         # ------------------------Training Matters------------------------
@@ -150,12 +146,12 @@ class Options():
             if self.opt.model_name in ['lstm', 'cnn_1d', 'resnet18_1d', 'resnet34_1d', 
                 'multi_scale_resnet_1d','micro_multi_scale_resnet_1d','mlp']:
                 self.opt.mode = 'classify_1d'
-            elif self.opt.model_name in ['dfcnn', 'multi_scale_resnet', 'resnet18', 'resnet50',
+            elif self.opt.model_name in ['light','dfcnn', 'multi_scale_resnet', 'resnet18', 'resnet50',
                 'resnet101','densenet121', 'densenet201', 'squeezenet', 'mobilenet','EarID','MV_Emotion']:
                 self.opt.mode = 'classify_2d'
             elif self.opt.model_name == 'autoencoder':
                 self.opt.mode = 'autoencoder'
-            elif self.opt.model_name in ['dann','dann_mobilenet','rd_mobilenet']:
+            elif self.opt.model_name in ['dann','dann_base','rd_mobilenet']:
                 self.opt.mode = 'domain'
             else:
                 print('\033[1;31m'+'Error: do not support this network '+self.opt.model_name+'\033[0m')
@@ -228,7 +224,6 @@ def str2list(string,out_type = 'string'):
             out_list.append(float(string))
     return out_list
 
-
 def get_auto_options(opt,signals,labels):
     
     shape = signals.shape
@@ -276,7 +271,7 @@ def get_auto_options(opt,signals,labels):
             sys.exit(0)
 
     # check stft spectrum
-    if opt.mode in ['classify_2d','domain']:
+    if opt.mode in ['classify_2d','domain'] and signals.ndim == 3:
         spectrums = []
         data = signals[np.random.randint(0,shape[0]-1)].reshape(1,shape[1],shape[2])
         data = augmenter.base1d(opt, data, test_flag=False)[0]
@@ -285,14 +280,19 @@ def get_auto_options(opt,signals,labels):
             spectrums.append(dsp.signal2spectrum(data[i],opt.stft_size,opt.stft_stride,
                 opt.cwt_wavename,opt.cwt_scale_num,opt.spectrum_n_downsample,not opt.stft_no_log, mod = opt.spectrum))
         plot.draw_eg_spectrums(spectrums,opt)
-        opt.stft_shape = spectrums[0].shape
-        h,w = opt.stft_shape
-        print('Shape of stft spectrum h,w:',opt.stft_shape)
+        opt.img_shape = spectrums[0].shape
+        h,w = opt.img_shape
+        print('Shape of stft spectrum h,w:',opt.img_shape)
         print('\033[1;37m'+'Please cheek ./save_dir/spectrum_eg.jpg to change parameters'+'\033[0m')
         
         if h<64 or w<64:
             print('\033[1;33m'+'Warning: spectrum is too small'+'\033[0m') 
         if h>512 or w>512:
             print('\033[1;33m'+'Warning: spectrum is too large'+'\033[0m')
+    
+    if signals.ndim == 4:
+        opt.img_shape = signals.shape[2],signals.shape[3]
+        img = signals[np.random.randint(0,shape[0]-1)]
+        opt.tensorboard_writer.add_image('img_eg',img)
 
     return opt

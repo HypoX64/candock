@@ -51,13 +51,13 @@ for fold in range(opt.k_fold):
 
         if opt.mode in ['classify_1d','classify_2d','autoencoder']: 
             core.train(signals,labels,train_sequences[fold])
-        elif opt.model_name == 'dann_mobilenet':
+        elif opt.model_name in ['dann','dann_base']:
             core.dann_train(signals,labels,train_sequences[fold],eval_sequences[fold])
         elif opt.model_name == 'rd_mobilenet':
             core.rd_train(signals,labels,train_sequences[fold])
             
         core.eval(signals,labels,eval_sequences[fold])
-        core.save()
+        core.epoch_save()
         core.check_remain_time()
 
         if opt.eval_detail:

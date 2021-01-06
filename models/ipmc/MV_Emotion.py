@@ -8,14 +8,25 @@ from torch import nn
 import torchvision
 
 import sys
-from ..net_2d import mobilenet
+from ..net_2d import mobilenet,resnet,densenet
 
 class BaseEncoder(nn.Module):
-    def __init__(self, input_nc):
+    def __init__(self, input_nc, encoder='resnet18'):
         super(BaseEncoder, self).__init__()
 
-        self.net = mobilenet.mobilenet_v2(pretrained=True)
-        self.net.features[0][0] = nn.Conv2d(input_nc, 32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+        if encoder == 'resnet18':
+            self.net = resnet.resnet18(pretrained=True)
+            self.net.conv1 = nn.Conv2d(input_nc, 64, 7, 2, 3, bias=False)
+        elif encoder == 'mobilenet':
+            self.net = mobilenet.mobilenet_v2(pretrained=True)
+            self.net.features[0][0] = nn.Conv2d(input_nc, 32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+        elif encoder == 'densenet37':
+            self.net = densenet.DenseNet(num_init_features=64, growth_rate=32, block_config=(3, 4, 6, 3))
+            self.net.features.conv0 = nn.Conv2d(input_nc, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        elif encoder == 'densenet121':
+            self.net = densenet.DenseNet(num_init_features=64, growth_rate=32, block_config=(6, 12, 24, 16))
+            self.net.features.conv0 = nn.Conv2d(input_nc, 64, kernel_size=7, stride=2, padding=3, bias=False)
+
         self.net = torch.nn.Sequential(*(list(self.net.children())[:-1]))
 
     def forward(self, x):
@@ -40,18 +51,26 @@ class SEweight(nn.Module):
         return x
 
 class MV_Emotion(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, encoder = 'densenet121'):
         super(MV_Emotion, self).__init__()
-        self.MicHeart  = BaseEncoder(1)
-        self.MicBreath = BaseEncoder(2)
-        self.PPGHeart  = BaseEncoder(2)
-        self.SEweight1 = SEweight(1280)
-        self.SEweight2 = SEweight(1280)
-        self.SEweight3 = SEweight(1280)
+        if encoder == 'resnet18':
+            self.feature_num = 512
+        elif encoder == 'mobilenet':
+            self.feature_num = 1280
+        elif encoder == 'densenet37':
+            self.feature_num = 244
+        elif encoder == 'densenet121':
+            self.feature_num = 1024
+        self.MicHeart  = BaseEncoder(1,encoder)
+        self.MicBreath = BaseEncoder(2,encoder)
+        self.PPGHeart  = BaseEncoder(2,encoder)
+        self.SEweight1 = SEweight(self.feature_num)
+        self.SEweight2 = SEweight(self.feature_num)
+        self.SEweight3 = SEweight(self.feature_num)
 
         self.classifier = nn.Sequential(
             nn.Dropout(0.2),
-            nn.Linear(1280*3, num_classes),
+            nn.Linear(self.feature_num*3, num_classes),
         )
 
     def forward(self, x):
@@ -60,9 +79,9 @@ class MV_Emotion(nn.Module):
         x_part2 = self.MicBreath((x[:,1:3,:,:].view(x.size(0),2,x.size(2),x.size(3))))
         x_part3 = self.PPGHeart((x[:,3:5,:,:].view(x.size(0),2,x.size(2),x.size(3))))
 
-        x_part1 = x_part1 + x_part1 * self.SEweight1(x_part1)
-        x_part2 = x_part2 + x_part2 * self.SEweight2(x_part2)
-        x_part3 = x_part3 + x_part3 * self.SEweight3(x_part3)
+        x_part1 = x_part1 * self.SEweight1(x_part1)
+        x_part2 = x_part2 * self.SEweight2(x_part2)
+        x_part3 = x_part3 * self.SEweight3(x_part3)
 
         x = torch.cat([x_part1,x_part2,x_part3],dim=1)
         x = self.classifier(x)

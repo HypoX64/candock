@@ -1,5 +1,4 @@
 '''
-clone from https://github.com/fungtion/DANN
 @inproceedings{ganin2015unsupervised,
   title={Unsupervised domain adaptation by backpropagation},
   author={Ganin, Yaroslav and Lempitsky, Victor},
@@ -9,49 +8,88 @@ clone from https://github.com/fungtion/DANN
   organization={PMLR}
 }
 '''
-import torch.nn as nn
+import torch
+from torch import nn
 from .functions import ReverseLayerF
+from ..net_2d import mobilenet,lightcnn
+from ..ipmc import MV_Emotion
 
+class Encoder(nn.Module):
+    def __init__(self, input_nc):
+        super(Encoder, self).__init__()
 
-class DANNBase(nn.Module):
+        self.net = lightcnn.LightCNN(input_nc)
 
+        # self.net = mobilenet.mobilenet_v2(pretrained=True)
+        # self.net.features[0][0] = nn.Conv2d(input_nc, 32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+
+        # self.net = densenet.densenet121(pretrained=False,num_classes = 1000)
+        # self.net.features.conv0 = nn.Conv2d(input_nc, 64, kernel_size=7, stride=2, padding=3, bias=False) 
+        
+        self.net = torch.nn.Sequential(*(list(self.net.children())[:-1]))
+
+    def forward(self, x):
+        x = self.net(x)
+        x = nn.functional.adaptive_avg_pool2d(x, 1).reshape(x.shape[0], -1)
+        # print(x.size())
+        return x
+
+class ClassClassifier(nn.Module):
+    def __init__(self,output_nc):
+        super(ClassClassifier, self).__init__()
+        self.fc1 = nn.Sequential(
+            nn.Linear(128, 100),
+            nn.BatchNorm1d(100),
+            nn.ReLU(inplace=True),
+            )
+        self.fc2 = nn.Sequential(
+            nn.Linear(100, 100),
+            nn.BatchNorm1d(100),
+            nn.ReLU(inplace=True),
+            )
+        self.fc3 = nn.Sequential(
+            nn.Dropout(0.2),
+            nn.Linear(100, output_nc),
+            nn.LogSoftmax(),
+            )
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.fc2(x)
+        x = self.fc3(x)
+        return x
+
+class DomainClassifier(nn.Module):
     def __init__(self):
-        super(DANNBase, self).__init__()
-        self.feature = nn.Sequential()
-        self.feature.add_module('f_conv1', nn.Conv2d(3, 64, kernel_size=5))
-        self.feature.add_module('f_bn1', nn.BatchNorm2d(64))
-        self.feature.add_module('f_pool1', nn.MaxPool2d(2))
-        self.feature.add_module('f_relu1', nn.ReLU(True))
-        self.feature.add_module('f_conv2', nn.Conv2d(64, 50, kernel_size=5))
-        self.feature.add_module('f_bn2', nn.BatchNorm2d(50))
-        self.feature.add_module('f_drop1', nn.Dropout2d())
-        self.feature.add_module('f_pool2', nn.MaxPool2d(2))
-        self.feature.add_module('f_relu2', nn.ReLU(True))
+        super(DomainClassifier, self).__init__()
+        self.fc1 = nn.Sequential(
+            nn.Linear(128, 100),
+            nn.BatchNorm1d(100),
+            nn.ReLU(inplace=True),
+            )
+        self.fc2 = nn.Sequential(
+            nn.Linear(100, 2),
+            nn.LogSoftmax(dim=1),
+            )
 
-        self.class_classifier = nn.Sequential()
-        self.class_classifier.add_module('c_fc1', nn.Linear(50 * 4 * 4, 100))
-        self.class_classifier.add_module('c_bn1', nn.BatchNorm1d(100))
-        self.class_classifier.add_module('c_relu1', nn.ReLU(True))
-        self.class_classifier.add_module('c_drop1', nn.Dropout2d())
-        self.class_classifier.add_module('c_fc2', nn.Linear(100, 100))
-        self.class_classifier.add_module('c_bn2', nn.BatchNorm1d(100))
-        self.class_classifier.add_module('c_relu2', nn.ReLU(True))
-        self.class_classifier.add_module('c_fc3', nn.Linear(100, 10))
-        self.class_classifier.add_module('c_softmax', nn.LogSoftmax())
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.fc2(x)
+        return x
 
-        self.domain_classifier = nn.Sequential()
-        self.domain_classifier.add_module('d_fc1', nn.Linear(50 * 4 * 4, 100))
-        self.domain_classifier.add_module('d_bn1', nn.BatchNorm1d(100))
-        self.domain_classifier.add_module('d_relu1', nn.ReLU(True))
-        self.domain_classifier.add_module('d_fc2', nn.Linear(100, 2))
-        self.domain_classifier.add_module('d_softmax', nn.LogSoftmax(dim=1))
+class DANN(nn.Module):
+    def __init__(self,input_nc,output_nc):
+        super(DANN, self).__init__()
+        self.encoder = Encoder(input_nc)
+        self.class_classifier = ClassClassifier(output_nc)
+        self.domain_classifier = DomainClassifier()
 
-    def forward(self, input_data, alpha):
-        input_data = input_data.expand(input_data.data.shape[0], 3, 28, 28)
-        feature = self.feature(input_data)
-        feature = feature.view(-1, 50 * 4 * 4)
-        reverse_feature = ReverseLayerF.apply(feature, alpha)
+    def forward(self, x, alpha):
+        
+        feature = self.encoder(x)
+        feature_reverse = ReverseLayerF.apply(feature, alpha)
+
         class_output = self.class_classifier(feature)
-        domain_output = self.domain_classifier(reverse_feature)
+        domain_output = self.domain_classifier(feature_reverse)
 
         return class_output, domain_output

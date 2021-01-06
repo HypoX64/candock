@@ -49,7 +49,10 @@ def batch_generator(data,target,sequence,shuffle = True):
             out_target[i] = target[sequence[i]]
         return out_target
     else:
-        out_data = np.zeros((batchsize,data.shape[1],data.shape[2]), data.dtype)
+        if data.ndim == 3:
+            out_data = np.zeros((batchsize,data.shape[1],data.shape[2]), data.dtype)
+        elif data.ndim == 4:
+            out_data = np.zeros((batchsize,data.shape[1],data.shape[2],data.shape[3]), data.dtype)
         out_target = np.zeros((batchsize), target.dtype)
         for i in range(batchsize):
             out_data[i] = data[sequence[i]]
@@ -82,12 +85,15 @@ def ToInputShape(opt,data,test_flag = False):
         result = augmenter.base1d(opt, data, test_flag = test_flag).astype(np.float32)
 
     elif opt.mode in ['classify_2d','domain']:
-        _batchsize,_ch,_size = data.shape
-        h,w = opt.stft_shape
-        data = augmenter.base1d(opt, data, test_flag = test_flag)
-        result = np.zeros((_batchsize,_ch,h,w), dtype=np.float32)
-        for i in range(_batchsize):
-            for j in range(opt.input_nc):
-                result[i][j] = dsp.signal2spectrum(data[i][j],opt.stft_size,opt.stft_stride,
-                    opt.cwt_wavename,opt.cwt_scale_num,opt.spectrum_n_downsample,not opt.stft_no_log, mod=opt.spectrum)
+        if data.ndim == 3:
+            _batchsize,_ch,_size = data.shape
+            h,w = opt.img_shape
+            data = augmenter.base1d(opt, data, test_flag = test_flag)
+            result = np.zeros((_batchsize,_ch,h,w), dtype=np.float32)
+            for i in range(_batchsize):
+                for j in range(opt.input_nc):
+                    result[i][j] = dsp.signal2spectrum(data[i][j],opt.stft_size,opt.stft_stride,
+                        opt.cwt_wavename,opt.cwt_scale_num,opt.spectrum_n_downsample,not opt.stft_no_log, mod=opt.spectrum)
+        else:
+            result = data            
     return result
