@@ -4,16 +4,18 @@ import torch.nn.functional as F
 
 class LightCNN(nn.Module): 
 
-    def __init__(self, input_nc=3, num_classes=10 ):
+    def __init__(self, input_nc=3, num_classes=10):
         super(LightCNN, self).__init__()
         self.cnn = nn.Sequential(
-            nn.Conv2d(input_nc, 64, kernel_size=5, stride=2),
+            nn.Conv2d(input_nc, 64, kernel_size=5),
             nn.BatchNorm2d(64),
+            nn.MaxPool2d(2),
             nn.ReLU(inplace=True),
             
-            nn.Conv2d(64, 128, kernel_size=5, stride=2),
+            nn.Conv2d(64, 128, kernel_size=5),
             nn.BatchNorm2d(128),
             nn.Dropout2d(),
+            nn.MaxPool2d(2),
             nn.ReLU(inplace=True)
         )
 

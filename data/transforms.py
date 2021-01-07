@@ -27,7 +27,10 @@ def k_fold_generator(length,fold_num,fold_index = 'auto'):
         eval_sequence.append(sequence[fold_index[1]:])
     else:
         if fold_index != 'auto' :
-            fold_index = [0]+fold_index+[length]
+            if fold_index[0] != 0:
+                fold_index = [0]+fold_index
+            if fold_index[-1] != length:
+                fold_index = fold_index+[length]
         else:
             fold_index = []
             for i in range(fold_num):

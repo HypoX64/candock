@@ -216,12 +216,13 @@ def str2list(string,out_type = 'string'):
     string = string.replace(' ','').replace('[','').replace(']','')
     strings = string.split(',')
     for string in strings:
-        if out_type == 'string':
-            out_list.append(string)
-        elif out_type == 'int':
-            out_list.append(int(string))
-        elif out_type == 'float':
-            out_list.append(float(string))
+        if string != '':
+            if out_type == 'string':
+                out_list.append(string)
+            elif out_type == 'int':
+                out_list.append(int(string))
+            elif out_type == 'float':
+                out_list.append(float(string))
     return out_list
 
 def get_auto_options(opt,signals,labels):

@@ -153,6 +153,8 @@ class Core(object):
         self.epoch_loss = 0
         self.confusion_mat = np.zeros((self.opt.label,self.opt.label), dtype=int)
         np.random.shuffle(sequences)
+        if len(sequences)%self.opt.batchsize==1:# drop_last=True when last batchsize =1
+            sequences = sequences[:self.opt.batchsize*(len(sequences)%self.opt.batchsize)]
         self.load_pool_init(signals, labels, sequences)
         self.epoch_iter_length = np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)
     

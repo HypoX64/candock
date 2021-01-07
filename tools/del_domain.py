@@ -14,19 +14,22 @@ opt.parser.add_argument('--keeps',type=str,default='', help='which domains you w
 opt.parser.add_argument('--foldbydomain',action='store_true', help='if specified, generate new fold index by domain, else 5-fold.')
 opt = opt.getparse()
 opt.dels = options.str2list(opt.dels,out_type='int')
+opt.keeps = options.str2list(opt.keeps,out_type='int')
 
 signals = np.load(os.path.join(opt.dataset_dir,'signals.npy'))
+print(signals.shape)
 labels = np.load(os.path.join(opt.dataset_dir,'labels.npy'))
+print(labels.shape)
 domains = np.load(os.path.join(opt.dataset_dir,'domains.npy'))
 datas = [signals,labels,domains]
 
 # del domain
 del_indexs = []
-if opt.keeps == '':
+if opt.keeps == []:
     for i in range(len(domains)):
         if domains[i] in opt.dels:
             del_indexs.append(i)
-if opt.dels == '':
+if opt.dels == []:
     for i in range(len(domains)):
         if domains[i] not in opt.keeps:
             del_indexs.append(i)
@@ -46,7 +49,7 @@ print('statistics:',domain_cnt,domain_num)
 fold_indexs = []
 fold_index = 0
 if opt.foldbydomain:
-    for i in range(domain_num):
+    for i in range(domain_num-1):
         fold_index += domain_cnt[i]
         fold_indexs.append(fold_index)
     print('new index:',fold_indexs)
@@ -58,6 +61,7 @@ else:
             fold_indexs.append(fold_index)
     print('new index:',fold_indexs)
 
+print(signals.shape)
 np.save(os.path.join(opt.save_dir,'signals.npy'), signals)
 np.save(os.path.join(opt.save_dir,'labels.npy'), labels)
 np.save(os.path.join(opt.save_dir,'domains.npy'), domains)
