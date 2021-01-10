@@ -18,7 +18,7 @@ def creatnet(opt):
 
     #---------------------------------domain---------------------------------
     elif name == 'dann':
-        net = dann.DANN(opt.input_nc,opt.label)
+        net = dann.DANN(opt.input_nc,opt.label,opt.domain_num)
     elif name == 'dann_base':
         net = dann_base.DANNBase()
     elif name == 'rd_mobilenet':

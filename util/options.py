@@ -19,20 +19,32 @@ class Options():
         self.parser.add_argument('--gpu_id', type=str, default='0',help='choose which gpu want to use, Single GPU: 0 | 1 | 2 ; Multi-GPU: 0,1,2,3 ; No GPU: -1')        
         self.parser.add_argument('--no_cudnn', action='store_true', help='if specified, do not use cudnn')
         self.parser.add_argument('--label', type=str, default='auto',help='number of labels')
-        self.parser.add_argument('--domain_num', type=str, default='auto',help='number of domain')
         self.parser.add_argument('--input_nc', type=str, default='auto', help='of input channels')
         self.parser.add_argument('--loadsize', type=str, default='auto', help='load data in this size')
         self.parser.add_argument('--finesize', type=str, default='auto', help='crop your data into this size')
         self.parser.add_argument('--label_name', type=str, default='auto',help='name of labels,example:"a,b,c,d,e,f"')
         self.parser.add_argument('--mode', type=str, default='auto',help='classify_1d | classify_2d | autoencoder | domain')
+        self.parser.add_argument('--domain_num', type=str, default='2',
+            help='number of domain, only available when mode==domain. 2 | auto ,if input 2, train-data is domain 0,test-data is domain 1.')
         self.parser.add_argument('--dataset_dir', type=str, default='./datasets/simple_test',help='your dataset path')
         self.parser.add_argument('--save_dir', type=str, default='./checkpoints/',help='save checkpoints')
         self.parser.add_argument('--tensorboard', type=str, default='./checkpoints/tensorboardX',help='tensorboardX log dir')
-        self.parser.add_argument('--tensorboard_writer', type=str, default='',help='Do not input anything')
-        self.parser.add_argument('--load_thread', type=int, default=8,help='how many threads when load data')  
-        
+          
+        # ------------------------Training Matters------------------------
+        self.parser.add_argument('--epochs', type=int, default=20,help='end epoch')
+        self.parser.add_argument('--lr', type=float, default=0.001,help='learning rate') 
+        self.parser.add_argument('--batchsize', type=int, default=64,help='batchsize')
+        self.parser.add_argument('--load_thread', type=int, default=8,help='how many threads when load data')
+        self.parser.add_argument('--best_index', type=str, default='f1',help='select which evaluation index to get the best results in all epochs, f1 | err')
+        self.parser.add_argument('--pretrained', type=str, default='',help='pretrained model path. If not specified, fo not use pretrained model')
+        self.parser.add_argument('--continue_train', action='store_true', help='if specified, continue train')
+        self.parser.add_argument('--weight_mod', type=str, default='auto',help='Choose weight mode: auto | normal')
+        self.parser.add_argument('--network_save_freq', type=int, default=5,help='the freq to save network')
+        self.parser.add_argument('--eval_detail', action='store_true', 
+            help='if specified, save detailed eval result information to pre_labels.npy and sequences.npy')
+
         # ------------------------Preprocessing------------------------
-        self.parser.add_argument('--normliaze', type=str, default='z-score', help='mode of normliaze, z-score | 5_95 | maxmin | None')      
+        self.parser.add_argument('--normliaze', type=str, default='None', help='mode of normliaze, z-score | 5_95 | maxmin | None')      
         # filter
         self.parser.add_argument('--filter', type=str, default='None', help='type of filter, fft | fir | iir |None')
         self.parser.add_argument('--filter_mod', type=str, default='bandpass', help='mode of fft_filter, bandpass | bandstop')
@@ -109,17 +121,6 @@ class Options():
         self.parser.add_argument('--img_shape', type=str, default='auto', help='output shape of stft. It depend on \
             stft_size,stft_stride,stft_n_downsample. Do not input this parameter.')
 
-        # ------------------------Training Matters------------------------
-        self.parser.add_argument('--pretrained', type=str, default='',help='pretrained model path. If not specified, fo not use pretrained model')
-        self.parser.add_argument('--continue_train', action='store_true', help='if specified, continue train')
-        self.parser.add_argument('--lr', type=float, default=0.001,help='learning rate') 
-        self.parser.add_argument('--batchsize', type=int, default=64,help='batchsize')
-        self.parser.add_argument('--weight_mod', type=str, default='auto',help='Choose weight mode: auto | normal')
-        self.parser.add_argument('--epochs', type=int, default=20,help='end epoch')
-        self.parser.add_argument('--network_save_freq', type=int, default=5,help='the freq to save network')
-        self.parser.add_argument('--eval_detail', action='store_true', 
-            help='if specified, save detailed eval result information to pre_labels.npy and sequences.npy')
-
         self.initialized = True
 
     def getparse(self):
@@ -159,7 +160,6 @@ class Options():
 
         if self.opt.k_fold == 0 :
             self.opt.k_fold = 1
-
 
         if self.opt.fold_index == 'auto':
             if os.path.isfile(os.path.join(self.opt.dataset_dir,'index.npy')):
@@ -206,9 +206,10 @@ class Options():
 
         # start tensorboard
         self.opt.tensorboard = os.path.join(self.opt.tensorboard,localtime+'_'+os.path.split(self.opt.save_dir)[1])
-        self.opt.tensorboard_writer = SummaryWriter(self.opt.tensorboard)
+        writer = SummaryWriter(self.opt.tensorboard)
         util.writelog('Please run "tensorboardx" and input "'+localtime+'" to filter outputs',self.opt,True)
-        self.opt.tensorboard_writer.add_text('Opt', message)
+        writer.add_text('Opt', message)
+        writer.close()
         return self.opt
 
 def str2list(string,out_type = 'string'):
@@ -262,14 +263,16 @@ def get_auto_options(opt,signals,labels):
 
     # domain_num
     if opt.mode == 'domain':
-        if os.path.isfile(os.path.join(opt.dataset_dir,'domains.npy')):
-            if opt.domain_num == 'auto':
+        if opt.domain_num == '2':
+            opt.domain_num = 2
+        else:
+            if os.path.isfile(os.path.join(opt.dataset_dir,'domains.npy')):
                 domains = np.load(os.path.join(opt.dataset_dir,'domains.npy'))
                 domains = dataloader.rebuild_domain(domains)
                 opt.domain_num = statistics.label_statistics(domains)[2]
-        else:
-            print('Please generate domains.npy(np.int64, shape like labels.npy)')
-            sys.exit(0)
+            else:
+                print('Please generate domains.npy(np.int64, shape like labels.npy)')
+                sys.exit(0)
 
     # check stft spectrum
     if opt.mode in ['classify_2d','domain'] and signals.ndim == 3:
@@ -294,6 +297,8 @@ def get_auto_options(opt,signals,labels):
     if signals.ndim == 4:
         opt.img_shape = signals.shape[2],signals.shape[3]
         img = signals[np.random.randint(0,shape[0]-1)]
-        opt.tensorboard_writer.add_image('img_eg',img)
+        writer = SummaryWriter(opt.tensorboard)   
+        writer.add_image('img_eg',img)
+        writer.close()
 
     return opt

@@ -73,7 +73,7 @@ class ClassClassifier(nn.Module):
         return x
 
 class DomainClassifier(nn.Module):
-    def __init__(self,feature_num):
+    def __init__(self,feature_num,domain_num):
         super(DomainClassifier, self).__init__()
         self.fc1 = nn.Sequential(
             nn.Linear(feature_num, 100),
@@ -81,7 +81,7 @@ class DomainClassifier(nn.Module):
             nn.ReLU(inplace=True),
             )
         self.fc2 = nn.Sequential(
-            nn.Linear(100, 2),
+            nn.Linear(100, domain_num),
             nn.LogSoftmax(dim=1),
             )
 
@@ -91,7 +91,7 @@ class DomainClassifier(nn.Module):
         return x
 
 class DANN(nn.Module):
-    def __init__(self,input_nc,output_nc,encoder='resnet18',avg_pool=False):
+    def __init__(self,input_nc,output_nc,domain_num,encoder='resnet18',avg_pool=False):
         super(DANN, self).__init__()
         if encoder == 'light':
             if avg_pool:
@@ -114,7 +114,7 @@ class DANN(nn.Module):
             self.feature_num = 1024
         self.encoder = Encoder(input_nc,encoder,avg_pool)
         self.class_classifier = ClassClassifier(output_nc,self.feature_num)
-        self.domain_classifier = DomainClassifier(self.feature_num)
+        self.domain_classifier = DomainClassifier(self.feature_num,domain_num)
 
     def forward(self, x, alpha):
         

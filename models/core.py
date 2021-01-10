@@ -47,9 +47,11 @@ class Core(object):
         # save stack init
         self.step = 0
         self.epoch = 0
+        self.procs = []
         self.features = []
         self.results = {'F1':[],'err':[]}
         self.confusion_mats = []
+        self.writer = SummaryWriter(self.opt.tensorboard)   
 
         if printflag:
             #util.writelog('network:\n'+str(self.net),self.opt,True)
@@ -101,7 +103,7 @@ class Core(object):
         if (self.fold == 0 and self.epoch > 1) or self.fold != 0:
             v = (self.fold*self.opt.epochs+self.epoch-1)/(time.time()-self.start_time)
             remain = (self.opt.k_fold*self.opt.epochs-(self.fold*self.opt.epochs+self.epoch))/v
-            self.opt.tensorboard_writer.add_scalar('RemainTime',remain/3600,self.fold*self.opt.epochs+self.epoch)
+            self.writer.add_scalar('RemainTime',remain/3600,self.fold*self.opt.epochs+self.epoch)
 
     def preprocess(self,signals, labels, sequences, queue):
         for i in range(np.ceil(len(sequences)/self.opt.batchsize).astype(np.int)):
@@ -110,17 +112,18 @@ class Core(object):
             queue.put([signal,label,sequences[i*self.opt.batchsize:(i+1)*self.opt.batchsize]])
 
     def start_process(self,signals,labels,sequences,queue):
-        p = Process(target=self.preprocess,args=(signals,labels,sequences,queue))         
+        p = Process(target=self.preprocess,args=(signals,labels,sequences,queue))
+        self.procs.append(p)
         p.daemon = True
         p.start()
     
     def load_pool_init(self,signals,labels,sequences):
-        self.queue = Queue(self.opt.load_thread*2)
+        self.queue = Queue(self.opt.load_thread)
         self.load_thread = self.opt.load_thread
         process_batch_num = len(sequences)/self.opt.batchsize/self.load_thread
         if process_batch_num < 1:
             if self.epoch == 0:
-                self.load_thread = len(sequences)//self.opt.batchsize
+                self.load_thread = np.clip(len(sequences)//self.opt.batchsize,1,256)
                 process_batch_num = len(sequences)/self.opt.batchsize/self.load_thread
                 print('\033[1;33m'+'Warning: too much load thread, try : '+str(self.load_thread)+'\033[0m') 
         for i in range(self.load_thread):
@@ -128,6 +131,13 @@ class Core(object):
                 self.start_process(signals,labels,sequences[int(i*process_batch_num)*self.opt.batchsize:int((i+1)*process_batch_num)*self.opt.batchsize],self.queue)
             else:
                 self.start_process(signals,labels,sequences[int(i*process_batch_num)*self.opt.batchsize:],self.queue)
+    
+    def terminate_all(self):
+        for p in self.procs:
+            if p.is_alive():
+                p.terminate()
+            p.join()
+        self.procs = []
 
     def add_label_to_confusion_mat(self,true_labels, pre_labels, save_to_detail=False):
         pre_labels = (torch.max(pre_labels, 1)[1]).data.cpu().numpy()
@@ -138,8 +148,8 @@ class Core(object):
                 self.eval_detail[2].append(pre_labels[x])
     
     def add_class_acc_to_tensorboard(self,tag):
-        self.opt.tensorboard_writer.add_scalars('fold'+str(self.fold+1)+'/F1', {tag:statistics.report(self.confusion_mat)[2]}, self.step)
-        self.opt.tensorboard_writer.add_scalars('fold'+str(self.fold+1)+'/Top1.err', {tag:statistics.report(self.confusion_mat)[3]}, self.step)
+        self.writer.add_scalars('fold'+str(self.fold+1)+'/F1', {tag:statistics.report(self.confusion_mat)[2]}, self.step)
+        self.writer.add_scalars('fold'+str(self.fold+1)+'/Top1.err', {tag:statistics.report(self.confusion_mat)[3]}, self.step)
         
     def epoch_forward_init(self,signals,labels,sequences,istrain=True):
         if istrain:
@@ -201,7 +211,8 @@ class Core(object):
             self.results['F1'].append(statistics.report(self.confusion_mat)[2])
             self.results['err'].append(statistics.report(self.confusion_mat)[3])
         
-        self.opt.tensorboard_writer.add_scalars('fold'+str(self.fold+1)+'/loss', {'eval_loss':self.epoch_loss/(i+1)}, self.step)
+        self.terminate_all()  
+        self.writer.add_scalars('fold'+str(self.fold+1)+'/loss', {'eval_loss':self.epoch_loss/(i+1)}, self.step)
         self.epoch +=1
         self.confusion_mats.append(self.confusion_mat)
 
@@ -213,9 +224,10 @@ class Core(object):
             self.optimizer.zero_grad()
             signal,label = transforms.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
             output,loss = self.forward(signal, label)
-            self.opt.tensorboard_writer.add_scalars('fold'+str(self.fold+1)+'/loss', {'train_loss':loss.item()}, self.step)
+            self.writer.add_scalars('fold'+str(self.fold+1)+'/loss', {'train_loss':loss.item()}, self.step)
             loss.backward()
             self.optimizer.step()
+        self.terminate_all()
         self.add_class_acc_to_tensorboard('train')
 
     def domain_random_loader_init(self,signals,labels,sequences,queue):
@@ -232,6 +244,9 @@ class Core(object):
         dst_signals_len = len(dst_sequences)
         domain_queue = Queue(self.opt.load_thread)
         self.domain_random_loader_init(signals,labels,dst_sequences,domain_queue)
+        domains = np.load(os.path.join(self.opt.dataset_dir,'domains.npy'))
+        domains = dataloader.rebuild_domain(domains)
+
         for i in range(self.epoch_iter_length):
             self.step = float(i/self.epoch_iter_length + self.epoch)
             p = self.step / self.opt.epochs
@@ -239,15 +254,23 @@ class Core(object):
             else:alpha = beta * (2. / (1. + np.exp(-10 * p)) - 1)
             self.optimizer.zero_grad()
             # src
-            s_signal,s_label,_ = self.queue.get()
+            s_signal,s_label,sequence = self.queue.get()
             this_batch_len = s_signal.shape[0]
             s_signal,s_label = transforms.ToTensor(s_signal,s_label,gpu_id =self.opt.gpu_id)
-            s_domain = transforms.ToTensor(None,np.zeros(this_batch_len, dtype=np.int64),gpu_id =self.opt.gpu_id)
+            if self.opt.domain_num == 2:
+                s_domain = transforms.ToTensor(None,np.zeros(this_batch_len, dtype=np.int64),gpu_id =self.opt.gpu_id)
+            else:
+                s_domain = transforms.batch_generator(None, domains, sequence)
+                s_domain = transforms.ToTensor(None,s_domain,gpu_id =self.opt.gpu_id)
             # dst
-            d_signal,_,_ = domain_queue.get()
+            d_signal,_,sequence = domain_queue.get()
             d_signal = transforms.ToTensor(d_signal[:this_batch_len],None,gpu_id =self.opt.gpu_id)
-            d_domain = transforms.ToTensor(None,np.ones(this_batch_len, dtype=np.int64),gpu_id =self.opt.gpu_id)
-            
+            if self.opt.domain_num == 2:
+                d_domain = transforms.ToTensor(None,np.ones(this_batch_len, dtype=np.int64),gpu_id =self.opt.gpu_id)
+            else:          
+                d_domain = transforms.batch_generator(None, domains, sequence[:this_batch_len])
+                d_domain = transforms.ToTensor(None,d_domain,gpu_id=self.opt.gpu_id)
+           
             class_output, domain_output = self.net(s_signal, alpha=alpha)
             self.add_label_to_confusion_mat(s_label,class_output,False)
             loss_s_label = self.loss_dann_c(class_output, s_label)
@@ -255,7 +278,7 @@ class Core(object):
             _, domain_output = self.net(d_signal, alpha=alpha)
             loss_d_domain = self.loss_dann_d(domain_output, d_domain)
             loss = loss_s_label+loss_s_domain+loss_d_domain
-            self.opt.tensorboard_writer.add_scalars('fold'+str(self.fold+1)+'/loss', {'src_label':loss_s_label.item(),
+            self.writer.add_scalars('fold'+str(self.fold+1)+'/loss', {'src_label':loss_s_label.item(),
                                                                 'src_domain':loss_s_domain.item(),
                                                                 'dst_domain':loss_d_domain.item()}, self.step)
             loss.backward()
@@ -286,7 +309,7 @@ class Core(object):
             loss_c = self.loss_classifier(class_output,label)
             loss_td = self.loss_rd_true_domain(domain_output,domain)
             loss_cd = self.loss_rd_conf_domain(domain_output,conf_domain)
-            self.opt.tensorboard_writer.add_scalars('fold'+str(self.fold+1)+'/loss', {'train':loss_c.item(),
+            self.writer.add_scalars('fold'+str(self.fold+1)+'/loss', {'train':loss_c.item(),
                                                                                     'confusion_domain':loss_cd.item(),
                                                                                     'true_domain':loss_td.item()}, self.step)
             loss = alpha*loss_c + beta*(loss_cd+loss_td)

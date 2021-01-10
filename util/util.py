@@ -2,6 +2,7 @@ import os
 import string
 import random
 import shutil
+from tensorboardX import SummaryWriter
 
 def randomstr(num):
     return ''.join(random.sample(string.ascii_letters + string.digits, num))
@@ -12,7 +13,9 @@ def writelog(log,opt,printflag = False, tensorboard = False):
     if printflag:
         print(log)
     if tensorboard:
-        opt.tensorboard_writer.add_text('Log', log)
+        writer = SummaryWriter(opt.tensorboard)   
+        writer.add_text('Log', log)
+        writer.close()
 
 def makedirs(path):
     if os.path.isdir(path):

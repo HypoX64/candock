@@ -61,11 +61,15 @@ for fold in range(opt.k_fold):
         core.check_remain_time()
 
         if opt.eval_detail:
-            for i in range(3):eval_detail[i] += core.eval_detail[i]           
+            for i in range(3):eval_detail[i] += core.eval_detail[i]
+    core.writer.close()
+
     #save result
     if opt.mode != 'autoencoder':
-        pos = core.results['F1'].index(max(core.results['F1']))
-        # pos = core.results['err'].index(min(core.results['err']))
+        if opt.best_index =='f1':
+            pos = core.results['F1'].index(max(core.results['F1']))
+        elif opt.best_index =='err':
+            pos = core.results['err'].index(min(core.results['err']))
         final_confusion_mat = core.confusion_mats[pos]
         if opt.k_fold==1:
             statistics.statistics(final_confusion_mat, opt, 'final', 'final_eval')

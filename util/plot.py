@@ -4,6 +4,7 @@ import matplotlib
 # matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from tensorboardX import SummaryWriter
 
 colors= ['blue','orange','green','red','purple','brown','pink','gray','olive','cyan']
 markers = ['o','^','.',',','v','<','>','1','2','3','4','s','p','*','h','H','+','x','D','d','|','_']
@@ -156,7 +157,10 @@ def draw_heatmap(mat,opt,name = 'train'):
     texts = annotate_heatmap(im,valfmt="{x:.1f}%")
 
     fig.tight_layout()
-    opt.tensorboard_writer.add_figure('confusion matrix',figure=fig)
+    writer = SummaryWriter(opt.tensorboard)
+    writer.add_figure('confusion matrix',figure=fig)
+    writer.close()
+
     # plt.show()
     # plt.savefig(os.path.join(opt.save_dir,name+'_heatmap.png'))
     plt.close('all')
@@ -294,7 +298,9 @@ def draw_eg_spectrums(spectrums,opt):
     else:
         fig = plt.figure()
         plt.imshow(spectrums[0])
-    opt.tensorboard_writer.add_figure('spectrum_eg',figure=fig)
+    writer = SummaryWriter(opt.tensorboard)
+    writer.add_figure('spectrum_eg',figure=fig)
+    writer.close()
     # plt.savefig(os.path.join(opt.save_dir,'spectrum_eg.jpg'))
     plt.close('all')
 
@@ -308,6 +314,9 @@ def draw_eg_signals(signals,opt):
     else:
         fig = plt.figure()
         plt.plot(signals[0])
-    opt.tensorboard_writer.add_figure('signal_eg',figure=fig)
+
+    writer = SummaryWriter(opt.tensorboard)
+    writer.add_figure('signal_eg',figure=fig)
+    writer.close()
     # plt.savefig(os.path.join(opt.save_dir,'signal_eg.jpg'))
     plt.close('all')
