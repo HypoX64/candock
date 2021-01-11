@@ -53,8 +53,6 @@ for fold in range(opt.k_fold):
             core.train(signals,labels,train_sequences[fold])
         elif opt.model_name in ['dann','dann_base']:
             core.dann_train(signals,labels,train_sequences[fold],eval_sequences[fold])
-        elif opt.model_name == 'rd_mobilenet':
-            core.rd_train(signals,labels,train_sequences[fold])
             
         core.eval(signals,labels,eval_sequences[fold])
         core.epoch_save()
@@ -62,8 +60,6 @@ for fold in range(opt.k_fold):
 
         if opt.eval_detail:
             for i in range(3):eval_detail[i] += core.eval_detail[i]
-    core.writer.close()
-
     #save result
     if opt.mode != 'autoencoder':
         if opt.best_index =='f1':
@@ -78,7 +74,7 @@ for fold in range(opt.k_fold):
             fold_final_confusion_mat += final_confusion_mat
             util.writelog('fold  -> macro-prec,reca,F1,err,kappa: '+str(statistics.report(final_confusion_mat)),opt,True,False)
             util.writelog('confusion_mat:\n'+str(final_confusion_mat)+'\n',opt,True)
-            plot.draw_heatmap(final_confusion_mat,opt,name = 'fold'+str(fold+1)+'_eval')
+            # plot.draw_heatmap(final_confusion_mat,opt,name = 'fold'+str(fold+1)+'_eval',step=fold)
 
 if opt.eval_detail:
     statistics.eval_detail(opt,eval_detail)

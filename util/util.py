@@ -13,9 +13,7 @@ def writelog(log,opt,printflag = False, tensorboard = False):
     if printflag:
         print(log)
     if tensorboard:
-        writer = SummaryWriter(opt.tensorboard)   
-        writer.add_text('Log', log)
-        writer.close()
+        opt.TBGlobalWriter.add_text('Log', log)
 
 def makedirs(path):
     if os.path.isdir(path):

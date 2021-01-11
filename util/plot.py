@@ -136,7 +136,7 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
     return texts
 
 
-def draw_heatmap(mat,opt,name = 'train'):
+def draw_heatmap(mat,opt,name = 'train',step=0):
     if 'merge' in name:
         label_name = opt.mergelabel_name
     else:
@@ -157,9 +157,7 @@ def draw_heatmap(mat,opt,name = 'train'):
     texts = annotate_heatmap(im,valfmt="{x:.1f}%")
 
     fig.tight_layout()
-    writer = SummaryWriter(opt.tensorboard)
-    writer.add_figure('confusion matrix',figure=fig)
-    writer.close()
+    opt.TBGlobalWriter.add_figure('confusion matrix', figure=fig, global_step=step )
 
     # plt.show()
     # plt.savefig(os.path.join(opt.save_dir,name+'_heatmap.png'))
@@ -298,9 +296,7 @@ def draw_eg_spectrums(spectrums,opt):
     else:
         fig = plt.figure()
         plt.imshow(spectrums[0])
-    writer = SummaryWriter(opt.tensorboard)
-    writer.add_figure('spectrum_eg',figure=fig)
-    writer.close()
+    opt.TBGlobalWriter.add_figure('spectrum_eg',figure=fig)
     # plt.savefig(os.path.join(opt.save_dir,'spectrum_eg.jpg'))
     plt.close('all')
 
@@ -315,8 +311,7 @@ def draw_eg_signals(signals,opt):
         fig = plt.figure()
         plt.plot(signals[0])
 
-    writer = SummaryWriter(opt.tensorboard)
-    writer.add_figure('signal_eg',figure=fig)
-    writer.close()
-    # plt.savefig(os.path.join(opt.save_dir,'signal_eg.jpg'))
+    opt.TBGlobalWriter.add_figure('signal_eg',figure=fig)
+
+    plt.savefig(os.path.join(opt.save_dir,'signal_eg.jpg'))
     plt.close('all')

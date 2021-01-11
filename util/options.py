@@ -29,6 +29,7 @@ class Options():
         self.parser.add_argument('--dataset_dir', type=str, default='./datasets/simple_test',help='your dataset path')
         self.parser.add_argument('--save_dir', type=str, default='./checkpoints/',help='save checkpoints')
         self.parser.add_argument('--tensorboard', type=str, default='./checkpoints/tensorboardX',help='tensorboardX log dir')
+        self.parser.add_argument('--TBGlobalWriter', type=str, default='',help='')
           
         # ------------------------Training Matters------------------------
         self.parser.add_argument('--epochs', type=int, default=20,help='end epoch')
@@ -130,7 +131,6 @@ class Options():
 
         if self.opt.gpu_id != '-1':
             os.environ["CUDA_VISIBLE_DEVICES"] = str(self.opt.gpu_id)
-        # os.environ['CUDA_VISIBLE_DEVICES'] = '0,3'
 
         if self.opt.label != 'auto':
             self.opt.label = int(self.opt.label)
@@ -152,7 +152,7 @@ class Options():
                 self.opt.mode = 'classify_2d'
             elif self.opt.model_name == 'autoencoder':
                 self.opt.mode = 'autoencoder'
-            elif self.opt.model_name in ['dann','dann_base','rd_mobilenet']:
+            elif self.opt.model_name in ['dann','dann_base']:
                 self.opt.mode = 'domain'
             else:
                 print('\033[1;31m'+'Error: do not support this network '+self.opt.model_name+'\033[0m')
@@ -206,10 +206,10 @@ class Options():
 
         # start tensorboard
         self.opt.tensorboard = os.path.join(self.opt.tensorboard,localtime+'_'+os.path.split(self.opt.save_dir)[1])
-        writer = SummaryWriter(self.opt.tensorboard)
-        util.writelog('Please run "tensorboardx" and input "'+localtime+'" to filter outputs',self.opt,True)
-        writer.add_text('Opt', message)
-        writer.close()
+        self.opt.TBGlobalWriter = SummaryWriter(self.opt.tensorboard)
+        util.writelog('Please run "tensorboard --logdir checkpoints/tensorboardX --host=your_server_ip" and input "'+localtime+'" to filter outputs',self.opt,True)
+        self.opt.TBGlobalWriter.add_text('Opt', message)
+        
         return self.opt
 
 def str2list(string,out_type = 'string'):
@@ -287,7 +287,7 @@ def get_auto_options(opt,signals,labels):
         opt.img_shape = spectrums[0].shape
         h,w = opt.img_shape
         print('Shape of stft spectrum h,w:',opt.img_shape)
-        print('\033[1;37m'+'Please cheek ./save_dir/spectrum_eg.jpg to change parameters'+'\033[0m')
+        print('\033[1;37m'+'Please cheek tensorboard->IMAGES->spectrum_eg to change parameters'+'\033[0m')
         
         if h<64 or w<64:
             print('\033[1;33m'+'Warning: spectrum is too small'+'\033[0m') 
@@ -297,8 +297,6 @@ def get_auto_options(opt,signals,labels):
     if signals.ndim == 4:
         opt.img_shape = signals.shape[2],signals.shape[3]
         img = signals[np.random.randint(0,shape[0]-1)]
-        writer = SummaryWriter(opt.tensorboard)   
-        writer.add_image('img_eg',img)
-        writer.close()
+        opt.TBGlobalWriter.add_image('img_eg',img)
 
     return opt
