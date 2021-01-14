@@ -91,7 +91,7 @@ class DomainClassifier(nn.Module):
         return x
 
 class DANN(nn.Module):
-    def __init__(self,input_nc,output_nc,domain_num,encoder='resnet18',avg_pool=False):
+    def __init__(self,input_nc,output_nc,domain_num,encoder='densenet121',avg_pool=False):
         super(DANN, self).__init__()
         if encoder == 'light':
             if avg_pool:
@@ -111,7 +111,10 @@ class DANN(nn.Module):
         elif encoder == 'densenet37':
             self.feature_num = 244
         elif encoder == 'densenet121':
-            self.feature_num = 1024
+            if avg_pool:
+                self.feature_num = 1024
+            else:
+                self.feature_num = 1024*48 # only for 257*251
         self.encoder = Encoder(input_nc,encoder,avg_pool)
         self.class_classifier = ClassClassifier(output_nc,self.feature_num)
         self.domain_classifier = DomainClassifier(self.feature_num,domain_num)
@@ -119,9 +122,7 @@ class DANN(nn.Module):
     def forward(self, x, alpha):
         
         feature = self.encoder(x)
-        # print(feature.shape)
         feature_reverse = ReverseLayerF.apply(feature, alpha)
-
         class_output = self.class_classifier(feature)
         domain_output = self.domain_classifier(feature_reverse)
 

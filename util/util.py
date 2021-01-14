@@ -2,6 +2,7 @@ import os
 import string
 import random
 import shutil
+import json
 from tensorboardX import SummaryWriter
 
 def randomstr(num):
@@ -13,6 +14,7 @@ def writelog(log,opt,printflag = False, tensorboard = False):
     if printflag:
         print(log)
     if tensorboard:
+        log = log.replace('\n', '  \n')
         opt.TBGlobalWriter.add_text('Log', log)
 
 def makedirs(path):
@@ -43,6 +45,12 @@ def savefile(file,path):
     wf = open(path,'wb')
     wf.write(file)
     wf.close()
+
+def savejson(path,data_dict):
+    json_str = json.dumps(data_dict)
+    f = open(path,'w+')
+    f.write(json_str)
+    f.close()
 
 def copyfile(src,dst):
     try:

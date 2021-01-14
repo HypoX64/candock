@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import sys
+import torch
 sys.path.append("..")
 
 from util import plot,util
@@ -113,43 +114,86 @@ def flatten_list(inputlist):
             result.append(head)
     return result
 
-def eval_detail(opt,detail):
-    #detail : [sequences, ture_labels, pre_labels]
-    sequences = np.array(flatten_list(detail[0]))
-    ture_labels = np.array(flatten_list(detail[1]))
-    pre_labels = np.array(detail[2])
+def save_detail_results(opt,results):
+    '''
+    results:{
+        0:{                                    #dict,index->fold
+            'F1':[0.1,0.2...],                 #list,index->epoch
+            'err':[0.9,0.8...],                #list,index->epoch
+            'loss':[1.1,1.0...],               #list,index->epoch
+            'confusion_mat':[
+                [[1204  133  763  280]
+                 [ 464  150  477  152]
+                 [ 768   66 1276  308]
+                 [ 159   23  293 2145]],
+                 [[2505  251 1322  667]
+                 [1010  283  834  353]
+                 [1476  174 2448  766]
+                 [ 376   46  446 4365]],
+                 ......
+            ],                                 #list,index->epoch
+            'eval_detail':[                    #list,index->epoch
+                {
+                    'sequences':[],
+                    'ture_labels':[],
+                    'pre_labels':[]
+                },
+                {
+                    'sequences':[],
+                    'ture_labels':[],
+                    'pre_labels':[]
+                }
+                ...
+            ], 
+            'best_epoch':0                     #int
+        }
+        1:{
 
-    # save detail
-    util.makedirs(os.path.join(opt.save_dir,'eval_detail'))
-    np.save(os.path.join(opt.save_dir,'eval_detail','sequences.npy'),sequences)
-    np.save(os.path.join(opt.save_dir,'eval_detail','ture_labels.npy'),ture_labels)
-    np.save(os.path.join(opt.save_dir,'eval_detail','pre_labels.npy'),pre_labels)
+        ...
+
+        }
+    }
+    '''
+
+    torch.save(results, os.path.join(opt.save_dir,'results.pth'))
+    util.writelog('All eval results has saved. Read "./docs/how_to_load_results.md" before load it.', opt, True)
 
     # statistic by domain
     if os.path.isfile(os.path.join(opt.dataset_dir,'domains.npy')):
-        domainUids = np.load(os.path.join(opt.dataset_dir,'domains.npy'))
-        domain_dict = {}
-        for i in range(len(sequences)):
-            Uid = str(domainUids[sequences[i]])
-            if Uid not in domain_dict:
-                domain_dict[Uid] = {}
-                domain_dict[Uid]['ture'] = []
-                domain_dict[Uid]['pred'] = []
+        sequences = []; ture_labels = []; pre_labels = []
+        for fold in results:
+            sequences.append(results[fold]['eval_detail'][results[fold]['best_epoch']]['sequences'])
+            ture_labels.append(results[fold]['eval_detail'][results[fold]['best_epoch']]['ture_labels'])
+            pre_labels.append(results[fold]['eval_detail'][results[fold]['best_epoch']]['pre_labels'])
 
-            domain_dict[Uid]['ture'].append(ture_labels[i])
-            domain_dict[Uid]['pred'].append(pre_labels[i])
+        sequences = np.array(flatten_list(sequences))
+        ture_labels = np.array(flatten_list(ture_labels))
+        pre_labels = np.array(flatten_list(pre_labels))
         
-        domain_stat = []
-        for Uid in domain_dict:
-            domain_dict[Uid]['Acc'] = 1-report(predtrue2mat(domain_dict[Uid]['ture'],domain_dict[Uid]['pred'],opt.label))[3]
-            domain_stat.append([int(Uid),domain_dict[Uid]['Acc']])
-        domain_stat = np.array(domain_stat)
-        domain_stat = domain_stat[np.argsort(domain_stat[:,1])][::-1]
-        domain_stat_txt = 'Domain,Acc(%)\n'
-        for i in range(len(domain_stat)):
-            domain_stat_txt += ('%03d' % domain_stat[i,0] + ',' +'%.2f' % (100*domain_stat[i,1]) + '\n')
-        util.savetxt(domain_stat_txt, os.path.join(opt.save_dir,'eval_detail','domain_statistic.csv'))
+        if os.path.isfile(os.path.join(opt.dataset_dir,'domains.npy')):
+            domainUids = np.load(os.path.join(opt.dataset_dir,'domains.npy'))
+            domain_dict = {}
+            for i in range(len(sequences)):
+                Uid = str(domainUids[sequences[i]])
+                if Uid not in domain_dict:
+                    domain_dict[Uid] = {}
+                    domain_dict[Uid]['ture'] = []
+                    domain_dict[Uid]['pred'] = []
 
+                domain_dict[Uid]['ture'].append(ture_labels[i])
+                domain_dict[Uid]['pred'].append(pre_labels[i])
+            
+            domain_stat = []
+            for Uid in domain_dict:
+                domain_dict[Uid]['Acc'] = 1-report(predtrue2mat(domain_dict[Uid]['ture'],domain_dict[Uid]['pred'],opt.label))[3]
+                domain_stat.append([int(Uid),domain_dict[Uid]['Acc']])
+            domain_stat = np.array(domain_stat)
+            domain_stat = domain_stat[np.argsort(domain_stat[:,1])][::-1]
+            domain_stat_txt = 'Domain,Acc(%)\n'
+            for i in range(len(domain_stat)):
+                domain_stat_txt += ('%03d' % domain_stat[i,0] + ',' +'%.2f' % (100*domain_stat[i,1]) + '\n')
+            util.savetxt(domain_stat_txt, os.path.join(opt.save_dir,'domain_statistic.csv'))
+            opt.TBGlobalWriter.add_text('DomainStatistic', domain_stat_txt.replace('\n', '  \n'))
 
 def statistics(mat,opt,logname,heatmapname):
     util.writelog('------------------------------ '+logname+' result ------------------------------',opt,True)

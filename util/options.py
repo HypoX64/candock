@@ -41,8 +41,6 @@ class Options():
         self.parser.add_argument('--continue_train', action='store_true', help='if specified, continue train')
         self.parser.add_argument('--weight_mod', type=str, default='auto',help='Choose weight mode: auto | normal')
         self.parser.add_argument('--network_save_freq', type=int, default=5,help='the freq to save network')
-        self.parser.add_argument('--eval_detail', action='store_true', 
-            help='if specified, save detailed eval result information to pre_labels.npy and sequences.npy')
 
         # ------------------------Preprocessing------------------------
         self.parser.add_argument('--normliaze', type=str, default='None', help='mode of normliaze, z-score | 5_95 | maxmin | None')      
@@ -208,7 +206,7 @@ class Options():
         self.opt.tensorboard = os.path.join(self.opt.tensorboard,localtime+'_'+os.path.split(self.opt.save_dir)[1])
         self.opt.TBGlobalWriter = SummaryWriter(self.opt.tensorboard)
         util.writelog('Please run "tensorboard --logdir checkpoints/tensorboardX --host=your_server_ip" and input "'+localtime+'" to filter outputs',self.opt,True)
-        self.opt.TBGlobalWriter.add_text('Opt', message)
+        self.opt.TBGlobalWriter.add_text('Opt', message.replace('\n', '  \n'))
         
         return self.opt
 

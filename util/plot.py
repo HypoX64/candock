@@ -315,3 +315,21 @@ def draw_eg_signals(signals,opt):
 
     plt.savefig(os.path.join(opt.save_dir,'signal_eg.jpg'))
     plt.close('all')
+
+
+#---------------------------------plot final evaluation on tensorboard---------------------------------
+def final(opt,results):
+    f1 = []; err = []; loss = []
+    for fold in results:
+        f1.append(results[fold]['F1'])
+        err.append(results[fold]['err'])
+        loss.append(results[fold]['loss'])
+
+    f1 = np.mean(np.array(f1),axis=0)
+    err = np.mean(np.array(err),axis=0)
+    loss = np.mean(np.array(loss),axis=0)
+
+    for epoch in range(opt.epochs):
+        opt.TBGlobalWriter.add_scalars('final'+'/F1', {'eval':f1[epoch]}, epoch)
+        opt.TBGlobalWriter.add_scalars('final'+'/Top1.err', {'eval':err[epoch]}, epoch)
+        opt.TBGlobalWriter.add_scalars('final'+'/loss', {'loss':loss[epoch]}, epoch)

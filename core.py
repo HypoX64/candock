@@ -11,10 +11,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 import sys
-sys.path.append("..")
 from util import util,plot,options
 from data import augmenter,transforms,dataloader,statistics
-from . import creatnet
+from models import creatnet
 
 def show_paramsnumber(net,opt):
     parameters = sum(param.numel() for param in net.parameters())
@@ -47,8 +46,7 @@ class Core(object):
         self.epoch = 0
         self.procs = []
         self.features = []
-        self.results = {'F1':[],'err':[]}
-        self.confusion_mats = []
+        self.results = {'F1':[],'err':[],'loss':[],'confusion_mat':[],'eval_detail':[],'best_epoch':0}
 
         if printflag:
             #util.writelog('network:\n'+str(self.net),self.opt,True)
@@ -96,7 +94,7 @@ class Core(object):
         if self.fold == 0 and self.epoch == 1:
             self.start_time = time.time()
         if self.fold == 0 and self.epoch == 2:
-            util.writelog('>>pre epoch cost time : '+str(round(time.time()-self.start_time,2))+'s',self.opt,True,True)
+            util.writelog('-> pre epoch cost time : '+str(round(time.time()-self.start_time,2))+'s',self.opt,True,True)
         if (self.fold == 0 and self.epoch > 1) or self.fold != 0:
             v = (self.fold*self.opt.epochs+self.epoch-1)/(time.time()-self.start_time)
             remain = (self.opt.k_fold*self.opt.epochs-(self.fold*self.opt.epochs+self.epoch))/v
@@ -142,7 +140,7 @@ class Core(object):
         for x in range(len(pre_labels)):
             self.confusion_mat[true_labels[x]][pre_labels[x]] += 1
             if save_to_detail and self.test_flag:
-                self.eval_detail[2].append(pre_labels[x])
+                self.eval_detail['pre_labels'].append(pre_labels[x])
     
     def add_class_acc_to_tensorboard(self,tag):
         self.opt.TBGlobalWriter.add_scalars('fold'+str(self.fold+1)+'/F1', {tag:statistics.report(self.confusion_mat)[2]}, self.step)
@@ -155,7 +153,7 @@ class Core(object):
         else:
             # self.net.eval()
             self.test_flag = True
-        self.eval_detail = [[],[],[]] # sequences, ture_labels, pre_labels
+        self.eval_detail = {'sequences':[],'ture_labels':[],'pre_labels':[]} # sequences, ture_labels, pre_labels
         self.features = []
         self.epoch_loss = 0
         self.confusion_mat = np.zeros((self.opt.label,self.opt.label), dtype=int)
@@ -188,8 +186,8 @@ class Core(object):
         self.epoch_forward_init(signals,labels,sequences,False)
         for i in range(self.epoch_iter_length):
             signal,label,sequence = self.queue.get()
-            self.eval_detail[0].append(list(sequence))
-            self.eval_detail[1].append(list(label))
+            self.eval_detail['sequences'].append(list(sequence))
+            self.eval_detail['ture_labels'].append(list(label))
             signal,label = transforms.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
             with torch.no_grad():
                 output,loss = self.forward(signal, label)
@@ -199,17 +197,24 @@ class Core(object):
             if (self.epoch+1)%10 == 0:
                 plot.draw_autoencoder_result(signal.data.cpu().numpy(), output.data.cpu().numpy(),self.opt)
                 plot.draw_scatter(self.features, self.opt)
-        else:     
+        else:
+            prec,reca,f1,err,kappa = statistics.report(self.confusion_mat)
             print('epoch:'+str(self.epoch+1),' macro-prec,reca,F1,err,kappa: '+str(statistics.report(self.confusion_mat)))
             self.add_class_acc_to_tensorboard('eval')
-            self.results['F1'].append(statistics.report(self.confusion_mat)[2])
-            self.results['err'].append(statistics.report(self.confusion_mat)[3])
+            self.results['F1'].append(f1)
+            self.results['err'].append(err)
+            self.results['confusion_mat'].append(self.confusion_mat)
+            self.results['loss'].append(self.epoch_loss/(i+1))
+            self.results['eval_detail'].append(self.eval_detail)
+            if self.opt.best_index == 'f1':
+                if f1 >= max(self.results['F1']):self.results['best_epoch'] = self.epoch
+            elif self.opt.best_index == 'err':
+                if err <= max(self.results['err']):self.results['best_epoch'] = self.epoch
         
         self.load_poll_terminate()  
         self.opt.TBGlobalWriter.add_scalars('fold'+str(self.fold+1)+'/loss', {'eval_loss':self.epoch_loss/(i+1)}, self.step)
         self.epoch +=1
-        self.confusion_mats.append(self.confusion_mat)
-
+        
     def train(self,signals,labels,sequences):
         self.epoch_forward_init(signals,labels,sequences,True)
         for i in range(self.epoch_iter_length):
