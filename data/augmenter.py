@@ -22,7 +22,7 @@ from util import array_operation as arr
 from . import transforms,dataloader,statistics,surrogates,noise
 
 from models.net_1d.gan import Generator,Discriminator,GANloss,weights_init_normal
-from models.core import show_paramsnumber
+from core import show_paramsnumber
 
 def dcgan(opt,signals,labels):
     print('Augment dataset using gan...')
