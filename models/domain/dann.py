@@ -114,7 +114,8 @@ class DANN(nn.Module):
             if avg_pool:
                 self.feature_num = 1024
             else:
-                self.feature_num = 1024*48 # only for 257*251
+                self.feature_num = 1024*7*8 # only for 257*251
+                #self.feature_num = 1024*4*8 # only for 257*126
         self.encoder = Encoder(input_nc,encoder,avg_pool)
         self.class_classifier = ClassClassifier(output_nc,self.feature_num)
         self.domain_classifier = DomainClassifier(self.feature_num,domain_num)

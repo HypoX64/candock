@@ -19,7 +19,7 @@ class Options():
         self.parser.add_argument('--gpu_id', type=str, default='0',help='choose which gpu want to use, Single GPU: 0 | 1 | 2 ; Multi-GPU: 0,1,2,3 ; No GPU: -1')        
         self.parser.add_argument('--no_cudnn', action='store_true', help='if specified, do not use cudnn')
         self.parser.add_argument('--label', type=str, default='auto',help='number of labels')
-        self.parser.add_argument('--input_nc', type=str, default='auto', help='of input channels')
+        self.parser.add_argument('--input_nc', type=str, default='auto', help='number of input channels')
         self.parser.add_argument('--loadsize', type=str, default='auto', help='load data in this size')
         self.parser.add_argument('--finesize', type=str, default='auto', help='crop your data into this size')
         self.parser.add_argument('--label_name', type=str, default='auto',help='name of labels,example:"a,b,c,d,e,f"')

@@ -209,7 +209,7 @@ class Core(object):
             if self.opt.best_index == 'f1':
                 if f1 >= max(self.results['F1']):self.results['best_epoch'] = self.epoch
             elif self.opt.best_index == 'err':
-                if err <= max(self.results['err']):self.results['best_epoch'] = self.epoch
+                if err <= min(self.results['err']):self.results['best_epoch'] = self.epoch
         
         self.load_poll_terminate()  
         self.opt.TBGlobalWriter.add_scalars('fold'+str(self.fold+1)+'/loss', {'eval_loss':self.epoch_loss/(i+1)}, self.step)
