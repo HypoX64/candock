@@ -91,7 +91,7 @@ class DomainClassifier(nn.Module):
         return x
 
 class DANN(nn.Module):
-    def __init__(self,input_nc,output_nc,domain_num,encoder='densenet121',avg_pool=False):
+    def __init__(self,input_nc,output_nc,domain_num,encoder='resnet18',avg_pool=False):
         super(DANN, self).__init__()
         if encoder == 'light':
             if avg_pool:

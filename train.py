@@ -65,7 +65,7 @@ for fold in range(opt.k_fold):
         fold_best_confusion_mat = core.results['confusion_mat'][core.results['best_epoch']]
         final_confusion_mat += fold_best_confusion_mat
         if opt.k_fold != 1:
-            util.writelog('fold'+str(fold)+' -> macro-prec,reca,F1,err,kappa: '+str(statistics.report(fold_best_confusion_mat)),opt,True,True)
+            util.writelog('fold'+str(fold+1)+' -> macro-prec,reca,F1,err,kappa: '+str(statistics.report(fold_best_confusion_mat)),opt,True,True)
             util.writelog('confusion_mat:\n'+str(fold_best_confusion_mat)+'\n',opt,True,False)
 
 if opt.mode != 'autoencoder':

@@ -244,7 +244,7 @@ def get_auto_options(opt,signals,labels):
     if opt.weight_mod == 'auto':
         opt.weight = 1/label_cnt_per
         opt.weight = opt.weight/np.min(opt.weight)
-    util.writelog('Loss_weight:'+str(opt.weight),opt,True)
+        util.writelog('Loss_weight:'+str(opt.weight),opt,True,True)
     import torch
     opt.weight = torch.from_numpy(opt.weight).float()
     if opt.gpu_id != '-1':      
