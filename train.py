@@ -73,7 +73,7 @@ if opt.mode != 'autoencoder':
     np.save(os.path.join(opt.save_dir,'confusion_mat.npy'), final_confusion_mat)
     statistics.save_detail_results(opt, final_results)
         
-    if opt.mergelabel:
+    if opt.mergelabel != 'None':
         mat = statistics.mergemat(final_confusion_mat, opt.mergelabel)
         statistics.statistics(mat, opt, 'merge', 'mergelabel_final')
 

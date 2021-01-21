@@ -123,112 +123,134 @@ def dcgan(opt,signals,labels):
     # return signals,labels
     return out_signals,out_labels
 
-def base1d(opt,data,test_flag):
+def base1d(opt,signal,warp_lambda=None,warp_pos_lambda=None,crop_lambda=None,random_list=None):
+    if warp_lambda is None or warp_pos_lambda is None or crop_lambda is None or random_list is None:
+        warp_lambda = np.clip(np.random.normal(1, 0.1),0.8,1.2)
+        warp_pos_lambda = np.sort(np.random.random(2))
+        crop_lambda = np.random.random()
+        random_list = np.random.rand(15)
+    
+    noise_lambda = opt.augment_noise_lambda
+    threshold = 1/(len(opt.augment)+1)
+    _length = signal.shape[0]
+    # Time Domain
+    if 'scale' in opt.augment and random_list[0]>threshold:
+        # beta = np.clip(np.random.normal(1, 0.1),0.8,1.2)
+        signal = arr.interp(signal, int(_length*warp_lambda))
+        _length = signal.shape[0]
+
+
+    if 'warp' in opt.augment and random_list[1]>threshold:
+        pos = (_length*warp_pos_lambda).astype(np.int64)
+        # pos = np.sort(np.random.randint(0, _length, 2))
+        if pos[1]-pos[0]>10:
+            # beta = np.clip(np.random.normal(1, 0.1),0.8,1.2)
+            signal = np.concatenate((signal[:pos[0]], arr.interp(signal[pos[0]:pos[1]], int((pos[1]-pos[0])*warp_lambda)) , signal[pos[1]:]))
+            _length = signal.shape[0]
+
+    # Noise            
+    if 'spike' in opt.augment and random_list[2]>threshold:
+        std = np.std(signal)
+        spike_indexs = np.random.randint(0, _length, int(_length*np.clip(np.random.uniform(0,0.05),0,1)))
+        for index in spike_indexs:
+            signal[index] = signal[index] + std*np.random.randn()*noise_lambda
+    
+    if 'step' in opt.augment and random_list[3]>threshold:
+        std = np.std(signal)
+        step_indexs = np.random.randint(0, _length, int(_length*np.clip(np.random.uniform(0,0.01),0,1)))
+        for index in step_indexs:
+            signal[index:] = signal[index:] + std*np.random.randn()*noise_lambda
+    
+    if 'slope' in opt.augment and random_list[4]>threshold: 
+        slope = np.linspace(-1, 1, _length)*np.random.randn()
+        signal = signal+slope*noise_lambda
+
+    if 'white' in opt.augment and random_list[5]>threshold:
+        signal = signal+noise.noise(_length,'white')*(np.std(signal)*np.random.randn()*noise_lambda)
+
+    if 'pink' in opt.augment and random_list[6]>threshold:
+        signal = signal+noise.noise(_length,'pink')*(np.std(signal)*np.random.randn()*noise_lambda)
+
+    if 'blue' in opt.augment and random_list[7]>threshold:
+        signal = signal+noise.noise(_length,'blue')*(np.std(signal)*np.random.randn()*noise_lambda)
+
+    if 'brown' in opt.augment and random_list[8]>threshold:
+        signal = signal+noise.noise(_length,'brown')*(np.std(signal)*np.random.randn()*noise_lambda)
+
+    if 'violet' in opt.augment and random_list[9]>threshold:
+        signal = signal+noise.noise(_length,'violet')*(np.std(signal)*np.random.randn()*noise_lambda)
+
+    # Frequency Domain
+    if 'app' in opt.augment and random_list[10]>threshold:
+        # amplitude and phase perturbations
+        signal = surrogates.app(signal)
+
+    if 'aaft' in opt.augment and random_list[11]>threshold:  
+        # Amplitude Adjusted Fourier Transform
+        signal = surrogates.aaft(signal)
+
+    if 'iaaft' in opt.augment and random_list[12]>threshold:
+        # Iterative Amplitude Adjusted Fourier Transform
+        signal = surrogates.iaaft(signal,10)[0]
+
+    # crop and filp
+    if 'filp' in opt.augment and random_list[13]>threshold:
+        signal = signal[::-1]
+
+    if _length >= opt.finesize:
+        move = int((_length-opt.finesize)*crop_lambda)
+        signal = signal[move:move+opt.finesize]
+    else:
+        signal = arr.pad(signal, opt.finesize-_length, mod = 'repeat')
+
+    return signal
+
+def ch1d(opt,data,test_flag):
+    """
+    data : ch,length
+    """
+    ch,length = data.shape
+    result = np.zeros((ch,opt.finesize))
+    if test_flag:
+        move = int((length-opt.finesize)*0.5)
+        result = data[:,move:move+opt.finesize]
+    else:
+        warp_lambda = np.clip(np.random.normal(1, 0.1),0.8,1.2)
+        warp_pos_lambda = np.sort(np.random.random(2))
+        crop_lambda = np.random.random()
+        random_list = np.random.rand(15)
+        for i in range(ch):
+            result[i] = base1d(opt, data[i],warp_lambda,warp_pos_lambda,crop_lambda,random_list)
+    return result
+
+def batch1d(opt,data,test_flag):
     """
     data : batchsize,ch,length
     """
     batchsize,ch,length = data.shape
-    random_list = np.random.rand(15)
-    threshold = 1/(len(opt.augment)+1)
-    noise_lambda = opt.augment_noise_lambda
-    if test_flag:
-        move = int((length-opt.finesize)*0.5)
-        result = data[:,:,move:move+opt.finesize]
-    else:
-        result = np.zeros((batchsize,ch,opt.finesize))
-        
-        for i in range(batchsize):
-            for j in range(ch):
-                signal = data[i][j]
-                _length = length
-                # Time Domain
-                if 'scale' in opt.augment and random_list[0]>threshold:
-                    beta = np.clip(np.random.normal(1, 0.1),0.8,1.2)
-                    signal = arr.interp(signal, int(_length*beta))
-                    _length = signal.shape[0]
-
-
-                if 'warp' in opt.augment and random_list[1]>threshold:
-                    pos = np.sort(np.random.randint(0, _length, 2))
-                    if pos[1]-pos[0]>10:
-                        beta = np.clip(np.random.normal(1, 0.1),0.8,1.2)
-                        signal = np.concatenate((signal[:pos[0]], arr.interp(signal[pos[0]:pos[1]], int((pos[1]-pos[0])*beta)) , signal[pos[1]:]))
-                        _length = signal.shape[0]
-
-                # Noise            
-                if 'spike' in opt.augment and random_list[2]>threshold:
-                    std = np.std(signal)
-                    spike_indexs = np.random.randint(0, _length, int(_length*np.clip(np.random.uniform(0,0.05),0,1)))
-                    for index in spike_indexs:
-                        signal[index] = signal[index] + std*np.random.randn()*noise_lambda
-                
-                if 'step' in opt.augment and random_list[3]>threshold:
-                    std = np.std(signal)
-                    step_indexs = np.random.randint(0, _length, int(_length*np.clip(np.random.uniform(0,0.01),0,1)))
-                    for index in step_indexs:
-                        signal[index:] = signal[index:] + std*np.random.randn()*noise_lambda
-                
-                if 'slope' in opt.augment and random_list[4]>threshold: 
-                    slope = np.linspace(-1, 1, _length)*np.random.randn()
-                    signal = signal+slope*noise_lambda
-
-                if 'white' in opt.augment and random_list[5]>threshold:
-                    signal = signal+noise.noise(_length,'white')*(np.std(signal)*np.random.randn()*noise_lambda)
-
-                if 'pink' in opt.augment and random_list[6]>threshold:
-                    signal = signal+noise.noise(_length,'pink')*(np.std(signal)*np.random.randn()*noise_lambda)
-
-                if 'blue' in opt.augment and random_list[7]>threshold:
-                    signal = signal+noise.noise(_length,'blue')*(np.std(signal)*np.random.randn()*noise_lambda)
-
-                if 'brown' in opt.augment and random_list[8]>threshold:
-                    signal = signal+noise.noise(_length,'brown')*(np.std(signal)*np.random.randn()*noise_lambda)
-
-                if 'violet' in opt.augment and random_list[9]>threshold:
-                    signal = signal+noise.noise(_length,'violet')*(np.std(signal)*np.random.randn()*noise_lambda)
-
-                # Frequency Domain
-                if 'app' in opt.augment and random_list[10]>threshold:
-                    # amplitude and phase perturbations
-                    signal = surrogates.app(signal)
-
-                if 'aaft' in opt.augment and random_list[11]>threshold:  
-                    # Amplitude Adjusted Fourier Transform
-                    signal = surrogates.aaft(signal)
-
-                if 'iaaft' in opt.augment and random_list[12]>threshold:
-                    # Iterative Amplitude Adjusted Fourier Transform
-                    signal = surrogates.iaaft(signal,10)[0]
-
-                # crop and filp
-                if 'filp' in opt.augment and random_list[13]>threshold:
-                    signal = signal[::-1]
-
-                if _length >= opt.finesize:
-                    move = int((_length-opt.finesize)*np.random.random())
-                    signal = signal[move:move+opt.finesize]
-                else:
-                    signal = arr.pad(signal, opt.finesize-_length, mod = 'repeat')
-
-                result[i,j] = signal
+    result = np.zeros((batchsize,ch,opt.finesize))
+    for i in range(batchsize):
+        result[i] = ch1d(opt,data[i],test_flag)
     return result
 
-def base2d(img,finesize = (224,244),test_flag = True):
-    h,w = img.shape[:2]
+def ch2d(img,finesize = (224,244),test_flag = True):
+    ch,h,w = img.shape
     if test_flag:
         h_move = int((h-finesize[0])*0.5)
         w_move = int((w-finesize[1])*0.5)
-        result = img[h_move:h_move+finesize[0],w_move:w_move+finesize[1]]
+        result = img[:,h_move:h_move+finesize[0],w_move:w_move+finesize[1]]
     else:
         #random crop
         h_move = int((h-finesize[0])*random.random())
         w_move = int((w-finesize[1])*random.random())
-        result = img[h_move:h_move+finesize[0],w_move:w_move+finesize[1]]
-        #random flip
-        if random.random()<0.5:
-            result = result[:,::-1]
+        result = img[:,h_move:h_move+finesize[0],w_move:w_move+finesize[1]]
+        
+        # #random flip
+        # if random.random()<0.5:
+        #     result = result[:,:,::-1]
+        
         #random amp
-        result = result*random.uniform(0.9,1.1)+random.uniform(-0.05,0.05)
+        result = result*random.uniform(0.9,1.1)
     return result
 
 def augment(opt,signals,labels):

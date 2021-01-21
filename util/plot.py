@@ -313,7 +313,7 @@ def draw_eg_signals(signals,opt):
 
     opt.TBGlobalWriter.add_figure('signal_eg',figure=fig)
 
-    plt.savefig(os.path.join(opt.save_dir,'signal_eg.jpg'))
+    #plt.savefig(os.path.join(opt.save_dir,'signal_eg.jpg'))
     plt.close('all')
 
 

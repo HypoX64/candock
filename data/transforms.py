@@ -85,14 +85,14 @@ def ToTensor(data=None,target=None,gpu_id='0'):
 def ToInputShape(opt,data,test_flag = False):
 
     if opt.mode in ['classify_1d','autoencoder']:
-        result = augmenter.base1d(opt, data, test_flag = test_flag).astype(np.float32)
+        result = augmenter.batch1d(opt, data, test_flag = test_flag).astype(np.float32)
 
     elif opt.mode in ['classify_2d','domain']:
         if data.ndim == 3:
             _batchsize,_ch,_size = data.shape
             h,w = opt.img_shape
-            data = augmenter.base1d(opt, data, test_flag = test_flag)
             result = np.zeros((_batchsize,_ch,h,w), dtype=np.float32)
+            data = augmenter.batch1d(opt, data, test_flag = test_flag)
             for i in range(_batchsize):
                 for j in range(opt.input_nc):
                     result[i][j] = dsp.signal2spectrum(data[i][j],opt.stft_size,opt.stft_stride,

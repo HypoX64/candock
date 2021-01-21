@@ -39,7 +39,7 @@ class Options():
         self.parser.add_argument('--best_index', type=str, default='f1',help='select which evaluation index to get the best results in all epochs, f1 | err')
         self.parser.add_argument('--pretrained', type=str, default='',help='pretrained model path. If not specified, fo not use pretrained model')
         self.parser.add_argument('--continue_train', action='store_true', help='if specified, continue train')
-        self.parser.add_argument('--weight_mod', type=str, default='auto',help='Choose weight mode: auto | normal')
+        self.parser.add_argument('--weight_level', type=int, default=0,help='change the weight of the loss function to an imbalanced dataset, loss_weight = (1/(class.weight))^opt.weight_level')
         self.parser.add_argument('--network_save_freq', type=int, default=5,help='the freq to save network')
 
         # ------------------------Preprocessing------------------------
@@ -55,8 +55,6 @@ class Options():
         self.parser.add_argument('--wave_level', type=int, default=5, help='decomposition level')
         self.parser.add_argument('--wave_usedcoeffs', type=str, default='[]', help='Coeff used for reconstruction, \
             eg. when level = 6 usedcoeffs=[1,1,0,0,0,0,0] : reconstruct signal with cA6, cD6')
-        self.parser.add_argument('--wave_channel', action='store_true', help='if specified, input reconstruct each coeff as a channel.')
-        
         
         # ------------------------Data Augmentation------------------------
         # base
@@ -127,6 +125,33 @@ class Options():
             self.initialize()
         self.opt = self.parser.parse_args()
 
+        """Print and save options
+        It will print both current options and default values(if different).
+        It will save options into a text file / [checkpoints_dir] / opt.txt
+        """
+        input_arg = ''
+        opt_message = ''
+        opt_message += '----------------- Options ---------------\n'
+        for k, v in sorted(vars(self.opt).items()):
+            comment = ''
+            default = self.parser.get_default(k)
+            if v != default:
+                comment = '\t[default: %s]' % str(default)
+                input_arg += ('--'+str(k)+' '+str(v)+' ')
+            opt_message += '{:>20}: {:<30}{}\n'.format(str(k), str(v), comment)
+        opt_message += '----------------- End -------------------'
+        localtime = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
+        util.makedirs(self.opt.save_dir)
+        util.writelog(str(localtime)+'\n'+opt_message+'\n', self.opt,True)
+
+        # start tensorboard
+        self.opt.tensorboard = os.path.join(self.opt.tensorboard,localtime+'_'+os.path.split(self.opt.save_dir)[1])
+        self.opt.TBGlobalWriter = SummaryWriter(self.opt.tensorboard)
+        util.writelog('Please run "tensorboard --logdir checkpoints/tensorboardX --host=your_server_ip" and input "'+localtime+'" to filter outputs',self.opt,True)
+        self.opt.TBGlobalWriter.add_text('Opt', opt_message.replace('\n', '  \n'))
+        self.opt.TBGlobalWriter.add_text('Opt', ('----------------- Input args ---------------\n'+input_arg).replace('\n', '  \n'))
+
+        # auto options (base)
         if self.opt.gpu_id != '-1':
             os.environ["CUDA_VISIBLE_DEVICES"] = str(self.opt.gpu_id)
 
@@ -169,7 +194,7 @@ class Options():
                 print('Warning: index.npy does not exist')
                 sys.exit(0)
         else:
-            self.opt.fold_index = eval(self.opt.fold_index)
+            self.opt.fold_index = str2list(self.opt.fold_index,int)
 
 
         if self.opt.augment == 'all':
@@ -177,51 +202,36 @@ class Options():
         else:
             self.opt.augment = str2list(self.opt.augment)
 
-        self.opt.filter_fc = eval(self.opt.filter_fc)
-        self.opt.wave_usedcoeffs = eval(self.opt.wave_usedcoeffs)
-        self.opt.gan_labels = eval(self.opt.gan_labels)
-
-        self.opt.mergelabel = eval(self.opt.mergelabel)
+        self.opt.filter_fc = str2list(self.opt.filter_fc,float)
+        self.opt.wave_usedcoeffs = str2list(self.opt.wave_usedcoeffs,int)
+        self.opt.gan_labels = str2list(self.opt.gan_labels,int)
+        if self.opt.mergelabel != 'None':
+            self.opt.mergelabel = str2list(self.opt.mergelabel,int,2)
         if self.opt.mergelabel_name != 'None':
-            self.opt.mergelabel_name = self.opt.mergelabel_name.replace(" ", "").split(",")
-
-        """Print and save options
-        It will print both current options and default values(if different).
-        It will save options into a text file / [checkpoints_dir] / opt.txt
-        """
-        message = ''
-        message += '----------------- Options ---------------\n'
-        for k, v in sorted(vars(self.opt).items()):
-            comment = ''
-            default = self.parser.get_default(k)
-            if v != default:
-                comment = '\t[default: %s]' % str(default)
-            message += '{:>20}: {:<30}{}\n'.format(str(k), str(v), comment)
-        message += '----------------- End -------------------'
-        localtime = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
-        util.makedirs(self.opt.save_dir)
-        util.writelog(str(localtime)+'\n'+message+'\n', self.opt,True)
-
-        # start tensorboard
-        self.opt.tensorboard = os.path.join(self.opt.tensorboard,localtime+'_'+os.path.split(self.opt.save_dir)[1])
-        self.opt.TBGlobalWriter = SummaryWriter(self.opt.tensorboard)
-        util.writelog('Please run "tensorboard --logdir checkpoints/tensorboardX --host=your_server_ip" and input "'+localtime+'" to filter outputs',self.opt,True)
-        self.opt.TBGlobalWriter.add_text('Opt', message.replace('\n', '  \n'))
+            self.opt.mergelabel_name = str2list(self.opt.mergelabel_name)
         
         return self.opt
 
-def str2list(string,out_type = 'string'):
+def str2list(string,out_type = str,depth = 1):
     out_list = []
-    string = string.replace(' ','').replace('[','').replace(']','')
-    strings = string.split(',')
-    for string in strings:
-        if string != '':
-            if out_type == 'string':
-                out_list.append(string)
-            elif out_type == 'int':
-                out_list.append(int(string))
-            elif out_type == 'float':
-                out_list.append(float(string))
+    string = string.replace(' ','')
+    if depth == 1:
+        string = string.replace('[','').replace(']','')
+        strings = string.split(',')
+        for string in strings:
+            if string != '':
+                out_list.append(out_type(string))
+
+    elif depth ==2:
+        string = list(string)[1:-1]
+        for c in string:
+            if c =='[':
+                _out = []
+            elif c == ']':
+                out_list.append(_out)
+            elif c != ',':
+                _out.append(int(c))
+
     return out_list
 
 def get_auto_options(opt,signals,labels):
@@ -241,10 +251,9 @@ def get_auto_options(opt,signals,labels):
 
     # weight
     opt.weight = np.ones(opt.label)
-    if opt.weight_mod == 'auto':
-        opt.weight = 1/label_cnt_per
-        opt.weight = opt.weight/np.min(opt.weight)
-        util.writelog('Loss_weight:'+str(opt.weight),opt,True,True)
+    opt.weight = 1/label_cnt_per
+    opt.weight = np.power((opt.weight/np.min(opt.weight)),opt.weight_level)
+    util.writelog('Loss_weight:'+str(opt.weight),opt,True,True)
     import torch
     opt.weight = torch.from_numpy(opt.weight).float()
     if opt.gpu_id != '-1':      
@@ -275,8 +284,8 @@ def get_auto_options(opt,signals,labels):
     # check stft spectrum
     if opt.mode in ['classify_2d','domain'] and signals.ndim == 3:
         spectrums = []
-        data = signals[np.random.randint(0,shape[0]-1)].reshape(1,shape[1],shape[2])
-        data = augmenter.base1d(opt, data, test_flag=False)[0]
+        data = signals[np.random.randint(0,shape[0]-1)].reshape(shape[1],shape[2])
+        data = augmenter.ch1d(opt, data, test_flag=False)
         plot.draw_eg_signals(data,opt)
         for i in range(shape[1]):
             spectrums.append(dsp.signal2spectrum(data[i],opt.stft_size,opt.stft_stride,

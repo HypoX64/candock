@@ -8,8 +8,8 @@ import scipy.io as sio
 import numpy as np
 
 sys.path.append("..")
-from . import transforms,statistics
-from util import dsp
+from . import transforms,statistics,augmenter
+from util import dsp,util
 from util import array_operation as arr
 
 
