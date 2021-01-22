@@ -37,7 +37,7 @@ class Core(object):
         self.loss_classifier = nn.CrossEntropyLoss(self.opt.weight)
         if self.opt.mode == 'autoencoder':
             self.loss_autoencoder = nn.MSELoss()
-        elif self.opt.mode == 'domain':
+        elif self.opt.mode in ['domain','domain_1d']:
             self.loss_dann_c = torch.nn.NLLLoss(self.opt.weight)
             self.loss_dann_d = torch.nn.NLLLoss()
 
@@ -172,8 +172,8 @@ class Core(object):
             for i in range(self.opt.batchsize):
                 self.features.append(np.concatenate((feature[i], [label[i]])))
 
-        elif self.opt.mode in ['classify_1d','classify_2d','domain']:
-            if self.opt.model_name in ['dann','dann_base']:
+        elif self.opt.mode in ['classify_1d','classify_2d','domain','domain_1d']:
+            if self.opt.mode in ['domain','domain_1d']:
                 out, _ = self.net(signal,0)
                 loss = self.loss_dann_c(out, label)
             else:

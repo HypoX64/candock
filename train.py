@@ -51,7 +51,7 @@ for fold in range(opt.k_fold):
 
         if opt.mode in ['classify_1d','classify_2d','autoencoder']: 
             core.train(signals,labels,train_sequences[fold])
-        elif opt.model_name in ['dann','dann_base']:
+        elif opt.mode in ['domain','domain_1d']:
             core.dann_train(signals,labels,train_sequences[fold],eval_sequences[fold])
             
         core.eval(signals,labels,eval_sequences[fold])

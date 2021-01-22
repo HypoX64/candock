@@ -84,7 +84,7 @@ def ToTensor(data=None,target=None,gpu_id='0'):
 
 def ToInputShape(opt,data,test_flag = False):
 
-    if opt.mode in ['classify_1d','autoencoder']:
+    if opt.mode in ['classify_1d','autoencoder','domain_1d']:
         result = augmenter.batch1d(opt, data, test_flag = test_flag).astype(np.float32)
 
     elif opt.mode in ['classify_2d','domain']:

@@ -177,6 +177,8 @@ class Options():
                 self.opt.mode = 'autoencoder'
             elif self.opt.model_name in ['dann','dann_base']:
                 self.opt.mode = 'domain'
+            elif self.opt.model_name in ['dann_lstm']:
+                self.opt.mode = 'domain_1d'
             else:
                 print('\033[1;31m'+'Error: do not support this network '+self.opt.model_name+'\033[0m')
                 sys.exit(0)
@@ -269,7 +271,7 @@ def get_auto_options(opt,signals,labels):
         opt.label_name = opt.label_name.replace(" ", "").split(",")
 
     # domain_num
-    if opt.mode == 'domain':
+    if opt.mode in ['domain','domain_1d']:
         if opt.domain_num == '2':
             opt.domain_num = 2
         else:

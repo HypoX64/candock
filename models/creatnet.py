@@ -7,7 +7,7 @@ from .net_1d import cnn_1d,lstm,resnet_1d,multi_scale_resnet_1d,micro_multi_scal
 from .net_2d import densenet,dfcnn,resnet,squeezenet,multi_scale_resnet,mobilenet,lightcnn
 from .ipmc import EarID,MV_Emotion
 from .autoencoder import autoencoder
-from .domain import dann,dann_base
+from .domain import dann,dann_base,dann_lstm
 
 
 def creatnet(opt):
@@ -21,6 +21,8 @@ def creatnet(opt):
         net = dann.DANN(opt.input_nc,opt.label,opt.domain_num)
     elif name == 'dann_base':
         net = dann_base.DANNBase()
+    elif name == 'dann_lstm':
+        net = dann_lstm.DANN(opt.lstm_inputsize, opt.lstm_timestep, opt.input_nc, opt.label, opt.domain_num)
 
     #---------------------------------IPMC Custom---------------------------------
     elif name == 'EarID':
