@@ -223,10 +223,11 @@ class Core(object):
             self.optimizer.zero_grad()
             signal,label = transforms.ToTensor(signal,label,gpu_id =self.opt.gpu_id)
             output,loss = self.forward(signal, label)
-            self.opt.TBGlobalWriter.add_scalars('fold'+str(self.fold+1)+'/loss', {'train_loss':loss.item()}, self.step)
+            self.epoch_loss += loss.item()
             loss.backward()
             self.optimizer.step()
         self.load_poll_terminate()
+        self.opt.TBGlobalWriter.add_scalars('fold'+str(self.fold+1)+'/loss', {'train_loss':self.epoch_loss/(i+1)}, self.step)
         self.add_class_acc_to_tensorboard('train')
 
     def domain_random_loader_init(self,signals,labels,sequences,queue):
@@ -245,6 +246,7 @@ class Core(object):
         self.domain_random_loader_init(signals,labels,dst_sequences,domain_queue)
         domains = np.load(os.path.join(self.opt.dataset_dir,'domains.npy'))
         domains = dataloader.rebuild_domain(domains)
+        loss_show = [0,0,0]
 
         for i in range(self.epoch_iter_length):
             self.step = float(i/self.epoch_iter_length + self.epoch)
@@ -277,10 +279,14 @@ class Core(object):
             _, domain_output = self.net(d_signal, alpha=alpha)
             loss_d_domain = self.loss_dann_d(domain_output, d_domain)
             loss = loss_s_label+loss_s_domain+loss_d_domain
-            self.opt.TBGlobalWriter.add_scalars('fold'+str(self.fold+1)+'/loss', {'src_label':loss_s_label.item(),
-                                                                'src_domain':loss_s_domain.item(),
-                                                                'dst_domain':loss_d_domain.item()}, self.step)
+            loss_show[0] += loss_s_label.item()
+            loss_show[1] += loss_s_domain.item()
+            loss_show[2] += loss_d_domain.item()
+            
             loss.backward()
             self.optimizer.step()
 
         self.add_class_acc_to_tensorboard('train')
+        self.opt.TBGlobalWriter.add_scalars('fold'+str(self.fold+1)+'/loss', {'src_label':loss_show[0]/(i+1),
+                                                                'src_domain':loss_show[1]/(i+1),
+                                                                'dst_domain':loss_show[2]/(i+1)}, self.step)

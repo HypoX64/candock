@@ -63,14 +63,14 @@ class lstm(nn.Module):
         for i in range(input_nc):
             exec('self.lstm'+str(i) + '=lstm_block(self.input_size,self.time_step,Hidden_size,Num_layers)')
             exec('self.lstms.append(self.lstm'+str(i)+')')
-        self.weight = SEweight(Hidden_size*input_nc)
+        # self.weight = SEweight(Hidden_size*input_nc)
 
     def forward(self, x):
         y = []
         for i in range(self.input_nc):
             y.append(self.lstms[i](x[:,i,:]))
         x = torch.cat(tuple(y), 1)
-        x = x*self.weight(x)
+        # x = x*self.weight(x)
         return x
 
 
