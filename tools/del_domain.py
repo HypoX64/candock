@@ -13,8 +13,8 @@ opt.parser.add_argument('--dels',type=str,default='', help='which domains you wa
 opt.parser.add_argument('--keeps',type=str,default='', help='which domains you want to keep, and del other, eg. [0,1,2,3,4]')
 opt.parser.add_argument('--foldbydomain',action='store_true', help='if specified, generate new fold index by domain, else 5-fold.')
 opt = opt.getparse()
-opt.dels = options.str2list(opt.dels,out_type='int')
-opt.keeps = options.str2list(opt.keeps,out_type='int')
+opt.dels = options.str2list(opt.dels,out_type=int)
+opt.keeps = options.str2list(opt.keeps,out_type=int)
 
 signals = np.load(os.path.join(opt.dataset_dir,'signals.npy'))
 print(signals.shape)
