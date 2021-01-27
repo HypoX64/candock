@@ -20,7 +20,7 @@ def domain_statistics(domains):
     # domain_cnt = Counter(domains.tolist())
     # import operator
     # sorted(domain_cnt,key=operator.itemgetter("k"),reverse=True)
-    domain_labels = list(set(domains.tolist()))
+    domain_labels = sorted(list(set(domains.tolist())))
     domain_num = len(domain_labels)
     domain_cnt = np.zeros(domain_num,dtype=np.int64)
     # from collections import Counter
