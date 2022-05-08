@@ -15,29 +15,31 @@ class Options():
         self.initialized = False
 
     def initialize(self):
+
         # ------------------------Base------------------------
+        self.parser.add_argument('--debug', action='store_true', help='if specified, run on debug mode')
         self.parser.add_argument('--gpu_id', type=str, default='0',help='choose which gpu want to use, Single GPU: 0 | 1 | 2 ; Multi-GPU: 0,1,2,3 ; No GPU: -1')        
         self.parser.add_argument('--no_cudnn', action='store_true', help='if specified, do not use cudnn')
         self.parser.add_argument('--label', type=str, default='auto',help='number of labels')
         self.parser.add_argument('--input_nc', type=str, default='auto', help='number of input channels')
+        self.parser.add_argument('--use_channel', type=str, default='all', help='which channel that used for syetem, eg. [0,3,4] -> use ch 0,3 and 4')
         self.parser.add_argument('--loadsize', type=str, default='auto', help='load data in this size')
         self.parser.add_argument('--finesize', type=str, default='auto', help='crop your data into this size')
         self.parser.add_argument('--label_name', type=str, default='auto',help='name of labels,example:"a,b,c,d,e,f"')
         self.parser.add_argument('--mode', type=str, default='auto',help='classify_1d | classify_2d | autoencoder | domain')
-        self.parser.add_argument('--domain_num', type=str, default='2',
-            help='number of domain, only available when mode==domain. 2 | auto ,if input 2, train-data is domain 0,test-data is domain 1.')
         self.parser.add_argument('--dataset_dir', type=str, default='./datasets/simple_test',help='your dataset path')
         self.parser.add_argument('--save_dir', type=str, default='./checkpoints/',help='save checkpoints')
-        self.parser.add_argument('--tensorboard', type=str, default='./checkpoints/tensorboardX',help='tensorboardX log dir')
+        self.parser.add_argument('--tensorboard_save_dir', type=str, default='./checkpoints/tensorboardX',help='tensorboardX log dir')
         self.parser.add_argument('--TBGlobalWriter', type=str, default='',help='')
           
         # ------------------------Training Matters------------------------
-        self.parser.add_argument('--epochs', type=int, default=20,help='end epoch')
+        self.parser.add_argument('--n_epochs', type=int, default=20,help='number of training epoch')
         self.parser.add_argument('--lr', type=float, default=0.001,help='learning rate') 
         self.parser.add_argument('--batchsize', type=int, default=64,help='batchsize')
         self.parser.add_argument('--load_thread', type=int, default=8,help='how many threads when load data')
         self.parser.add_argument('--best_index', type=str, default='f1',help='select which evaluation index to get the best results in all epochs, f1 | err')
         self.parser.add_argument('--pretrained', type=str, default='',help='pretrained model path. If not specified, fo not use pretrained model')
+        self.parser.add_argument('--finetune', action='store_true',help='When use pretrained model you can use this to freeze parmas')
         self.parser.add_argument('--continue_train', action='store_true', help='if specified, continue train')
         self.parser.add_argument('--weight_level', type=int, default=0,help='change the weight of the loss function to an imbalanced dataset, loss_weight = (1/(class.weight))^opt.weight_level')
         self.parser.add_argument('--network_save_freq', type=int, default=5,help='the freq to save network')
@@ -98,10 +100,10 @@ class Options():
         """Available Network
         1d: lstm, cnn_1d, resnet18_1d, resnet34_1d, multi_scale_resnet_1d,
             micro_multi_scale_resnet_1d,autoencoder,mlp
-        2d: mobilenet, dfcnn, multi_scale_resnet, resnet18, resnet50, resnet101,
-            densenet121, densenet201, squeezenet
+        2d: 'light','dfcnn','resnet101','resnet50','resnet18','densenet121','resnet18_cbam','resnet50_cbam',
+            'densenet201','mobilenetv2','mobilenetv3','ghostnet','shufflenetv2','mnasnet','squeezenet'
         """
-        self.parser.add_argument('--model_name', type=str, default='micro_multi_scale_resnet_1d',help='Choose model  lstm...')
+        self.parser.add_argument('--model_name', type=str, default='resnet18',help='Choose model  lstm...')
         self.parser.add_argument('--lstm_inputsize', type=str, default='auto',help='lstm_inputsize of LSTM')
         self.parser.add_argument('--lstm_timestep', type=int, default=100,help='time_step of LSTM')
         # For autoecoder
@@ -117,6 +119,20 @@ class Options():
         self.parser.add_argument('--stft_no_log', action='store_true', help='if specified, do not log1p spectrum')
         self.parser.add_argument('--img_shape', type=str, default='auto', help='output shape of stft. It depend on \
             stft_size,stft_stride,stft_n_downsample. Do not input this parameter.')
+        # For dann
+        # supported encoder： lstm,resnet18,mobilenetv2,mobilenetv3,ghostnet,mnasnet,squeezenet,shufflenetv2
+        self.parser.add_argument('--dann', action='store_true', help='if specified, run dann model. please use --model_name to choose encoder type')
+        self.parser.add_argument('--no_dst_domain', type=bool, default=False, help='if True, do not use target unlabel data when training')
+        self.parser.add_argument('--dann_domain_num', type=str, default='auto',
+            help='number of domain, only available when mode==domain. 2 | auto ,if input 2, train-data is domain 0,test-data is domain 1.')
+        self.parser.add_argument('--dann_beta', type=float, default=1.0,help='')
+
+        # For Deep Metric Learning
+        # supported encoder：resnet18,resnet50,'resnet18_cbam','resnet50_cbam',mobilenetv2,mobilenetv3,ghostnet,mnasnet,squeezenet,shufflenetv2
+        self.parser.add_argument('--dml', action='store_true', help='if specified, run dml model. please use --model_name to choose encoder type')
+        self.parser.add_argument('--n_embedding', type=int, default=128, help='')
+        self.parser.add_argument('--margin', type=float, default=0.2, help='')
+        
 
         self.initialized = True
 
@@ -145,8 +161,8 @@ class Options():
         util.writelog(str(localtime)+'\n'+opt_message+'\n', self.opt,True)
 
         # start tensorboard
-        self.opt.tensorboard = os.path.join(self.opt.tensorboard,localtime+'_'+os.path.split(self.opt.save_dir)[1])
-        self.opt.TBGlobalWriter = SummaryWriter(self.opt.tensorboard)
+        self.opt.tensorboard_save_dir = os.path.join(self.opt.tensorboard_save_dir,localtime+'_'+os.path.split(self.opt.save_dir)[1])
+        self.opt.TBGlobalWriter = SummaryWriter(self.opt.tensorboard_save_dir)
         util.writelog('Please run "tensorboard --logdir checkpoints/tensorboardX --host=your_server_ip" and input "'+localtime+'" to filter outputs',self.opt,True)
         self.opt.TBGlobalWriter.add_text('Opt', opt_message.replace('\n', '  \n'))
         self.opt.TBGlobalWriter.add_text('Opt', ('----------------- Input args ---------------\n'+input_arg).replace('\n', '  \n'))
@@ -167,18 +183,18 @@ class Options():
             self.opt.lstm_inputsize = int(self.opt.lstm_inputsize)
 
         if self.opt.mode == 'auto':
-            if self.opt.model_name in ['lstm', 'cnn_1d', 'resnet18_1d', 'resnet34_1d', 
+            if self.opt.dml:
+                self.opt.mode = 'dml'
+            elif self.opt.model_name in ['lstm'] and self.opt.dann:
+                self.opt.mode = 'domain_1d'
+            elif self.opt.dann:
+                self.opt.mode = 'domain'
+            elif self.opt.model_name in ['lstm', 'cnn_1d', 'resnet18_1d', 'resnet34_1d', 
                 'multi_scale_resnet_1d','micro_multi_scale_resnet_1d','mlp']:
                 self.opt.mode = 'classify_1d'
-            elif self.opt.model_name in ['light','dfcnn', 'multi_scale_resnet', 'resnet18', 'resnet50',
-                'resnet101','densenet121', 'densenet201', 'squeezenet', 'mobilenet','EarID','MV_Emotion']:
+            elif self.opt.model_name in ['light','dfcnn','resnet101','resnet50','resnet18','densenet121','earid',
+            'densenet201','mobilenetv2','mobilenetv3','ghostnet','shufflenetv2','mnasnet','squeezenet','resnet18_cbam','resnet50_cbam']:
                 self.opt.mode = 'classify_2d'
-            elif self.opt.model_name == 'autoencoder':
-                self.opt.mode = 'autoencoder'
-            elif self.opt.model_name in ['dann','dann_base']:
-                self.opt.mode = 'domain'
-            elif self.opt.model_name in ['dann_lstm']:
-                self.opt.mode = 'domain_1d'
             else:
                 print('\033[1;31m'+'Error: do not support this network '+self.opt.model_name+'\033[0m')
                 sys.exit(0)
@@ -212,6 +228,13 @@ class Options():
         if self.opt.mergelabel_name != 'None':
             self.opt.mergelabel_name = str2list(self.opt.mergelabel_name)
         
+        if self.opt.use_channel != 'all':
+            self.opt.use_channel = np.array(str2list(self.opt.use_channel,int))
+            self.opt.input_nc = len(self.opt.use_channel)
+
+        # if self.opt.finetune:
+        #     self.opt.no_dst_domain = True
+
         return self.opt
 
 def str2list(string,out_type = str,depth = 1):
@@ -270,21 +293,21 @@ def get_auto_options(opt,signals,labels):
     elif not isinstance(opt.label_name,list):
         opt.label_name = opt.label_name.replace(" ", "").split(",")
 
-    # domain_num
+    # dann_domain_num
     if opt.mode in ['domain','domain_1d']:
-        if opt.domain_num == '2':
-            opt.domain_num = 2
+        if opt.dann_domain_num == '2' and not opt.finetune:
+            opt.dann_domain_num = 2
         else:
             if os.path.isfile(os.path.join(opt.dataset_dir,'domains.npy')):
                 domains = np.load(os.path.join(opt.dataset_dir,'domains.npy'))
                 domains = dataloader.rebuild_domain(domains)
-                opt.domain_num = statistics.label_statistics(domains)[2]
+                opt.dann_domain_num = statistics.label_statistics(domains)[2]
             else:
                 print('Please generate domains.npy(np.int64, shape like labels.npy)')
                 sys.exit(0)
 
     # check stft spectrum
-    if opt.mode in ['classify_2d','domain'] and signals.ndim == 3:
+    if opt.mode in ['classify_2d','domain','dml'] and signals.ndim == 3:
         spectrums = []
         data = signals[np.random.randint(0,shape[0]-1)].reshape(shape[1],shape[2])
         data = augmenter.ch1d(opt, data, test_flag=False)

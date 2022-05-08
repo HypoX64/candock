@@ -1,14 +1,30 @@
 import os
 import numpy as np
 import matplotlib
-# matplotlib.use('Agg')
+import torch
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 from tensorboardX import SummaryWriter
+from sklearn.decomposition import PCA
 
 colors= ['blue','orange','green','red','purple','brown','pink','gray','olive','cyan']
 markers = ['o','^','.',',','v','<','>','1','2','3','4','s','p','*','h','H','+','x','D','d','|','_']
-
+def getcolor(num,mode='color'):
+    colors = []
+    if mode == colors:
+        step = 255*3/50
+        for i in range(1,num+1):
+            if step*i < 255:
+                colors.append([step*i/255,0,0])
+            elif 255<=step*i <255*2:
+                colors.append([1,(step*i-255)/255,0])
+            else:
+                colors.append([1,1,(step*i-255*2)/255])
+    else:
+        step = 255/50
+        for i in range(1,num+1):
+            colors.append([0,step*i/255,0])
+    return colors
 #---------------------------------heatmap---------------------------------
 
 """
@@ -196,60 +212,37 @@ def label_statistics(labels):
     label_cnt_per = label_cnt/len(labels)
     return label_cnt,label_cnt_per,label_num
 
-def draw_scatter(data,opt):
-    data = np.array(data)
-    data = data[np.argsort(data[:,-1])]
-    label_cnt,_,label_num = label_statistics(data[:,-1])
-    fig = plt.figure(figsize=(12,9))
+def draw_dml(opt,embeddings,labels,step,n_max_plot=10):
+    fig = plt.figure()
+    # print(type(embeddings))
+    if isinstance(embeddings,torch.Tensor) and isinstance(labels,torch.Tensor):
+        embeddings = embeddings.detach().cpu().numpy()
+        labels = labels.detach().cpu().numpy()
+    embeddings = embeddings[np.argsort(labels[:,0])]
+    labels = labels[np.argsort(labels[:,0])]
+    length,n_embedding = embeddings.shape
+    label_cnt,_,label_num = label_statistics(labels[:,0])
+    # print(label_num)
+    colors = getcolor(label_num,mode='blue')
+    if n_embedding>2:
+        pca=PCA(n_components=2) 
+        embeddings=pca.fit_transform(embeddings)
+
     cnt = 0
-    data_dimension = data.shape[1]-1
+    for i in range(min(label_num,n_max_plot)):
+        plt.scatter(
+            (embeddings[cnt:cnt+label_cnt[i],0])[:100], 
+            (embeddings[cnt:cnt+label_cnt[i],1])[:100],
+            label=str(i),
+            # color = tuple(colors[i])
+        )
+        cnt += label_cnt[i]
 
-    if data_dimension>3:
-        from sklearn.decomposition import PCA
-        pca=PCA(n_components=3)     
-        data=pca.fit_transform(data[:,:-1])
-        data_dimension = 3
-    
-    if data_dimension == 2:
-        plt.xlim(-1.5,1.5)
-        plt.ylim(-1.5,1.5)
-        for i in range(label_num):
-            plt.scatter(
-                (data[cnt:cnt+label_cnt[i],0])[:100], 
-                (data[cnt:cnt+label_cnt[i],1])[:100],
-                label=str(i),
-            )
-            cnt += label_cnt[i]
-
-    elif data_dimension == 3:
-        ax = fig.add_subplot(111, projection='3d')
-        ax.set_zlim3d(-1.5, 1.5)
-        ax.set_ylim3d(-1.5, 1.5)
-        ax.set_xlim3d(-1.5, 1.5)
-        for i in range(label_num):
-            ax.scatter(
-                (data[cnt:cnt+label_cnt[i],0])[:100], 
-                (data[cnt:cnt+label_cnt[i],1])[:100], 
-                (data[cnt:cnt+label_cnt[i],2])[:100],
-                label=str(i),
-            )
-            cnt += label_cnt[i]
     plt.title('Autoencoder Embedding Result')
     plt.legend(loc=2)
-    plt.savefig(os.path.join(opt.save_dir,'feature_scatter.png'))
-    np.save(os.path.join(opt.save_dir,'feature_scatter.npy'), data)
+    opt.TBGlobalWriter.add_figure('dml_embedding',fig,step)
     plt.close('all')
 
-
-def draw_autoencoder_result(true_signal,pred_signal,opt):
-    plt.subplot(211)
-    plt.plot(true_signal[0][0])
-    plt.title('True')
-    plt.subplot(212)
-    plt.plot(pred_signal[0][0])
-    plt.title('Pred')
-    plt.savefig(os.path.join(opt.save_dir,'autoencoder_result.png'))
-    plt.close('all')
 
 def draw_gan_result(real_signal,gan_signal,opt):
     if real_signal.shape[0]>4:
@@ -271,21 +264,6 @@ def draw_gan_result(real_signal,gan_signal,opt):
         plt.title('gan')
     plt.savefig(os.path.join(opt.save_dir,'gan_result.png'))
     plt.close('all')
-
-def showscatter3d(data):
-    label_cnt,_,label_num = label_statistics(data[:,3])
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    cnt = 0
-    for i in range(label_num):
-        #c = colors[i%10],marker = markers[i//10]
-        ax.scatter(data[cnt:cnt+label_cnt[i],0], data[cnt:cnt+label_cnt[i],1], data[cnt:cnt+label_cnt[i],2],
-            )
-        cnt += label_cnt[i]
-
-    plt.show()
 
 def draw_eg_spectrums(spectrums,opt):
     if len(spectrums) > 1:
@@ -329,7 +307,7 @@ def final(opt,results):
     err = np.mean(np.array(err),axis=0)
     loss = np.mean(np.array(loss),axis=0)
 
-    for epoch in range(opt.epochs):
+    for epoch in range(opt.n_epochs):
         opt.TBGlobalWriter.add_scalars('final'+'/F1', {'eval':f1[epoch]}, epoch)
         opt.TBGlobalWriter.add_scalars('final'+'/Top1.err', {'eval':err[epoch]}, epoch)
         opt.TBGlobalWriter.add_scalars('final'+'/loss', {'loss':loss[epoch]}, epoch)

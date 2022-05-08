@@ -2,6 +2,8 @@ import numpy as np
 import os
 import sys
 import torch
+from pytorch_metric_learning import distances
+from torch import tensor
 sys.path.append("..")
 
 from util import plot,util
@@ -16,19 +18,15 @@ def label_statistics(labels):
     return label_cnt,label_cnt_per,label_num
 
 def domain_statistics(domains):
-    # from collections import Counter
-    # domain_cnt = Counter(domains.tolist())
-    # import operator
-    # sorted(domain_cnt,key=operator.itemgetter("k"),reverse=True)
     domain_labels = sorted(list(set(domains.tolist())))
     domain_num = len(domain_labels)
     domain_cnt = np.zeros(domain_num,dtype=np.int64)
-    # from collections import Counter
-    # domain_cnt = Counter(domains.tolist())
+
     for i in range(len(domains)):
         domain_cnt[domain_labels.index(domains[i])] += 1
     return domain_cnt,domain_num
 
+###################################### Classification ######################################
 def mat2predtrue(mat):
     y_pred = [];y_true = []
     for i in range(mat.shape[0]):
@@ -93,7 +91,7 @@ def report(mat,print_sub=False):
         sub_F1[i] = 2*sub_precision[i]*sub_recall[i] / np.clip((sub_precision[i]+sub_recall[i]),1e-5,1e10)
 
     if print_sub == True:
-        print('sub_recall:',sub_recall,'\nsub_acc:',sub_acc,'\nsub_sp:',sub_sp)
+        print('sub_recall:',sub_recall,'\nsub_acc:',sub_acc,'\nsub_prec:',sub_precision)
 
     err = 1-_err/np.sum(mat)
     Macro_precision = np.mean(sub_precision)
@@ -104,6 +102,8 @@ def report(mat,print_sub=False):
     k = Kappa(mat)
     return round(Macro_precision,4),round(Macro_recall,4),round(Macro_F1,4),round(err,4),round(k, 4)
 
+
+###################################### IO ######################################
 def flatten_list(inputlist):
     result = []
     while inputlist:
@@ -201,11 +201,17 @@ def statistics(mat,opt,logname,heatmapname):
     util.writelog('confusion_mat:\n'+str(mat)+'\n',opt,True,False)
     plot.draw_heatmap(mat,opt,name = heatmapname)
 
-
+def avg_statistics(opt,reports,logname):
+    util.writelog('------------------------------ '+logname+' avg result ------------------------------',opt,True)
+    reports = np.array(reports)
+    avg = np.round(np.mean(reports,axis=0),4)
+    std = np.round(np.std(reports,axis=0),4)
+    util.writelog(logname+' -> std(macro-prec,reca,F1,err,kappa): '+str(std),opt,True,True)
+    util.writelog(logname+' -> avg(macro-prec,reca,F1,err,kappa): '+str(avg),opt,True,True)
+    
 def main():
-    mat=[[37980,1322,852,2,327],[3922,8784,3545,0,2193],[1756,5136,99564,1091,991],[18,1,7932,4063,14],[1361,1680,465,0,23931]]
-    mat = np.array(mat)
-    avg_recall,avg_acc,avg_sp,err,kappa = result(mat)
-    print(avg_recall,avg_acc,avg_sp,err,kappa)
+    embeddings = np.load('../checkpoints/EarID/resnet18_128/test_embeddings.npy')
+    labels = np.load('../checkpoints/EarID/resnet18_128/test_labels.npy')
+    print(embeddings.shape,labels.shape)
 if __name__ == '__main__':
     main()

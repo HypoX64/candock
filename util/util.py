@@ -5,6 +5,15 @@ import shutil
 import json
 from tensorboardX import SummaryWriter
 
+def Traversal(filedir):
+    file_list=[]
+    for root,dirs,files in os.walk(filedir): 
+        for file in files:
+            file_list.append(os.path.join(root,file)) 
+        for dir in dirs:
+            Traversal(dir)
+    return file_list
+
 def randomstr(num):
     return ''.join(random.sample(string.ascii_letters + string.digits, num))
 

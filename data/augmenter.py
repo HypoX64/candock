@@ -1,5 +1,6 @@
 import os
 import time
+import random
 
 import numpy as np
 import scipy.signal
@@ -22,7 +23,7 @@ from util import array_operation as arr
 from . import transforms,dataloader,statistics,surrogates,noise
 
 from models.net_1d.gan import Generator,Discriminator,GANloss,weights_init_normal
-from core import show_paramsnumber
+from models import model_util
 
 def dcgan(opt,signals,labels):
     print('Augment dataset using gan...')
@@ -47,8 +48,8 @@ def dcgan(opt,signals,labels):
 
     generator = Generator(opt.loadsize,opt.input_nc,opt.gan_latent_dim)
     discriminator = Discriminator(opt.loadsize,opt.input_nc)
-    show_paramsnumber(generator, opt)
-    show_paramsnumber(discriminator, opt)
+    model_util.show_paramsnumber(generator, opt)
+    model_util.show_paramsnumber(discriminator, opt)
 
     ganloss = GANloss(opt.gpu_id,opt.batchsize)
 
@@ -77,15 +78,15 @@ def dcgan(opt,signals,labels):
                 epoch_g_loss = 0
                 epoch_d_loss = 0
                 iter_pre_epoch = len(sub_labels)//opt.batchsize
-                transformer.shuffledata(sub_signals, sub_labels)
+                transforms.shuffledata(sub_signals, sub_labels)
                 t1 = time.time()
                 for i in range(iter_pre_epoch):
                     real_signal = sub_signals[i*opt.batchsize:(i+1)*opt.batchsize].reshape(opt.batchsize,opt.input_nc,opt.loadsize)
-                    real_signal = transformer.ToTensor(real_signal,gpu_id=opt.gpu_id)
+                    real_signal = transforms.ToTensor(real_signal,gpu_id=opt.gpu_id)
 
                     #  Train Generator
                     optimizer_G.zero_grad()
-                    z = transformer.ToTensor(np.random.normal(0, 1, (opt.batchsize, opt.gan_latent_dim)),gpu_id = opt.gpu_id)
+                    z = transforms.ToTensor(np.random.normal(0, 1, (opt.batchsize, opt.gan_latent_dim)),gpu_id = opt.gpu_id)
                     gen_signal = generator(z)
                     g_loss = ganloss(discriminator(gen_signal),True)
                     epoch_g_loss += g_loss.item()
@@ -110,7 +111,7 @@ def dcgan(opt,signals,labels):
 
             generator.eval()
             for i in range(int(len(sub_labels)*(opt.gan_augment_times-1))//opt.batchsize):
-                z = transformer.ToTensor(np.random.normal(0, 1, (opt.batchsize, opt.gan_latent_dim)),gpu_id = opt.gpu_id)
+                z = transforms.ToTensor(np.random.normal(0, 1, (opt.batchsize, opt.gan_latent_dim)),gpu_id = opt.gpu_id)
                 gen_signal = generator(z)
                 out_signals = np.concatenate((out_signals, gen_signal.data.cpu().numpy()))
                 #print(np.ones((opt.batchsize),dtype=np.int64)*which_label)
@@ -260,5 +261,5 @@ if __name__ == '__main__':
 
     opt = options.Options().getparse()
     signals,labels = dataloader.loaddataset(opt)
-    out_signals,out_labels = gan(opt,signals,labels,2)
+    out_signals,out_labels = dcgan(opt,signals,labels,2)
     print(out_signals.shape,out_labels.shape)

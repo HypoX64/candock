@@ -99,7 +99,7 @@ def train(opt):
 
     print('train.shape:',signals_train.shape,'eval.shape:',signals_eval.shape)
     print('train_label_cnt:',label_cnt,'eval_label_cnt:',statistics.label_statistics(labels_eval))
-    for epoch in range(opt.epochs):
+    for epoch in range(opt.n_epochs):
         t1 = time.time()
 
         core.train(signals_train,labels_train,train_sequences)

@@ -121,7 +121,7 @@ def energy(signal,kernel_size,stride,padding = 0):
         energy[i] = rms(signal[i*stride:i*stride+kernel_size]) 
     return energy
 
-def signal2spectrum(data,stft_window_size,stft_stride,cwt_wavename,cwt_scale_num,n_downsample=1, log = True, log_alpha = 0.1, mod = 'stft'):
+def signal2spectrum(data,stft_window_size,stft_stride,cwt_wavename=None,cwt_scale_num=None,n_downsample=1, log = True, log_alpha = 0.1, mod = 'stft'):
     # window : ('tukey',0.5) hann
     if n_downsample != 1:
         data = downsample(data,alpha=n_downsample)
