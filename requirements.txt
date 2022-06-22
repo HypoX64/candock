@@ -1,5 +1,5 @@
 opencv_python==4.4.0.42
-numpy==1.18.5
+numpy==1.22.0
 matplotlib==3.2.2
 torch==1.6.0
 PyWavelets==1.1.1
